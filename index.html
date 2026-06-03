@@ -411,10 +411,21 @@
 </head>
 <body>
 <script>
-  // Auth guard
+  // Check for invite token FIRST before auth guard
   (function() {
+    var hash = window.location.hash;
+    if (hash && hash.indexOf('type=invite') !== -1 && hash.indexOf('access_token') !== -1) {
+      window.location.replace('register.html' + hash);
+      return;
+    }
+    // Check for password recovery token
+    if (hash && hash.indexOf('type=recovery') !== -1 && hash.indexOf('access_token') !== -1) {
+      window.location.replace('register.html' + hash);
+      return;
+    }
+    // Auth guard
     if (!sessionStorage.getItem('mjm_user')) {
-      window.location.href = 'login.html';
+      window.location.replace('login.html');
     }
   })();
 </script>
@@ -461,56 +472,79 @@
     <!-- ───────────────── HOME ───────────────── -->
     <div class="screen-section active" id="screen-home">
 
-      <!-- Alert -->
-      <div class="alert-banner">
+      <!-- Important announcement banner (red) — shown when urgent announcement exists -->
+      <div class="alert-banner" id="urgent-banner">
         <i class="ti ti-alert-circle"></i>
         <div class="alert-text">
-          <strong>Reminder:</strong> Monthly Dept. Meeting today at 2:00 PM — Level 3 Meeting Room. Compulsory for all HODs.
+          <strong>Office Closure:</strong> The office will be closed this Friday 30 May for public holiday. Please plan accordingly.
         </div>
       </div>
 
-      <!-- Quick stats -->
-      <div class="stats-strip">
-        <div class="stat-box">
-          <div class="stat-val">2</div>
-          <div class="stat-lbl">On Leave</div>
+      <!-- Calendar -->
+      <div class="cal-card">
+        <div class="cal-header">
+          <button class="cal-nav-btn"><i class="ti ti-chevron-left"></i></button>
+          <div class="cal-month-label">June 2026</div>
+          <button class="cal-nav-btn"><i class="ti ti-chevron-right"></i></button>
         </div>
-        <div class="stat-box">
-          <div class="stat-val">3</div>
-          <div class="stat-lbl">Events</div>
+        <div class="cal-body">
+          <div class="cal-grid">
+            <div class="cal-dow">S</div><div class="cal-dow">M</div><div class="cal-dow">T</div>
+            <div class="cal-dow">W</div><div class="cal-dow">T</div><div class="cal-dow">F</div><div class="cal-dow">S</div>
+            <div class="cal-day"><span>1</span></div>
+            <div class="cal-day"><span>2</span></div>
+            <div class="cal-day today"><span>3</span></div>
+            <div class="cal-day on-leave"><span>4</span><div class="cal-underline leave"></div></div>
+            <div class="cal-day on-leave"><span>5</span><div class="cal-underline leave"></div></div>
+            <div class="cal-day has-event"><span>6</span></div>
+            <div class="cal-day"><span>7</span></div>
+            <div class="cal-day"><span>8</span></div>
+            <div class="cal-day has-event"><span>9</span></div>
+            <div class="cal-day"><span>10</span></div>
+            <div class="cal-day"><span>11</span></div>
+            <div class="cal-day"><span>12</span></div>
+            <div class="cal-day on-leave"><span>13</span><div class="cal-underline leave"></div></div>
+            <div class="cal-day on-leave"><span>14</span><div class="cal-underline leave"></div></div>
+            <div class="cal-day on-leave"><span>15</span><div class="cal-underline leave"></div></div>
+            <div class="cal-day"><span>16</span></div>
+            <div class="cal-day"><span>17</span></div>
+            <div class="cal-day"><span>18</span></div>
+            <div class="cal-day has-event on-leave"><span>19</span><div class="cal-underline leave"></div></div>
+            <div class="cal-day holiday"><span>20</span></div>
+            <div class="cal-day"><span>21</span></div>
+            <div class="cal-day"><span>22</span></div>
+            <div class="cal-day"><span>23</span></div>
+            <div class="cal-day"><span>24</span></div>
+            <div class="cal-day"><span>25</span></div>
+            <div class="cal-day"><span>26</span></div>
+            <div class="cal-day"><span>27</span></div>
+            <div class="cal-day on-leave"><span>28</span><div class="cal-underline leave"></div></div>
+            <div class="cal-day"><span>29</span></div>
+            <div class="cal-day"><span>30</span></div>
+          </div>
+          <div class="legend-row">
+            <div class="legend-item">
+              <div style="width:16px;height:16px;border-radius:50%;background:var(--green-dark);display:flex;align-items:center;justify-content:center;">
+                <span style="font-size:8px;color:#fff;font-weight:600;">3</span>
+              </div>Today
+            </div>
+            <div class="legend-item"><div class="legend-line" style="background:#EF9F27;"></div>Leave</div>
+            <div class="legend-item">
+              <div style="width:16px;height:16px;border-radius:4px;background:#CECBF6;display:flex;align-items:center;justify-content:center;">
+                <span style="font-size:8px;color:#3C3489;font-weight:600;">6</span>
+              </div>Event
+            </div>
+            <div class="legend-item">
+              <div style="width:16px;height:16px;border-radius:4px;background:#FCEBEB;display:flex;align-items:center;justify-content:center;">
+                <span style="font-size:8px;color:#A32D2D;font-weight:600;">20</span>
+              </div>Holiday
+            </div>
+          </div>
         </div>
-        <div class="stat-box">
-          <div class="stat-val">5</div>
-          <div class="stat-lbl">On Duty</div>
-        </div>
-      </div>
-
-      <!-- Latest announcements -->
-      <div class="section-row">
-        <div class="section-title">Latest Announcements</div>
-        <div class="see-all" onclick="switchTabByName('announce')">See all</div>
-      </div>
-
-      <div class="card card-urgent">
-        <div class="card-meta">
-          <span class="badge badge-urgent">Urgent</span>
-          <span class="card-time">Today, 8:30 AM</span>
-        </div>
-        <div class="card-title">Office Closure — Friday 30 May</div>
-        <div class="card-body">The office will be closed this Friday for public holiday. Please plan accordingly.</div>
-      </div>
-
-      <div class="card card-info">
-        <div class="card-meta">
-          <span class="badge badge-info">General</span>
-          <span class="card-time">Yesterday</span>
-        </div>
-        <div class="card-title">New Flexi-Work Policy — June 2026</div>
-        <div class="card-body">Staff may opt for a 4-day compressed workweek. Applications open via HR Portal from 1 June.</div>
       </div>
 
       <!-- Today on leave -->
-      <div class="section-row" style="margin-top:4px;">
+      <div class="section-row">
         <div class="section-title">Today on Leave</div>
         <div class="see-all" onclick="switchTabByName('leave')">See all</div>
       </div>
@@ -555,20 +589,6 @@
           </div>
           <span class="badge badge-success">On duty</span>
         </div>
-      </div>
-
-      <!-- Upcoming event teaser -->
-      <div class="section-row">
-        <div class="section-title">Next Event</div>
-        <div class="see-all" onclick="switchTabByName('calendar')">Calendar</div>
-      </div>
-      <div class="card card-event">
-        <div class="card-meta">
-          <span class="badge badge-blue">Event</span>
-          <span class="card-time">Thu 29 May · 2:00 PM</span>
-        </div>
-        <div class="card-title">Monthly Department Meeting</div>
-        <div class="card-body">Level 3 Meeting Room · All HODs required · Q2 Review &amp; H2 Planning</div>
       </div>
 
     </div><!-- /home -->
@@ -921,6 +941,8 @@
       <span>Profile</span>
     </div>
   </div>
+
+<script>
   function tick() {
     const now = new Date();
     let h = now.getHours(), m = now.getMinutes();
