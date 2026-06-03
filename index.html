@@ -442,7 +442,7 @@
     </div>
     <div class="top-bar-actions">
       <div class="nav-badge"><i class="ti ti-bell"></i></div>
-      <div class="top-avatar">ST</div>
+      <div class="top-avatar" onclick="window.location.href='profile.html'" style="cursor:pointer;" title="My Profile">ST</div>
     </div>
   </div>
 
@@ -916,13 +916,11 @@
       <i class="ti ti-users"></i>
       <span>Duty</span>
     </div>
+    <div class="nav-item" id="nav-profile" onclick="window.location.href='profile.html'">
+      <i class="ti ti-user-circle"></i>
+      <span>Profile</span>
+    </div>
   </div>
-
-</div><!-- /phone -->
-</div><!-- /phone-wrap -->
-
-<script>
-  // Live clock
   function tick() {
     const now = new Date();
     let h = now.getHours(), m = now.getMinutes();
