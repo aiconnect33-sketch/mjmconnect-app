@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0F6E56">
+<title>MJMConnect — Invite Flow</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --green:      #0F6E56; --green-mid: #1D9E75; --green-lite: #5DCAA5;
+  --green-bg:   #E1F5EE; --green-text:#085041;
+  --red-bg:     #FCEBEB; --red-text:  #A32D2D; --red-dot: #E24B4A;
+  --amber-bg:   #FAEEDA; --amber-text:#854F0B;
+  --blue-bg:    #E6F1FB; --blue-text: #185FA5;
+  --purple-bg:  #EEEDFE; --purple-text:#534AB7;
+  --coral-bg:   #FAECE7; --coral-text:#993C1D;
+  --bg:         #F4F6F5; --surface:   #FFFFFF;
+  --border:     rgba(0,0,0,0.08);
+  --text:       #111C18; --text2:     #6B7A73; --text3: #9AABA3;
+  --r-sm:6px; --r-md:10px; --r-lg:14px;
+}
+html, body {
+  min-height: 100%; font-family: 'Inter', -apple-system, sans-serif;
+  background: #1C1C1E; color: var(--text);
+  -webkit-font-smoothing: antialiased; overflow-x: hidden;
+}
+.page { padding: 28px 16px 48px; max-width: 420px; margin: 0 auto; }
+.page-header { text-align: center; margin-bottom: 24px; }
+.page-header h1 { font-size: 20px; font-weight: 700; color: #fff; }
+.page-header p  { font-size: 13px; color: #888; margin-top: 5px; line-height: 1.5; }
+.step-nav { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; }
+.step-btn {
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 1.5px solid #444; background: transparent; color: #888;
+  font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+  display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+}
+.step-btn.active { background: var(--green); border-color: var(--green); color: #fff; }
+.step-btn.done   { background: #1a3a30; border-color: var(--green-mid); color: var(--green-lite); }
+.step-label { text-align: center; margin-bottom: 20px; }
+.step-num   { font-size: 11px; font-weight: 600; color: var(--green-lite); text-transform: uppercase; letter-spacing: 0.08em; }
+.step-title { font-size: 17px; font-weight: 700; color: #fff; margin-top: 4px; }
+.step-desc  { font-size: 13px; color: #888; margin-top: 5px; line-height: 1.5; }
+.step-screen { display: none; }
+.step-screen.active { display: block; }
+.phone-wrap { display: flex; justify-content: center; margin-bottom: 24px; }
+.phone {
+  width: 100%; max-width: 320px; background: var(--surface);
+  border-radius: 36px; overflow: hidden;
+  border: 7px solid #2c2c2e;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.5), 0 0 0 1px #3a3a3c;
+  display: flex; flex-direction: column; min-height: 560px;
+}
+.sb {
+  background: var(--green); color: #E1F5EE;
+  font-size: 11px; font-weight: 500; padding: 10px 16px 6px;
+  display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;
+}
+.topbar {
+  background: var(--green); padding: 4px 12px 12px;
+  display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;
+}
+.wm { display: flex; align-items: center; gap: 7px; }
+.wm-icon { width: 26px; height: 26px; border-radius: 7px; background: var(--green-mid); display: flex; align-items: center; justify-content: center; }
+.wm-icon i { font-size: 14px; color: #E1F5EE; }
+.wm-name { font-size: 14px; font-weight: 600; color: #E1F5EE; }
+.wm-name span { color: var(--green-lite); font-weight: 400; }
+.top-av { width: 26px; height: 26px; border-radius: 50%; background: var(--green-mid); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #E1F5EE; }
+.sbody { background: var(--bg); flex: 1; overflow-y: auto; overflow-x: hidden; padding: 10px; -webkit-overflow-scrolling: touch; }
+.nav-bar { background: var(--surface); border-top: 0.5px solid var(--border); display: flex; justify-content: space-around; padding: 7px 0 12px; flex-shrink: 0; }
+.nav-item { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 9px; font-weight: 500; color: var(--text2); }
+.nav-item i { font-size: 18px; }
+.nav-item.active { color: var(--green); }
+.card { background: var(--surface); border-radius: var(--r-lg); border: 0.5px solid var(--border); padding: 11px 12px; margin-bottom: 9px; }
+.card-label { font-size: 10px; font-weight: 600; color: var(--text2); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 7px; }
+.badge { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 20px; white-space: nowrap; }
+.b-green  { background: var(--green-bg);   color: var(--green-text); }
+.b-red    { background: var(--red-bg);     color: var(--red-text); }
+.b-amber  { background: var(--amber-bg);   color: var(--amber-text); }
+.b-blue   { background: var(--blue-bg);    color: var(--blue-text); }
+.b-purple { background: var(--purple-bg);  color: var(--purple-text); }
+.form-group { margin-bottom: 9px; }
+.form-label { display: block; font-size: 10px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+.iw { position: relative; }
+.fi {
+  width: 100%; border: 0.5px solid #D1DBD7; border-radius: var(--r-md);
+  padding: 8px 10px 8px 32px; font-size: 12px; color: var(--text);
+  background: var(--surface); font-family: inherit; outline: none;
+  -webkit-appearance: none; transition: border-color 0.15s;
+}
+.fi:focus { border-color: var(--green); }
+.fi::placeholder { color: var(--text3); }
+.fi.locked { background: var(--bg); color: var(--text2); cursor: not-allowed; }
+.ii { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); font-size: 13px; color: var(--text3); pointer-events: none; }
+.btn-p { width: 100%; background: var(--green); color: #fff; border: none; border-radius: var(--r-md); padding: 10px; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 4px; }
+.btn-g { width: 100%; background: transparent; color: var(--green); border: 0.5px solid var(--green); border-radius: var(--r-md); padding: 9px; font-size: 12px; font-weight: 500; font-family: inherit; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 6px; }
+.sub-tabs { display: flex; gap: 4px; margin-bottom: 9px; }
+.sub-tab { flex: 1; text-align: center; font-size: 11px; font-weight: 500; padding: 6px 0; border-radius: var(--r-sm); cursor: pointer; color: var(--text2); background: var(--surface); border: 0.5px solid var(--border); font-family: inherit; }
+.sub-tab.active { background: var(--green-bg); color: var(--green); font-weight: 600; border-color: var(--green-bg); }
+.row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 0.5px solid var(--border); }
+.row:first-child { padding-top: 0; } .row:last-child { border-bottom: none; padding-bottom: 0; }
+.av { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; flex-shrink: 0; }
+.av-g { background: var(--green-bg); color: var(--green-text); }
+.av-b { background: var(--blue-bg);  color: var(--blue-text); }
+.av-a { background: var(--amber-bg); color: var(--amber-text); }
+.av-c { background: var(--coral-bg); color: var(--coral-text); }
+.av-p { background: var(--purple-bg);color: var(--purple-text); }
+.pname { font-size: 12px; font-weight: 500; color: var(--text); }
+.psub  { font-size: 10px; color: var(--text2); margin-top: 1px; }
+.confirm-icon { width: 44px; height: 44px; border-radius: 50%; background: var(--green-bg); display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; }
+.confirm-icon i { font-size: 22px; color: var(--green); }
+.ct { text-align: center; font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+.cs { text-align: center; font-size: 11px; color: var(--text2); line-height: 1.5; margin-bottom: 10px; }
+.ns  { display: flex; gap: 8px; align-items: flex-start; padding: 8px 0; border-bottom: 0.5px solid var(--border); }
+.ns:last-child { border-bottom: none; }
+.nsn { width: 20px; height: 20px; border-radius: 50%; background: var(--green); color: #fff; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+.nst { font-size: 12px; font-weight: 600; color: var(--text); }
+.nss { font-size: 10px; color: var(--text2); margin-top: 1px; line-height: 1.4; }
+.email-wrap { background: #F7F7F7; border-radius: var(--r-lg); border: 0.5px solid var(--border); overflow: hidden; margin-bottom: 8px; }
+.eh { background: var(--green); padding: 10px; text-align: center; }
+.el { display: inline-flex; align-items: center; gap: 6px; }
+.eli { width: 24px; height: 24px; border-radius: 6px; background: var(--green-mid); display: flex; align-items: center; justify-content: center; }
+.eli i { font-size: 12px; color: #E1F5EE; }
+.eln { font-size: 13px; font-weight: 600; color: #E1F5EE; }
+.eln span { color: var(--green-lite); font-weight: 400; }
+.em { background: var(--bg); padding: 5px 10px; border-bottom: 0.5px solid var(--border); }
+.emr { display: flex; gap: 5px; font-size: 9px; color: var(--text2); padding: 1px 0; }
+.emr strong { color: var(--text); font-weight: 600; min-width: 26px; }
+.eb { padding: 10px 12px; background: #fff; }
+.eg { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 5px; }
+.et { font-size: 11px; color: var(--text2); line-height: 1.6; margin-bottom: 8px; }
+.ecta { display: block; background: var(--green); color: #fff; text-align: center; border-radius: var(--r-md); padding: 9px; font-size: 12px; font-weight: 600; margin-bottom: 8px; cursor: pointer; border: none; width: 100%; font-family: inherit; }
+.eexp { display: flex; align-items: center; gap: 5px; background: var(--amber-bg); border-radius: var(--r-sm); padding: 5px 8px; margin-bottom: 8px; }
+.eexp i { font-size: 11px; color: var(--amber-text); }
+.eexp span { font-size: 10px; color: var(--amber-text); font-weight: 500; }
+.ef { font-size: 9px; color: var(--text3); text-align: center; line-height: 1.5; }
+.pw-strength { display: flex; gap: 3px; margin-top: 5px; }
+.pw-bar { flex: 1; height: 3px; border-radius: 2px; background: #E0E0E0; }
+.pw-bar.filled { background: var(--green); }
+.sec-note { background: var(--green-bg); border-radius: var(--r-md); padding: 8px 10px; display: flex; gap: 7px; align-items: flex-start; margin-bottom: 9px; }
+.sec-note i { font-size: 13px; color: var(--green); margin-top: 1px; flex-shrink: 0; }
+.sec-note span { font-size: 10px; color: var(--green-text); line-height: 1.5; }
+.success-icon { width: 54px; height: 54px; border-radius: 50%; background: var(--green-bg); display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; }
+.success-icon i { font-size: 28px; color: var(--green); }
+.access-item { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text2); padding: 5px 0; border-bottom: 0.5px solid var(--border); }
+.access-item:last-child { border-bottom: none; }
+.access-item i { font-size: 14px; color: var(--green); flex-shrink: 0; }
+.divider { height: 0.5px; background: var(--border); margin: 8px 0; }
+.page-nav { display: flex; justify-content: center; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pnav-btn { display: flex; align-items: center; gap: 6px; background: #2c2c2e; color: #ccc; border: 1px solid #3a3a3c; border-radius: 22px; padding: 9px 16px; font-size: 12px; font-weight: 500; font-family: inherit; cursor: pointer; transition: all 0.15s; }
+.pnav-btn:hover { background: #3a3a3c; color: #fff; }
+.pnav-btn.primary { background: var(--green); color: #fff; border-color: var(--green); }
+.pnav-btn i { font-size: 13px; }
+</style>
+</head>
+<body>
+<script>
+// No auth guard on this walkthrough page — open to all for demo
+// Seed staff list if empty
+(function() {
+  var list = JSON.parse(localStorage.getItem('mjm_staff') || '[]');
+  if (list.length === 0) {
+    list = [
+      { id:1, name:'Shirley Tan', email:'shirleytan@puigroups.com', role:'superadmin' },
+      { id:2, name:'Ahmad Hafiz', email:'ahmad.hafiz@mjmconnect.com', role:'hradmin'   },
+      { id:3, name:'Kevin Tan',   email:'kevin.tan@mjmconnect.com',   role:'staff'     }
+    ];
+    localStorage.setItem('mjm_staff', JSON.stringify(list));
+  }
+})();
+</script>
+
+<div class="page">
+
+  <div class="page-header">
+    <h1>MJMConnect — Invite Flow</h1>
+    <p>Tap the numbered steps below to walk through the full registration journey.</p>
+  </div>
+
+  <div class="step-nav">
+    <button class="step-btn active" onclick="goStep(1)">1</button>
+    <button class="step-btn" onclick="goStep(2)">2</button>
+    <button class="step-btn" onclick="goStep(3)">3</button>
+    <button class="step-btn" onclick="goStep(4)">4</button>
+    <button class="step-btn" onclick="goStep(5)">5</button>
+    <button class="step-btn" onclick="goStep(6)">6</button>
+  </div>
+
+  <!-- STEP 1 -->
+  <div class="step-screen active" id="step-1">
+    <div class="step-label">
+      <div class="step-num">Step 1 of 6</div>
+      <div class="step-title">HR Sends an Invite</div>
+      <div class="step-desc">HR fills in the staff's name and email, then hits "Send invite link." They can also see the status of all previous invites.</div>
+    </div>
+    <div class="phone-wrap"><div class="phone">
+      <div class="sb"><span>9:41</span><div><i class="ti ti-wifi"></i>&nbsp;<i class="ti ti-battery-3"></i></div></div>
+      <div class="topbar">
+        <div class="wm"><div class="wm-icon"><i class="ti ti-building-community"></i></div><div class="wm-name">MJM<span>Connect</span> Admin</div></div>
+        <div class="top-av">HR</div>
+      </div>
+      <div class="sbody">
+        <div class="sub-tabs">
+          <button class="sub-tab active">Invite Staff</button>
+          <button class="sub-tab">Invite Log</button>
+          <button class="sub-tab">Manage Staff</button>
+        </div>
+        <div class="card">
+          <div class="card-label">New Staff Invite</div>
+          <div class="form-group">
+            <label class="form-label">Full Name</label>
+            <div class="iw"><i class="ti ti-user ii"></i><input class="fi" type="text" placeholder="e.g. Nurul Ain Binti Razak"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Work Email</label>
+            <div class="iw"><i class="ti ti-mail ii"></i><input class="fi" type="email" placeholder="e.g. nurulain@mjmconnect.com"></div>
+          </div>
+          <button class="btn-p"><i class="ti ti-send"></i> Send Invite Link</button>
+        </div>
+        <div class="card">
+          <div class="card-label">Recent Invites</div>
+          <div class="row"><div class="av av-g">NA</div><div style="flex:1;"><div class="pname">Nurul Ain Binti Razak</div><div class="psub">nurulain@mjmconnect.com · 2h ago</div></div><span class="badge b-amber">Pending</span></div>
+          <div class="row"><div class="av av-b">KT</div><div style="flex:1;"><div class="pname">Kevin Tan</div><div class="psub">kevin.tan@mjmconnect.com · 2 days ago</div></div><span class="badge b-green">Joined</span></div>
+          <div class="row"><div class="av av-p">SW</div><div style="flex:1;"><div class="pname">Siti Wardah</div><div class="psub">siti.wardah@mjmconnect.com · 5 days ago</div></div><span class="badge b-green">Joined</span></div>
+          <div class="row"><div class="av av-a">MH</div><div style="flex:1;"><div class="pname">Mohd Hafiz</div><div class="psub">m.hafiz@mjmconnect.com · 7 days ago</div></div><span class="badge b-red">Expired</span></div>
+        </div>
+      </div>
+      <div class="nav-bar">
+        <div class="nav-item"><i class="ti ti-home"></i><span>Home</span></div>
+        <div class="nav-item active"><i class="ti ti-user-plus"></i><span>Invite</span></div>
+        <div class="nav-item"><i class="ti ti-users"></i><span>Staff</span></div>
+        <div class="nav-item"><i class="ti ti-settings"></i><span>Settings</span></div>
+      </div>
+    </div></div>
+    <div class="page-nav">
+      <button class="pnav-btn primary" onclick="goStep(2)">Next — Invite Sent <i class="ti ti-arrow-right"></i></button>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="step-screen" id="step-2">
+    <div class="step-label">
+      <div class="step-num">Step 2 of 6</div>
+      <div class="step-title">Invite Sent — HR's View</div>
+      <div class="step-desc">HR sees a clean confirmation. No further action needed — the system handles everything.</div>
+    </div>
+    <div class="phone-wrap"><div class="phone">
+      <div class="sb"><span>9:43</span><div><i class="ti ti-wifi"></i>&nbsp;<i class="ti ti-battery-3"></i></div></div>
+      <div class="topbar">
+        <div class="wm"><div class="wm-icon"><i class="ti ti-building-community"></i></div><div class="wm-name">MJM<span>Connect</span> Admin</div></div>
+        <div class="top-av">HR</div>
+      </div>
+      <div class="sbody">
+        <div class="card">
+          <div class="confirm-icon"><i class="ti ti-circle-check"></i></div>
+          <div class="ct">Invite sent successfully</div>
+          <div class="cs">An invite link has been sent to <strong>nurulain@mjmconnect.com</strong>. Link expires in 48 hours.</div>
+          <div class="divider"></div>
+          <div class="card-label">What happens next</div>
+          <div class="ns"><div class="nsn">1</div><div><div class="nst">Staff receives email</div><div class="nss">Nurul Ain gets an invite with a "Set up my account" button.</div></div></div>
+          <div class="ns"><div class="nsn">2</div><div><div class="nst">Staff completes registration</div><div class="nss">They confirm their name, add phone (optional) and create a password.</div></div></div>
+          <div class="ns"><div class="nsn">3</div><div><div class="nst">Account is activated</div><div class="nss">They can immediately sign in and access MJMConnect.</div></div></div>
+          <div class="divider"></div>
+          <div style="background:var(--bg);border-radius:var(--r-md);padding:9px;display:flex;align-items:center;gap:8px;">
+            <div class="av av-g" style="width:34px;height:34px;font-size:11px;">NA</div>
+            <div style="flex:1;"><div style="font-size:12px;font-weight:600;color:var(--text);">Nurul Ain Binti Razak</div><div style="font-size:10px;color:var(--text2);">nurulain@mjmconnect.com</div></div>
+            <span class="badge b-amber">Pending</span>
+          </div>
+          <button class="btn-g" onclick="goStep(1)"><i class="ti ti-user-plus"></i> Invite Another</button>
+        </div>
+      </div>
+      <div class="nav-bar">
+        <div class="nav-item"><i class="ti ti-home"></i><span>Home</span></div>
+        <div class="nav-item active"><i class="ti ti-user-plus"></i><span>Invite</span></div>
+        <div class="nav-item"><i class="ti ti-users"></i><span>Staff</span></div>
+        <div class="nav-item"><i class="ti ti-settings"></i><span>Settings</span></div>
+      </div>
+    </div></div>
+    <div class="page-nav">
+      <button class="pnav-btn" onclick="goStep(1)"><i class="ti ti-arrow-left"></i> Back</button>
+      <button class="pnav-btn primary" onclick="goStep(3)">Next — Staff Email <i class="ti ti-arrow-right"></i></button>
+    </div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="step-screen" id="step-3">
+    <div class="step-label">
+      <div class="step-num">Step 3 of 6</div>
+      <div class="step-title">Staff Receives Invite Email</div>
+      <div class="step-desc">A clean branded email lands in the staff's inbox. Tap "Set up my account" to continue.</div>
+    </div>
+    <div class="phone-wrap"><div class="phone">
+      <div class="sb" style="background:#fff;color:var(--text);border-bottom:0.5px solid var(--border);"><span style="color:var(--text);">9:46</span><div><i class="ti ti-wifi" style="color:var(--text);"></i></div></div>
+      <div style="background:#fff;padding:7px 10px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:7px;flex-shrink:0;">
+        <i class="ti ti-arrow-left" style="font-size:15px;color:var(--text2);"></i>
+        <div style="flex:1;"><div style="font-size:11px;font-weight:600;color:var(--text);">You've been invited to MJMConnect</div><div style="font-size:9px;color:var(--text2);">no-reply@mjmconnect.com</div></div>
+      </div>
+      <div class="sbody" style="padding:8px;">
+        <div class="email-wrap">
+          <div class="eh"><div class="el"><div class="eli"><i class="ti ti-building-community"></i></div><div class="eln">MJM<span>Connect</span></div></div></div>
+          <div class="em">
+            <div class="emr"><strong>To:</strong> nurulain@mjmconnect.com</div>
+            <div class="emr"><strong>From:</strong> no-reply@mjmconnect.com</div>
+            <div class="emr"><strong>Date:</strong> Thu, 29 May 2026 · 9:43 AM</div>
+          </div>
+          <div class="eb">
+            <div class="eg">Hi Nurul Ain,</div>
+            <div class="et">You've been invited to join <strong>MJMConnect</strong> — your office's centralised notice board for announcements, leave schedules, events and duty rosters.<br><br>Click the button below to set up your account.</div>
+            <button class="ecta" onclick="goStep(4)"><i class="ti ti-user-check"></i>&nbsp; Set up my account</button>
+            <div class="eexp"><i class="ti ti-clock"></i><span>Link expires in <strong>48 hours</strong> (by 31 May 2026)</span></div>
+            <div class="et" style="margin-bottom:6px;">If you weren't expecting this, you can safely ignore this email.</div>
+            <div class="ef">Sent by HR Department · MJMConnect · © 2026</div>
+          </div>
+        </div>
+      </div>
+    </div></div>
+    <div class="page-nav">
+      <button class="pnav-btn" onclick="goStep(2)"><i class="ti ti-arrow-left"></i> Back</button>
+      <button class="pnav-btn primary" onclick="goStep(4)">Next — Staff Registers <i class="ti ti-arrow-right"></i></button>
+    </div>
+  </div>
+
+  <!-- STEP 4 -->
+  <div class="step-screen" id="step-4">
+    <div class="step-label">
+      <div class="step-num">Step 4 of 6</div>
+      <div class="step-title">Staff Completes Registration</div>
+      <div class="step-desc">Email is pre-filled and locked. Staff confirms name, adds phone (optional), and creates a password.</div>
+    </div>
+    <div class="phone-wrap"><div class="phone">
+      <div class="sb"><span>9:48</span><div><i class="ti ti-wifi"></i>&nbsp;<i class="ti ti-battery-3"></i></div></div>
+      <div class="topbar"><div class="wm"><div class="wm-icon"><i class="ti ti-building-community"></i></div><div class="wm-name">MJM<span>Connect</span></div></div></div>
+      <div class="sbody">
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+            <div style="width:32px;height:32px;border-radius:50%;background:var(--green-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="ti ti-user-check" style="font-size:16px;color:var(--green);"></i></div>
+            <div><div style="font-size:12px;font-weight:700;color:var(--text);">Set up your account</div><div style="font-size:10px;color:var(--text2);">Invited by HR Department</div></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email <span style="font-size:9px;color:var(--text3);text-transform:none;font-weight:400;letter-spacing:0;">(cannot change)</span></label>
+            <div class="iw"><i class="ti ti-mail ii"></i><input class="fi locked" type="email" value="nurulain@mjmconnect.com" readonly></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Full Name</label>
+            <div class="iw"><i class="ti ti-user ii"></i><input class="fi" type="text" value="Nurul Ain Binti Razak"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Phone <span style="font-size:9px;color:var(--text3);text-transform:none;font-weight:400;letter-spacing:0;">(optional)</span></label>
+            <div class="iw"><i class="ti ti-phone ii"></i><input class="fi" type="tel" placeholder="e.g. 019-3456789"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Create Password</label>
+            <div class="iw"><i class="ti ti-lock ii"></i><input class="fi" type="password" placeholder="At least 8 characters"></div>
+            <div class="pw-strength"><div class="pw-bar filled"></div><div class="pw-bar filled"></div><div class="pw-bar filled"></div><div class="pw-bar"></div></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Confirm Password</label>
+            <div class="iw"><i class="ti ti-lock ii"></i><input class="fi" type="password" placeholder="Re-enter password"></div>
+          </div>
+          <div class="sec-note"><i class="ti ti-shield-check"></i><span>Your account can only be accessed by you. Only HR can invite staff — no self-registration.</span></div>
+          <button class="btn-p" onclick="goStep(5)">Create My Account <i class="ti ti-arrow-right"></i></button>
+        </div>
+      </div>
+    </div></div>
+    <div class="page-nav">
+      <button class="pnav-btn" onclick="goStep(3)"><i class="ti ti-arrow-left"></i> Back</button>
+      <button class="pnav-btn primary" onclick="goStep(5)">Next — Account Created <i class="ti ti-arrow-right"></i></button>
+    </div>
+  </div>
+
+  <!-- STEP 5 -->
+  <div class="step-screen" id="step-5">
+    <div class="step-label">
+      <div class="step-num">Step 5 of 6</div>
+      <div class="step-title">Account Created — Welcome!</div>
+      <div class="step-desc">Registration complete. Staff is welcomed and can now access MJMConnect.</div>
+    </div>
+    <div class="phone-wrap"><div class="phone">
+      <div class="sb"><span>9:50</span><div><i class="ti ti-wifi"></i>&nbsp;<i class="ti ti-battery-3"></i></div></div>
+      <div class="topbar"><div class="wm"><div class="wm-icon"><i class="ti ti-building-community"></i></div><div class="wm-name">MJM<span>Connect</span></div></div></div>
+      <div class="sbody">
+        <div class="card" style="text-align:center;">
+          <div class="success-icon"><i class="ti ti-confetti"></i></div>
+          <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px;">Welcome, Nurul Ain!</div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:12px;">Your MJMConnect account is ready. Welcome to the team!</div>
+          <div style="background:var(--bg);border-radius:var(--r-lg);border:0.5px solid var(--border);padding:9px 10px;display:flex;align-items:center;gap:9px;text-align:left;margin-bottom:10px;">
+            <div style="width:38px;height:38px;border-radius:50%;background:var(--green-bg);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--green-text);flex-shrink:0;">NA</div>
+            <div><div style="font-size:12px;font-weight:600;color:var(--text);">Nurul Ain Binti Razak</div><div style="font-size:10px;color:var(--text2);">nurulain@mjmconnect.com</div></div>
+          </div>
+          <div style="background:var(--bg);border-radius:var(--r-lg);border:0.5px solid var(--border);padding:9px 10px;text-align:left;margin-bottom:12px;">
+            <div class="access-item"><i class="ti ti-speakerphone"></i> Announcements &amp; notices</div>
+            <div class="access-item"><i class="ti ti-calendar"></i> Office calendar &amp; events</div>
+            <div class="access-item"><i class="ti ti-beach"></i> Leave schedule</div>
+            <div class="access-item"><i class="ti ti-users"></i> Duty roster</div>
+          </div>
+          <button class="btn-p" onclick="goStep(6)"><i class="ti ti-login"></i> Go to Sign In</button>
+        </div>
+      </div>
+    </div></div>
+    <div class="page-nav">
+      <button class="pnav-btn" onclick="goStep(4)"><i class="ti ti-arrow-left"></i> Back</button>
+      <button class="pnav-btn primary" onclick="goStep(6)">Next — Sign In Screen <i class="ti ti-arrow-right"></i></button>
+    </div>
+  </div>
+
+  <!-- STEP 6 -->
+  <div class="step-screen" id="step-6">
+    <div class="step-label">
+      <div class="step-num">Step 6 of 6</div>
+      <div class="step-title">The Regular Sign-In Screen</div>
+      <div class="step-desc">What any staff member sees when they open the app. Invite-only — no self-registration.</div>
+    </div>
+    <div class="phone-wrap"><div class="phone">
+      <div class="sb" style="background:var(--bg);color:var(--text);border-bottom:0.5px solid var(--border);"><span>9:41</span><div><i class="ti ti-wifi" style="color:var(--text);"></i></div></div>
+      <div class="sbody" style="display:flex;flex-direction:column;justify-content:center;padding:20px 14px;">
+        <div style="text-align:center;margin-bottom:18px;">
+          <div style="width:48px;height:48px;border-radius:13px;background:var(--green);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;"><i class="ti ti-building-community" style="font-size:24px;color:#E1F5EE;"></i></div>
+          <div style="font-size:17px;font-weight:700;color:var(--text);">MJM<span style="color:var(--green);">Connect</span></div>
+          <div style="font-size:11px;color:var(--text2);margin-top:2px;">Sign in to your account</div>
+        </div>
+        <div class="card" style="margin-bottom:0;">
+          <div class="form-group">
+            <label class="form-label">Work Email</label>
+            <div class="iw"><i class="ti ti-mail ii"></i><input class="fi" type="email" placeholder="Enter your work email"></div>
+          </div>
+          <div class="form-group" style="margin-bottom:6px;">
+            <label class="form-label">Password</label>
+            <div class="iw"><i class="ti ti-lock ii"></i><input class="fi" type="password" placeholder="Enter your password"></div>
+          </div>
+          <div style="text-align:right;margin-bottom:10px;"><span style="font-size:11px;color:var(--green);font-weight:500;cursor:pointer;">Forgot password?</span></div>
+          <button class="btn-p">Sign In</button>
+        </div>
+        <div style="text-align:center;margin-top:12px;font-size:11px;color:var(--text2);line-height:1.6;">
+          Don't have an account?<br>
+          <strong style="color:var(--text);">Contact HR to receive an invite link.</strong><br>
+          <span style="font-size:10px;color:var(--text3);">Self-registration is not available.</span>
+        </div>
+      </div>
+    </div></div>
+    <div class="page-nav">
+      <button class="pnav-btn" onclick="goStep(5)"><i class="ti ti-arrow-left"></i> Back</button>
+      <button class="pnav-btn primary" onclick="goStep(1)"><i class="ti ti-refresh"></i> Start Over</button>
+      <button class="pnav-btn" onclick="window.location.href='admin.html'"><i class="ti ti-layout-dashboard"></i> Back to Admin</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  var currentStep = 1;
+  function goStep(n) {
+    document.querySelectorAll('.step-screen').forEach(function(s) { s.classList.remove('active'); });
+    document.querySelectorAll('.step-btn').forEach(function(b, i) {
+      b.classList.remove('active','done');
+      if (i + 1 < n) b.classList.add('done');
+      if (i + 1 === n) b.classList.add('active');
+    });
+    document.getElementById('step-' + n).classList.add('active');
+    currentStep = n;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  function logout() {
+    if (confirm('Sign out of MJMConnect?')) {
+      sessionStorage.removeItem('mjm_user');
+      window.location.href = 'login.html';
+    }
+  }
+</script>
+</body>
+</html>

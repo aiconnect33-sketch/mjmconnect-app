@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0F6E56">
+<title>MJMConnect — Set Up Your Account</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --green:#0F6E56;--green-mid:#1D9E75;--green-lite:#5DCAA5;
+  --green-bg:#E1F5EE;--green-text:#085041;
+  --red-bg:#FCEBEB;--red-text:#A32D2D;
+  --amber-bg:#FAEEDA;--amber-text:#854F0B;
+  --bg:#F4F6F5;--surface:#FFFFFF;--border:#D8E4E0;
+  --text:#111C18;--text2:#6B7A73;--text3:#9AABA3;
+  --r-md:10px;--r-lg:14px;--r-xl:20px;
+}
+html,body{min-height:100%;font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;}
+.page{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:24px 16px 48px;}
+.card{width:100%;max-width:400px;background:var(--surface);border-radius:var(--r-xl);border:0.5px solid var(--border);box-shadow:0 4px 24px rgba(15,110,86,0.08);overflow:hidden;margin-top:8px;}
+.card-header{background:var(--green);padding:22px 24px 18px;display:flex;align-items:center;gap:12px;}
+.header-icon{width:44px;height:44px;border-radius:12px;background:var(--green-mid);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.header-icon i{font-size:22px;color:#E1F5EE;}
+.header-title{font-size:18px;font-weight:700;color:#E1F5EE;}
+.header-title span{color:var(--green-lite);font-weight:400;}
+.header-sub{font-size:12px;color:rgba(225,245,238,0.75);margin-top:2px;}
+.invite-banner{background:var(--green-bg);border-bottom:0.5px solid #C2E6D8;padding:10px 20px;display:flex;align-items:center;gap:8px;}
+.invite-banner i{font-size:15px;color:var(--green);flex-shrink:0;}
+.invite-banner-text{font-size:12px;color:var(--green-text);line-height:1.5;}
+.invite-banner-text strong{font-weight:600;}
+.steps-bar{padding:14px 20px 0;display:flex;align-items:center;}
+.step-item{display:flex;flex-direction:column;align-items:center;flex:1;}
+.step-circle{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;border:2px solid var(--border);color:var(--text3);background:var(--surface);transition:all 0.3s;}
+.step-circle.active{border-color:var(--green);color:var(--green);background:var(--green-bg);}
+.step-circle.done{border-color:var(--green);background:var(--green);color:#fff;}
+.step-label-text{font-size:9px;font-weight:600;color:var(--text3);margin-top:3px;text-transform:uppercase;letter-spacing:0.04em;text-align:center;white-space:nowrap;}
+.step-label-text.active{color:var(--green);}
+.step-connector{flex:1;height:2px;background:var(--border);margin-bottom:16px;transition:background 0.3s;}
+.step-connector.done{background:var(--green);}
+.card-body{padding:18px 20px 4px;}
+.reg-panel{display:none;}.reg-panel.active{display:block;}
+.panel-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:3px;}
+.panel-sub{font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:14px;}
+.form-group{margin-bottom:12px;}
+.form-label{display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:5px;}
+.optional-tag{font-size:10px;color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0;margin-left:3px;}
+.input-wrap{position:relative;}
+.form-input{width:100%;border:1px solid var(--border);border-radius:var(--r-md);padding:10px 36px 10px 36px;font-size:13px;color:var(--text);background:var(--surface);font-family:inherit;outline:none;transition:border-color 0.15s,box-shadow 0.15s;-webkit-appearance:none;}
+.form-input::placeholder{color:var(--text3);}
+.form-input:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(15,110,86,0.1);}
+.form-input.locked{background:var(--bg);color:var(--text2);cursor:not-allowed;}
+.form-input.error{border-color:var(--red-text);}
+.form-input.valid{border-color:var(--green);}
+.input-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--text3);pointer-events:none;}
+.input-icon-right{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--text3);background:none;border:none;cursor:pointer;padding:0;}
+.field-error{font-size:11px;color:var(--red-text);margin-top:4px;display:none;align-items:center;gap:4px;}
+.field-error.visible{display:flex;}
+.field-hint{font-size:11px;color:var(--text3);margin-top:3px;}
+.pw-strength-row{display:flex;align-items:center;gap:6px;margin-top:6px;}
+.pw-bars{display:flex;gap:3px;flex:1;}
+.pw-bar{flex:1;height:3px;border-radius:2px;background:#E0E0E0;transition:background 0.25s;}
+.pw-bar.weak{background:var(--red-text);}.pw-bar.fair{background:#F0A500;}.pw-bar.good{background:var(--green-mid);}.pw-bar.strong{background:var(--green);}
+.pw-strength-label{font-size:10px;font-weight:600;min-width:40px;text-align:right;}
+.pw-checklist{background:var(--bg);border-radius:var(--r-md);padding:9px 11px;margin-top:7px;display:flex;flex-direction:column;gap:4px;}
+.pw-check-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text3);transition:color 0.2s;}
+.pw-check-item.met{color:var(--green-text);}
+.pw-check-item i{font-size:12px;color:var(--text3);transition:color 0.2s;}
+.pw-check-item.met i{color:var(--green);}
+.security-note{background:var(--green-bg);border-radius:var(--r-md);padding:9px 11px;display:flex;gap:7px;align-items:flex-start;margin-bottom:12px;}
+.security-note i{font-size:13px;color:var(--green);margin-top:1px;flex-shrink:0;}
+.security-note span{font-size:11px;color:var(--green-text);line-height:1.5;}
+.profile-preview{background:var(--bg);border-radius:var(--r-lg);border:0.5px solid var(--border);padding:12px;display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.profile-av{width:42px;height:42px;border-radius:50%;background:var(--green-bg);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--green-text);flex-shrink:0;}
+.success-icon-circle{width:64px;height:64px;border-radius:50%;background:var(--green-bg);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;}
+.success-icon-circle i{font-size:32px;color:var(--green);}
+.access-item{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);padding:5px 0;border-bottom:0.5px solid var(--border);}
+.access-item:last-child{border-bottom:none;}
+.access-item i{font-size:14px;color:var(--green);flex-shrink:0;}
+.btn-primary{width:100%;background:var(--green);color:#fff;border:none;border-radius:var(--r-md);padding:11px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:background 0.15s;margin-bottom:8px;}
+.btn-primary:disabled{background:var(--text3);cursor:not-allowed;}
+.btn-ghost{width:100%;background:transparent;color:var(--green);border:1px solid var(--green);border-radius:var(--r-md);padding:10px;font-size:13px;font-weight:500;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:8px;}
+.spinner{width:15px;height:15px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;display:none;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.alert{border-radius:var(--r-md);padding:10px 12px;font-size:12px;line-height:1.5;margin-bottom:12px;display:none;align-items:flex-start;gap:8px;}
+.alert.visible{display:flex;}
+.alert i{font-size:15px;flex-shrink:0;margin-top:1px;}
+.alert-error{background:var(--red-bg);color:var(--red-text);}
+.card-footer{padding:4px 20px 18px;}
+.hdivider{height:0.5px;background:var(--border);margin:14px 0 12px;}
+.footer-note{text-align:center;font-size:11px;color:var(--text3);line-height:1.6;}
+.footer-note a{color:var(--green);font-weight:500;text-decoration:none;}
+.version-tag{text-align:center;margin-top:18px;font-size:11px;color:#aaa;}
+.expired-icon{width:56px;height:56px;border-radius:50%;background:var(--amber-bg);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;}
+.expired-icon i{font-size:26px;color:var(--amber-text);}
+.loading-screen{text-align:center;padding:40px 20px;}
+.loading-screen i{font-size:32px;color:var(--green);animation:spin 1s linear infinite;}
+.loading-screen p{font-size:13px;color:var(--text2);margin-top:12px;}
+</style>
+</head>
+<body>
+<div class="page">
+<div class="card">
+
+  <div class="card-header">
+    <div class="header-icon"><i class="ti ti-user-check"></i></div>
+    <div>
+      <div class="header-title">MJM<span>Connect</span></div>
+      <div class="header-sub">Set up your account</div>
+    </div>
+  </div>
+
+  <div class="invite-banner" id="invite-banner">
+    <i class="ti ti-mail-check"></i>
+    <div class="invite-banner-text">You've been invited by <strong>HR Department</strong>. Complete the steps below to activate your account.</div>
+  </div>
+
+  <div class="steps-bar">
+    <div class="step-item">
+      <div class="step-circle active" id="sc-1">1</div>
+      <div class="step-label-text active" id="sl-1">Your Info</div>
+    </div>
+    <div class="step-connector" id="conn-1"></div>
+    <div class="step-item">
+      <div class="step-circle" id="sc-2">2</div>
+      <div class="step-label-text" id="sl-2">Password</div>
+    </div>
+    <div class="step-connector" id="conn-2"></div>
+    <div class="step-item">
+      <div class="step-circle" id="sc-3">3</div>
+      <div class="step-label-text" id="sl-3">Done</div>
+    </div>
+  </div>
+
+  <!-- LOADING PANEL -->
+  <div class="reg-panel active" id="panel-loading">
+    <div class="card-body">
+      <div class="loading-screen">
+        <i class="ti ti-loader"></i>
+        <p>Verifying your invite link...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANEL 1 — YOUR INFO -->
+  <div class="reg-panel" id="panel-1">
+    <div class="card-body">
+      <div class="panel-title">Confirm your details</div>
+      <div class="panel-sub">Your email is set by HR and cannot be changed. Confirm your name and optionally add a phone number.</div>
+      <div class="alert alert-error" id="p1-alert">
+        <i class="ti ti-alert-circle"></i><span id="p1-alert-msg">Please fill in all required fields.</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Work Email</label>
+        <div class="input-wrap">
+          <i class="ti ti-mail input-icon"></i>
+          <input class="form-input locked" type="email" id="reg-email" readonly>
+          <i class="ti ti-lock input-icon-right" style="cursor:default;"></i>
+        </div>
+        <div class="field-hint">Set by HR · cannot be changed</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Full Name</label>
+        <div class="input-wrap">
+          <i class="ti ti-user input-icon"></i>
+          <input class="form-input" type="text" id="reg-name" placeholder="As per your ID" oninput="updateAvatar()">
+        </div>
+        <div class="field-error" id="name-error"><i class="ti ti-alert-circle"></i><span>Full name is required.</span></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Phone Number <span class="optional-tag">(optional)</span></label>
+        <div class="input-wrap">
+          <i class="ti ti-phone input-icon"></i>
+          <input class="form-input" type="tel" id="reg-phone" placeholder="e.g. 019-3456789" inputmode="tel">
+        </div>
+      </div>
+    </div>
+    <div class="card-footer">
+      <button class="btn-primary" onclick="goStep(2)">Continue <i class="ti ti-arrow-right"></i></button>
+      <div class="hdivider"></div>
+      <div class="footer-note">Wrong details? <a href="login.html">Contact HR</a> to update your invite.</div>
+    </div>
+  </div>
+
+  <!-- PANEL 2 — PASSWORD -->
+  <div class="reg-panel" id="panel-2">
+    <div class="card-body">
+      <div class="panel-title">Create your password</div>
+      <div class="panel-sub">Choose a strong password to keep your account secure.</div>
+      <div class="alert alert-error" id="p2-alert">
+        <i class="ti ti-alert-circle"></i><span id="p2-alert-msg">Please check your password.</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">New Password</label>
+        <div class="input-wrap">
+          <i class="ti ti-lock input-icon"></i>
+          <input class="form-input" type="password" id="pw-new" placeholder="At least 8 characters" oninput="evalPassword()" autocomplete="new-password">
+          <button class="input-icon-right" type="button" onclick="togglePw('pw-new','eye-new')"><i class="ti ti-eye" id="eye-new"></i></button>
+        </div>
+        <div class="pw-strength-row">
+          <div class="pw-bars">
+            <div class="pw-bar" id="bar1"></div>
+            <div class="pw-bar" id="bar2"></div>
+            <div class="pw-bar" id="bar3"></div>
+            <div class="pw-bar" id="bar4"></div>
+          </div>
+          <div class="pw-strength-label" id="strength-label" style="color:var(--text3);">—</div>
+        </div>
+        <div class="pw-checklist">
+          <div class="pw-check-item" id="chk-len"><i class="ti ti-circle"></i> At least 8 characters</div>
+          <div class="pw-check-item" id="chk-upper"><i class="ti ti-circle"></i> One uppercase letter (A–Z)</div>
+          <div class="pw-check-item" id="chk-num"><i class="ti ti-circle"></i> One number (0–9)</div>
+          <div class="pw-check-item" id="chk-special"><i class="ti ti-circle"></i> One special character (!@#$…)</div>
+        </div>
+        <div class="field-error" id="pw-error"><i class="ti ti-alert-circle"></i><span>Password must meet all requirements.</span></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Confirm Password</label>
+        <div class="input-wrap">
+          <i class="ti ti-lock-check input-icon"></i>
+          <input class="form-input" type="password" id="pw-confirm" placeholder="Re-enter your password" oninput="checkConfirm()" autocomplete="new-password">
+          <button class="input-icon-right" type="button" onclick="togglePw('pw-confirm','eye-confirm')"><i class="ti ti-eye" id="eye-confirm"></i></button>
+        </div>
+        <div class="field-error" id="confirm-error"><i class="ti ti-alert-circle"></i><span>Passwords do not match.</span></div>
+      </div>
+      <div class="security-note">
+        <i class="ti ti-shield-check"></i>
+        <span>Your password is encrypted. HR and admins can never see it.</span>
+      </div>
+    </div>
+    <div class="card-footer">
+      <button class="btn-primary" id="create-btn" onclick="handleCreate()">
+        <span id="create-label">Create My Account</span>
+        <div class="spinner" id="create-spinner"></div>
+      </button>
+      <button class="btn-ghost" onclick="goStep(1)"><i class="ti ti-arrow-left"></i> Back</button>
+      <div class="hdivider"></div>
+      <div class="footer-note">Wrong details? <a href="login.html">Contact HR</a> to update your invite.</div>
+    </div>
+  </div>
+
+  <!-- PANEL 3 — SUCCESS -->
+  <div class="reg-panel" id="panel-3">
+    <div class="card-body">
+      <div style="text-align:center;padding:12px 0 8px;">
+        <div class="success-icon-circle"><i class="ti ti-confetti"></i></div>
+        <div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:5px;" id="success-name">You're all set!</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:14px;">Your MJMConnect account is ready. Welcome to the team!</div>
+        <div class="profile-preview">
+          <div class="profile-av" id="success-av">?</div>
+          <div style="text-align:left;">
+            <div style="font-size:13px;font-weight:600;color:var(--text);" id="success-fullname"></div>
+            <div style="font-size:11px;color:var(--text2);" id="success-email"></div>
+          </div>
+        </div>
+        <div style="background:var(--bg);border-radius:var(--r-lg);border:0.5px solid var(--border);padding:10px 12px;margin-bottom:14px;text-align:left;">
+          <div class="access-item"><i class="ti ti-speakerphone"></i> Announcements &amp; notices</div>
+          <div class="access-item"><i class="ti ti-calendar"></i> Office calendar &amp; events</div>
+          <div class="access-item"><i class="ti ti-beach"></i> Leave schedule</div>
+          <div class="access-item"><i class="ti ti-users"></i> Duty roster</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-footer">
+      <button class="btn-primary" onclick="window.location.href='login.html'">
+        <i class="ti ti-login"></i> Go to Sign In
+      </button>
+      <div class="hdivider"></div>
+      <div class="footer-note">MJMConnect · © 2026</div>
+    </div>
+  </div>
+
+  <!-- PANEL — EXPIRED -->
+  <div class="reg-panel" id="panel-expired">
+    <div class="card-body">
+      <div style="text-align:center;padding:20px 0 12px;">
+        <div class="expired-icon"><i class="ti ti-clock-x"></i></div>
+        <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:5px;">This invite link has expired</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:14px;">
+          Invite links are valid for 48 hours. This one has expired or has already been used.<br><br>
+          Please contact HR to request a new invite link.
+        </div>
+        <div class="security-note" style="text-align:left;">
+          <i class="ti ti-info-circle"></i>
+          <span>For security, each invite link can only be used once and expires after 48 hours.</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-footer">
+      <button class="btn-ghost" onclick="window.location.href='login.html'">
+        <i class="ti ti-arrow-left"></i> Back to Sign In
+      </button>
+      <div class="hdivider"></div>
+      <div class="footer-note">Need help? Contact your HR department.</div>
+    </div>
+  </div>
+
+</div>
+<div class="version-tag">MJMConnect · v1.0 · © 2026</div>
+</div>
+
+<script>
+var SURL = 'https://jkbxngfwkytscgxnnnnd.supabase.co';
+var SKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImprYnhuZ2Z3a3l0c2NneG5ubm5kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNTcyMjcsImV4cCI6MjA5NTYzMzIyN30._FIzBEcmwtAkADDiDZVTS-YQY0kLoGBowL8n7T45Ulk';
+var currentStep = 1;
+var accessToken  = null;
+var refreshToken = null;
+var userEmail    = null;
+
+// ── ON LOAD — parse token from URL ──
+window.addEventListener('DOMContentLoaded', async function() {
+
+  // Supabase puts tokens in the URL hash after redirect
+  // Format: #access_token=xxx&refresh_token=xxx&type=invite
+  var hash   = window.location.hash.substring(1);
+  var params = new URLSearchParams(hash);
+
+  accessToken  = params.get('access_token');
+  refreshToken = params.get('refresh_token');
+  var type     = params.get('type');
+
+  if (!accessToken || type !== 'invite') {
+    // No valid invite token — show expired screen
+    showPanel('expired');
+    return;
+  }
+
+  // Get user info from Supabase using the access token
+  try {
+    var res = await fetch(SURL + '/auth/v1/user', {
+      headers: {
+        'apikey': SKEY,
+        'Authorization': 'Bearer ' + accessToken
+      }
+    });
+    var data = await res.json();
+
+    if (!res.ok || !data.email) {
+      showPanel('expired');
+      return;
+    }
+
+    userEmail = data.email;
+
+    // Pre-fill email and name
+    document.getElementById('reg-email').value = userEmail;
+
+    // Try to get name from profiles table
+    var profile = await fetch(SURL + '/rest/v1/profiles?email=eq.' + encodeURIComponent(userEmail) + '&select=full_name', {
+      headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + accessToken }
+    });
+    var profileData = await profile.json();
+    if (profileData && profileData.length > 0 && profileData[0].full_name) {
+      document.getElementById('reg-name').value = profileData[0].full_name;
+      updateAvatar();
+    }
+
+    // Show step 1
+    showPanel('1');
+
+  } catch(e) {
+    showPanel('expired');
+  }
+});
+
+// ── SHOW PANEL ──
+function showPanel(name) {
+  document.querySelectorAll('.reg-panel').forEach(function(p){ p.classList.remove('active'); });
+  document.getElementById('panel-' + name).classList.add('active');
+}
+
+// ── GO STEP ──
+function goStep(n) {
+  if (n === 2 && currentStep === 1) {
+    if (!validateStep1()) return;
+  }
+  showPanel(n);
+  currentStep = n;
+  updateStepUI(n);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function updateStepUI(n) {
+  for (var i = 1; i <= 3; i++) {
+    var circle = document.getElementById('sc-' + i);
+    var label  = document.getElementById('sl-' + i);
+    circle.classList.remove('active','done');
+    label.classList.remove('active');
+    if (i < n) { circle.classList.add('done'); circle.innerHTML = '<i class="ti ti-check"></i>'; }
+    else if (i === n) { circle.classList.add('active'); circle.innerHTML = i; label.classList.add('active'); }
+    else { circle.innerHTML = i; }
+  }
+  for (var j = 1; j <= 2; j++) {
+    document.getElementById('conn-' + j).classList.toggle('done', j < n);
+  }
+}
+
+function validateStep1() {
+  clearErrors();
+  var name = document.getElementById('reg-name').value.trim();
+  if (!name) {
+    document.getElementById('reg-name').classList.add('error');
+    document.getElementById('name-error').classList.add('visible');
+    document.getElementById('p1-alert-msg').textContent = 'Full name is required.';
+    document.getElementById('p1-alert').classList.add('visible');
+    return false;
+  }
+  return true;
+}
+
+function clearErrors() {
+  document.querySelectorAll('.field-error').forEach(function(e){ e.classList.remove('visible'); });
+  document.querySelectorAll('.form-input').forEach(function(i){ if (!i.classList.contains('locked')) { i.classList.remove('error','valid'); } });
+  document.querySelectorAll('.alert').forEach(function(a){ a.classList.remove('visible'); });
+}
+
+function updateAvatar() {
+  var name   = document.getElementById('reg-name').value.trim();
+  var parts  = name.split(' ').filter(Boolean);
+  var initials = parts.length >= 2 ? parts[0][0] + parts[1][0] : parts.length === 1 ? parts[0].substring(0,2) : '?';
+  document.getElementById('success-av').textContent = initials.toUpperCase();
+}
+
+function togglePw(inputId, iconId) {
+  var input = document.getElementById(inputId);
+  var icon  = document.getElementById(iconId);
+  if (input.type === 'password') { input.type = 'text'; icon.className = 'ti ti-eye-off'; }
+  else { input.type = 'password'; icon.className = 'ti ti-eye'; }
+}
+
+function evalPassword() {
+  var val = document.getElementById('pw-new').value;
+  var checks = {
+    len:     val.length >= 8,
+    upper:   /[A-Z]/.test(val),
+    num:     /[0-9]/.test(val),
+    special: /[^A-Za-z0-9]/.test(val)
+  };
+  setCheck('chk-len',     checks.len);
+  setCheck('chk-upper',   checks.upper);
+  setCheck('chk-num',     checks.num);
+  setCheck('chk-special', checks.special);
+  var score   = Object.values(checks).filter(Boolean).length;
+  var bars    = ['bar1','bar2','bar3','bar4'];
+  var levels  = ['','weak','fair','good','strong'];
+  var labels  = ['—','Weak','Fair','Good','Strong'];
+  var colors  = ['var(--text3)','var(--red-text)','#F0A500','var(--green-mid)','var(--green)'];
+  bars.forEach(function(id, i) {
+    var b = document.getElementById(id);
+    b.className = 'pw-bar';
+    if (i < score) b.classList.add(levels[score]);
+  });
+  var lbl = document.getElementById('strength-label');
+  lbl.textContent  = val.length === 0 ? '—' : labels[score];
+  lbl.style.color  = val.length === 0 ? 'var(--text3)' : colors[score];
+  if (document.getElementById('pw-confirm').value) checkConfirm();
+}
+
+function setCheck(id, met) {
+  var el = document.getElementById(id);
+  var ic = el.querySelector('i');
+  el.classList.toggle('met', met);
+  ic.className = met ? 'ti ti-circle-check' : 'ti ti-circle';
+}
+
+function checkConfirm() {
+  var pw1 = document.getElementById('pw-new').value;
+  var pw2 = document.getElementById('pw-confirm').value;
+  var inp = document.getElementById('pw-confirm');
+  var err = document.getElementById('confirm-error');
+  if (pw2 && pw1 !== pw2) {
+    inp.classList.add('error'); err.classList.add('visible');
+  } else {
+    inp.classList.remove('error'); err.classList.remove('visible');
+    if (pw2 && pw1 === pw2) inp.classList.add('valid');
+  }
+}
+
+// ── CREATE ACCOUNT ──
+async function handleCreate() {
+  clearErrors();
+  var pw1 = document.getElementById('pw-new').value;
+  var pw2 = document.getElementById('pw-confirm').value;
+  var checks = {
+    len:     pw1.length >= 8,
+    upper:   /[A-Z]/.test(pw1),
+    num:     /[0-9]/.test(pw1),
+    special: /[^A-Za-z0-9]/.test(pw1)
+  };
+
+  if (!pw1 || !Object.values(checks).every(Boolean)) {
+    document.getElementById('pw-new').classList.add('error');
+    document.getElementById('pw-error').classList.add('visible');
+    document.getElementById('p2-alert-msg').textContent = 'Password must meet all requirements listed.';
+    document.getElementById('p2-alert').classList.add('visible');
+    return;
+  }
+  if (pw1 !== pw2) {
+    document.getElementById('pw-confirm').classList.add('error');
+    document.getElementById('confirm-error').classList.add('visible');
+    document.getElementById('p2-alert-msg').textContent = 'Passwords do not match.';
+    document.getElementById('p2-alert').classList.add('visible');
+    return;
+  }
+
+  var btn = document.getElementById('create-btn');
+  var lbl = document.getElementById('create-label');
+  var spn = document.getElementById('create-spinner');
+  btn.disabled = true; lbl.style.display = 'none'; spn.style.display = 'block';
+
+  try {
+    var name  = document.getElementById('reg-name').value.trim();
+    var phone = document.getElementById('reg-phone').value.trim();
+
+    // Set the password using the invite access token
+    var res = await fetch(SURL + '/auth/v1/user', {
+      method: 'PUT',
+      headers: {
+        'apikey': SKEY,
+        'Authorization': 'Bearer ' + accessToken,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ password: pw1 })
+    });
+
+    if (!res.ok) {
+      var err = await res.json();
+      btn.disabled = false; lbl.style.display = 'inline'; spn.style.display = 'none';
+      document.getElementById('p2-alert-msg').textContent = err.msg || 'Could not set password. Please try again.';
+      document.getElementById('p2-alert').classList.add('visible');
+      return;
+    }
+
+    // Update profile in database
+    await fetch(SURL + '/rest/v1/profiles?email=eq.' + encodeURIComponent(userEmail), {
+      method: 'PATCH',
+      headers: {
+        'apikey': SKEY,
+        'Authorization': 'Bearer ' + accessToken,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify({ full_name: name, phone: phone, role: 'staff' })
+    });
+
+    // Show success screen
+    document.getElementById('success-name').textContent = 'Welcome, ' + name.split(' ')[0] + '!';
+    document.getElementById('success-fullname').textContent = name;
+    document.getElementById('success-email').textContent   = userEmail;
+    updateAvatar();
+    goStep(3);
+
+  } catch(e) {
+    btn.disabled = false; lbl.style.display = 'inline'; spn.style.display = 'none';
+    document.getElementById('p2-alert-msg').textContent = 'Connection error. Please try again.';
+    document.getElementById('p2-alert').classList.add('visible');
+  }
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    if (currentStep === 1) goStep(2);
+    if (currentStep === 2) handleCreate();
+  }
+});
+</script>
+</body>
+</html>

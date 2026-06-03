@@ -1,0 +1,2258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0F6E56">
+<title>MJMConnect — HR Admin</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ── RESET ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --green:       #0F6E56;
+  --green-mid:   #1D9E75;
+  --green-lite:  #5DCAA5;
+  --green-bg:    #E1F5EE;
+  --green-text:  #085041;
+  --red-bg:      #FCEBEB;
+  --red-text:    #A32D2D;
+  --red-dot:     #E24B4A;
+  --amber-bg:    #FAEEDA;
+  --amber-text:  #854F0B;
+  --blue-bg:     #E6F1FB;
+  --blue-text:   #185FA5;
+  --purple-bg:   #EEEDFE;
+  --purple-text: #534AB7;
+  --coral-bg:    #FAECE7;
+  --coral-text:  #993C1D;
+  --bg:          #F4F6F5;
+  --surface:     #FFFFFF;
+  --border:      #D8E4E0;
+  --text:        #111C18;
+  --text2:       #6B7A73;
+  --text3:       #9AABA3;
+  --r-sm:        6px;
+  --r-md:        10px;
+  --r-lg:        14px;
+  --r-xl:        20px;
+}
+
+html, body {
+  height: 100%;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── PHONE SHELL ── */
+.phone-wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  background: var(--bg);
+}
+.phone {
+  width: 100%;
+  max-width: 430px;
+  min-height: 100vh;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* ── STATUS BAR ── */
+.sb {
+  background: var(--green);
+  color: #E1F5EE;
+  font-size: 11px; font-weight: 500;
+  padding: 10px 18px 6px;
+  display: flex; justify-content: space-between; align-items: center;
+  flex-shrink: 0;
+}
+.sb-icons { display: flex; gap: 5px; align-items: center; }
+.sb-icons i { font-size: 13px; }
+
+/* ── TOP BAR ── */
+.topbar {
+  background: var(--green);
+  padding: 4px 16px 14px;
+  display: flex; justify-content: space-between; align-items: center;
+  flex-shrink: 0;
+}
+.wordmark { display: flex; align-items: center; gap: 9px; }
+.wm-icon {
+  width: 32px; height: 32px; border-radius: 9px;
+  background: var(--green-mid);
+  display: flex; align-items: center; justify-content: center;
+}
+.wm-icon i { font-size: 17px; color: #E1F5EE; }
+.wm-name { font-size: 16px; font-weight: 700; color: #E1F5EE; }
+.wm-name span { color: var(--green-lite); font-weight: 400; }
+.wm-badge {
+  font-size: 9px; font-weight: 700;
+  background: rgba(255,255,255,0.2);
+  color: #E1F5EE; padding: 2px 7px;
+  border-radius: 20px; margin-left: 2px;
+  letter-spacing: 0.05em; text-transform: uppercase;
+}
+.topbar-right { display: flex; align-items: center; gap: 10px; }
+.topbar-right i { font-size: 21px; color: #E1F5EE; cursor: pointer; }
+.top-av {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--green-mid);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: #E1F5EE; cursor: pointer;
+}
+
+/* ── TAB NAV ── */
+.tab-nav {
+  background: var(--surface);
+  border-bottom: 0.5px solid var(--border);
+  padding: 10px 14px 0;
+  display: flex; gap: 4px;
+  overflow-x: auto; scrollbar-width: none;
+  flex-shrink: 0;
+}
+.tab-nav::-webkit-scrollbar { display: none; }
+.tab-btn {
+  flex-shrink: 0;
+  font-size: 12px; font-weight: 500;
+  color: var(--text2);
+  padding: 6px 13px 8px;
+  border-radius: var(--r-sm) var(--r-sm) 0 0;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  border-top: none; border-left: none; border-right: none;
+  background: none; font-family: inherit;
+  white-space: nowrap; transition: color 0.15s, border-color 0.15s;
+}
+.tab-btn.active { color: var(--green); border-bottom-color: var(--green); font-weight: 600; }
+
+/* ── SCREEN BODY ── */
+.screen-body {
+  background: var(--bg);
+  flex: 1; overflow-y: auto;
+  padding: 14px 14px 90px;
+  -webkit-overflow-scrolling: touch;
+}
+.screen-section { display: none; }
+.screen-section.active { display: block; }
+
+/* ── STAT CARDS ── */
+.stats-grid {
+  display: grid; grid-template-columns: repeat(3,1fr);
+  gap: 8px; margin-bottom: 14px;
+}
+.stat-card {
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 12px 8px; text-align: center;
+}
+.stat-val { font-size: 22px; font-weight: 700; color: var(--green); line-height: 1; }
+.stat-lbl { font-size: 10px; color: var(--text2); margin-top: 4px; font-weight: 500; }
+.stat-card.warn .stat-val { color: var(--amber-text); }
+.stat-card.alert .stat-val { color: var(--red-text); }
+
+/* ── SECTION HEADER ── */
+.sec-hdr {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 10px; margin-top: 4px;
+}
+.sec-title {
+  font-size: 11px; font-weight: 700;
+  color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em;
+}
+.sec-action {
+  font-size: 11px; font-weight: 600;
+  color: var(--green); cursor: pointer; background: none; border: none;
+  font-family: inherit; padding: 0;
+}
+
+/* ── CARDS ── */
+.card {
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+.card-label {
+  font-size: 10px; font-weight: 700;
+  color: var(--text2); text-transform: uppercase;
+  letter-spacing: 0.05em; margin-bottom: 8px;
+}
+
+/* ── BADGES ── */
+.badge {
+  font-size: 10px; font-weight: 600;
+  padding: 2px 8px; border-radius: 20px;
+  letter-spacing: 0.02em; white-space: nowrap;
+}
+.b-green  { background: var(--green-bg);  color: var(--green-text); }
+.b-red    { background: var(--red-bg);    color: var(--red-text); }
+.b-amber  { background: var(--amber-bg);  color: var(--amber-text); }
+.b-blue   { background: var(--blue-bg);   color: var(--blue-text); }
+.b-purple { background: var(--purple-bg); color: var(--purple-text); }
+.b-coral  { background: var(--coral-bg);  color: var(--coral-text); }
+
+/* ── FORM ELEMENTS ── */
+.form-group { margin-bottom: 13px; }
+.form-label {
+  display: block; font-size: 11px; font-weight: 600;
+  color: var(--text2); text-transform: uppercase;
+  letter-spacing: 0.05em; margin-bottom: 6px;
+}
+.optional-tag {
+  font-size: 10px; color: var(--text3);
+  font-weight: 400; text-transform: none; letter-spacing: 0; margin-left: 3px;
+}
+.input-wrap { position: relative; }
+.form-input {
+  width: 100%; border: 1px solid var(--border);
+  border-radius: var(--r-md); padding: 10px 12px 10px 36px;
+  font-size: 13px; color: var(--text);
+  background: var(--surface); font-family: inherit;
+  outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+  -webkit-appearance: none;
+}
+.form-input.no-icon { padding-left: 12px; }
+.form-input::placeholder { color: var(--text3); }
+.form-input:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(15,110,86,0.1);
+}
+.form-input.error { border-color: var(--red-text); box-shadow: 0 0 0 3px rgba(163,45,45,0.08); }
+.form-textarea {
+  width: 100%; border: 1px solid var(--border);
+  border-radius: var(--r-md); padding: 10px 12px;
+  font-size: 13px; color: var(--text);
+  background: var(--surface); font-family: inherit;
+  outline: none; resize: vertical; min-height: 90px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  -webkit-appearance: none; line-height: 1.5;
+}
+.form-textarea::placeholder { color: var(--text3); }
+.form-textarea:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(15,110,86,0.1);
+}
+.form-select {
+  width: 100%; border: 1px solid var(--border);
+  border-radius: var(--r-md); padding: 10px 32px 10px 36px;
+  font-size: 13px; color: var(--text);
+  background: var(--surface); font-family: inherit;
+  outline: none; -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B7A73' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center;
+  transition: border-color 0.15s;
+}
+.form-select:focus { border-color: var(--green); outline: none; }
+.input-icon {
+  position: absolute; left: 11px; top: 50%;
+  transform: translateY(-50%);
+  font-size: 15px; color: var(--text3); pointer-events: none;
+}
+.char-count {
+  text-align: right; font-size: 10px;
+  color: var(--text3); margin-top: 4px;
+}
+.char-count.warn { color: var(--amber-text); }
+.char-count.over { color: var(--red-text); }
+.field-error {
+  font-size: 11px; color: var(--red-text);
+  margin-top: 5px; display: none;
+  align-items: center; gap: 4px;
+}
+.field-error i { font-size: 12px; }
+.field-error.visible { display: flex; }
+
+/* ── BADGE TYPE PICKER ── */
+.badge-picker {
+  display: flex; gap: 6px; flex-wrap: wrap;
+}
+.badge-opt {
+  padding: 5px 12px; border-radius: 20px;
+  font-size: 11px; font-weight: 600;
+  cursor: pointer; border: 1.5px solid transparent;
+  transition: all 0.15s; user-select: none;
+}
+.badge-opt.selected { border-color: var(--green); }
+.badge-opt-urgent   { background: var(--red-bg);    color: var(--red-text); }
+.badge-opt-general  { background: var(--green-bg);  color: var(--green-text); }
+.badge-opt-hr       { background: var(--blue-bg);   color: var(--blue-text); }
+.badge-opt-facility { background: var(--amber-bg);  color: var(--amber-text); }
+.badge-opt-event    { background: var(--purple-bg); color: var(--purple-text); }
+
+/* ── NOTIFY TOGGLE ── */
+.toggle-row {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  padding: 10px 0; border-top: 0.5px solid var(--border);
+  margin-top: 4px;
+}
+.toggle-info { flex: 1; }
+.toggle-label { font-size: 13px; font-weight: 500; color: var(--text); }
+.toggle-sub   { font-size: 11px; color: var(--text2); margin-top: 2px; }
+.toggle-switch {
+  width: 44px; height: 26px; border-radius: 13px;
+  background: var(--border); position: relative;
+  cursor: pointer; transition: background 0.2s; flex-shrink: 0;
+}
+.toggle-switch.on { background: var(--green); }
+.toggle-knob {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: #fff; position: absolute;
+  top: 3px; left: 3px;
+  transition: transform 0.2s;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
+.toggle-switch.on .toggle-knob { transform: translateX(18px); }
+
+/* ── BUTTONS ── */
+.btn-primary {
+  width: 100%; background: var(--green);
+  color: #fff; border: none; border-radius: var(--r-md);
+  padding: 12px; font-size: 14px; font-weight: 600;
+  font-family: inherit; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  transition: background 0.15s, transform 0.1s;
+  margin-bottom: 8px;
+}
+.btn-primary:hover  { background: #0d5f49; }
+.btn-primary:active { transform: scale(0.98); }
+.btn-primary:disabled { background: var(--text3); cursor: not-allowed; }
+.btn-ghost {
+  width: 100%; background: transparent;
+  color: var(--green); border: 1px solid var(--green);
+  border-radius: var(--r-md); padding: 11px;
+  font-size: 13px; font-weight: 500; font-family: inherit; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  transition: background 0.15s; margin-bottom: 8px;
+}
+.btn-ghost:hover { background: var(--green-bg); }
+.btn-danger {
+  background: none; border: none;
+  color: var(--red-text); font-size: 12px; font-weight: 500;
+  font-family: inherit; cursor: pointer; padding: 0;
+  display: flex; align-items: center; gap: 4px;
+}
+.btn-icon {
+  width: 30px; height: 30px; border-radius: var(--r-sm);
+  border: 0.5px solid var(--border); background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--text2); font-size: 15px;
+}
+.btn-icon:hover { background: var(--surface); }
+.btn-icon.danger { color: var(--red-text); border-color: var(--red-bg); background: var(--red-bg); }
+
+/* ── SPINNER ── */
+.spinner {
+  width: 16px; height: 16px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff; border-radius: 50%;
+  animation: spin 0.7s linear infinite; display: none;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── ALERT ── */
+.alert {
+  border-radius: var(--r-md); padding: 10px 12px;
+  font-size: 12px; line-height: 1.5; margin-bottom: 12px;
+  display: none; align-items: flex-start; gap: 8px;
+}
+.alert.visible { display: flex; }
+.alert i { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+.alert-success { background: var(--green-bg); color: var(--green-text); }
+.alert-error   { background: var(--red-bg);   color: var(--red-text); }
+
+/* ── ANNOUNCEMENT LIST ITEM ── */
+.ann-item {
+  background: var(--surface); border: 0.5px solid var(--border);
+  border-radius: var(--r-lg); padding: 12px 14px; margin-bottom: 10px;
+}
+.ann-item.card-urgent  { border-left: 3px solid var(--red-dot);   border-radius: 0 var(--r-lg) var(--r-lg) 0; }
+.ann-item.card-general { border-left: 3px solid var(--green);     border-radius: 0 var(--r-lg) var(--r-lg) 0; }
+.ann-item.card-hr      { border-left: 3px solid var(--blue-text); border-radius: 0 var(--r-lg) var(--r-lg) 0; }
+.ann-item.card-facility{ border-left: 3px solid var(--amber-text);border-radius: 0 var(--r-lg) var(--r-lg) 0; }
+.ann-item.card-event   { border-left: 3px solid var(--purple-text);border-radius: 0 var(--r-lg) var(--r-lg) 0; }
+.ann-meta {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  margin-bottom: 6px;
+}
+.ann-time  { font-size: 10px; color: var(--text3); }
+.ann-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+.ann-body  { font-size: 12px; color: var(--text2); line-height: 1.5; }
+.ann-actions {
+  display: flex; gap: 8px; margin-top: 10px;
+  padding-top: 10px; border-top: 0.5px solid var(--border);
+  align-items: center;
+}
+.ann-author {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; color: var(--text3); flex: 1;
+}
+.ann-author i { font-size: 13px; }
+
+/* ── PERSON ROW ── */
+.person-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 0; border-bottom: 0.5px solid var(--border);
+}
+.person-row:first-child { padding-top: 0; }
+.person-row:last-child  { border-bottom: none; padding-bottom: 0; }
+.p-name { font-size: 13px; font-weight: 500; color: var(--text); }
+.p-sub  { font-size: 11px; color: var(--text2); margin-top: 1px; }
+
+/* ── AVATARS ── */
+.av {
+  width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 600; flex-shrink: 0;
+}
+.av-g { background: var(--green-bg);  color: var(--green-text); }
+.av-b { background: var(--blue-bg);   color: var(--blue-text); }
+.av-a { background: var(--amber-bg);  color: var(--amber-text); }
+.av-c { background: var(--coral-bg);  color: var(--coral-text); }
+.av-p { background: var(--purple-bg); color: var(--purple-text); }
+.av-r { background: var(--red-bg);    color: var(--red-text); }
+
+/* ── DUTY SLOT ── */
+.duty-slot {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  padding: 8px 0; border-bottom: 0.5px solid var(--border);
+}
+.duty-slot:first-child { padding-top: 0; }
+.duty-slot:last-child  { border-bottom: none; padding-bottom: 0; }
+.duty-person { display: flex; align-items: center; gap: 8px; }
+.duty-right  { display: flex; align-items: center; gap: 6px; }
+
+/* ── ADD ROW BUTTON ── */
+.add-row-btn {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 600; color: var(--green);
+  background: none; border: none; font-family: inherit;
+  cursor: pointer; padding: 8px 0 2px;
+}
+.add-row-btn i { font-size: 15px; }
+
+/* ── INLINE FORM CARD ── */
+.inline-form {
+  background: var(--green-bg);
+  border: 1px solid #C2E6D8;
+  border-radius: var(--r-lg); padding: 12px 14px;
+  margin-bottom: 10px; display: none;
+}
+.inline-form.visible { display: block; }
+.inline-form-title {
+  font-size: 12px; font-weight: 700; color: var(--green-text);
+  margin-bottom: 10px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.close-btn {
+  background: none; border: none; color: var(--green-text);
+  cursor: pointer; font-size: 16px; padding: 0; line-height: 1;
+}
+
+/* ── MODAL OVERLAY ── */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: none; align-items: center; justify-content: center;
+  z-index: 200; padding: 20px;
+}
+.modal-overlay.visible { display: flex; }
+.modal {
+  background: var(--surface); border-radius: var(--r-xl);
+  padding: 20px; width: 100%; max-width: 360px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+.modal-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+.modal-body  { font-size: 13px; color: var(--text2); line-height: 1.5; margin-bottom: 18px; }
+.modal-actions { display: flex; gap: 8px; }
+.modal-actions button { flex: 1; }
+
+/* ── BOTTOM NAV ── */
+.nav-bar {
+  position: fixed; bottom: 0;
+  width: 100%; max-width: 430px;
+  background: var(--surface);
+  border-top: 0.5px solid var(--border);
+  display: flex; justify-content: space-around;
+  padding: 8px 0 20px; z-index: 100;
+}
+.nav-item {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  font-size: 10px; font-weight: 500; color: var(--text2);
+  cursor: pointer; padding: 0 10px;
+}
+.nav-item i { font-size: 22px; }
+.nav-item.active { color: var(--green); }
+.nav-dot {
+  position: relative; display: inline-block;
+}
+.nav-dot::after {
+  content: ''; position: absolute; top: 0; right: -3px;
+  width: 7px; height: 7px; background: var(--red-dot);
+  border-radius: 50%; border: 1.5px solid var(--surface);
+}
+
+/* ── DIVIDER ── */
+.divider { height: 0.5px; background: var(--border); margin: 10px 0; }
+</style>
+</head>
+<body>
+<script>
+  // Auth guard — set a demo admin session if none exists (for direct file testing)
+  (function() {
+    if (!sessionStorage.getItem('mjm_user')) {
+      sessionStorage.setItem('mjm_user', JSON.stringify({
+        email: 'admin@mjmconnect.com',
+        role: 'admin',
+        name: 'HR Admin'
+      }));
+    }
+  })();
+</script>
+
+<div class="phone-wrap">
+<div class="phone">
+
+  <!-- STATUS BAR -->
+  <div class="sb">
+    <span id="js-clock">9:41</span>
+    <div class="sb-icons">
+      <i class="ti ti-wifi"></i>
+      <i class="ti ti-battery-3"></i>
+    </div>
+  </div>
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="wordmark">
+      <div class="wm-icon"><i class="ti ti-building-community"></i></div>
+      <div class="wm-name">MJM<span>Connect</span></div>
+      <div class="wm-badge">Admin</div>
+    </div>
+    <div class="topbar-right">
+      <i class="ti ti-bell"></i>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;">
+        <div class="top-av" onclick="logout()" title="Sign out" style="cursor:pointer;">SA</div>
+        <div id="role-badge" style="font-size:9px;color:rgba(225,245,238,0.8);font-weight:600;letter-spacing:0.04em;">Super Admin</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB NAV -->
+  <div class="tab-nav">
+    <button class="tab-btn active" onclick="switchTab(this,'dashboard')">Dashboard</button>
+    <button class="tab-btn" onclick="switchTab(this,'announce')">Announcements</button>
+    <button class="tab-btn" onclick="switchTab(this,'invite')">Invite Staff</button>
+    <button class="tab-btn" onclick="switchTab(this,'leave')">Leave</button>
+    <button class="tab-btn" onclick="switchTab(this,'duty')">Duty</button>
+    <button class="tab-btn" id="settings-tab-btn" onclick="switchTab(this,'settings')">Settings</button>
+  </div>
+
+  <!-- SCREEN BODY -->
+  <div class="screen-body">
+
+    <!-- ═══════════════════════════
+         DASHBOARD
+    ═══════════════════════════ -->
+    <div class="screen-section active" id="screen-dashboard">
+
+      <!-- Stats -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-val">24</div>
+          <div class="stat-lbl">Total Staff</div>
+        </div>
+        <div class="stat-card warn">
+          <div class="stat-val">2</div>
+          <div class="stat-lbl">On Leave</div>
+        </div>
+        <div class="stat-card alert">
+          <div class="stat-val">3</div>
+          <div class="stat-lbl">Pending Invites</div>
+        </div>
+      </div>
+
+      <!-- Quick actions -->
+      <div class="sec-hdr">
+        <div class="sec-title">Quick Actions</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+        <button class="card" style="text-align:center;cursor:pointer;border:none;font-family:inherit;"
+          onclick="switchTabByName('announce');setTimeout(()=>showPostForm(),100)">
+          <i class="ti ti-speakerphone" style="font-size:22px;color:var(--green);display:block;margin-bottom:6px;"></i>
+          <div style="font-size:12px;font-weight:600;color:var(--text);">Post Announcement</div>
+        </button>
+        <button class="card" style="text-align:center;cursor:pointer;border:none;font-family:inherit;"
+          onclick="switchTabByName('invite')">
+          <i class="ti ti-user-plus" style="font-size:22px;color:var(--green);display:block;margin-bottom:6px;"></i>
+          <div style="font-size:12px;font-weight:600;color:var(--text);">Invite Staff</div>
+        </button>
+        <button class="card" style="text-align:center;cursor:pointer;border:none;font-family:inherit;"
+          onclick="switchTabByName('leave');setTimeout(()=>showLeaveForm(),100)">
+          <i class="ti ti-beach" style="font-size:22px;color:var(--green);display:block;margin-bottom:6px;"></i>
+          <div style="font-size:12px;font-weight:600;color:var(--text);">Add Leave</div>
+        </button>
+        <button class="card" style="text-align:center;cursor:pointer;border:none;font-family:inherit;"
+          onclick="switchTabByName('duty');setTimeout(()=>showDutyForm(),100)">
+          <i class="ti ti-users" style="font-size:22px;color:var(--green);display:block;margin-bottom:6px;"></i>
+          <div style="font-size:12px;font-weight:600;color:var(--text);">Update Duty</div>
+        </button>
+      </div>
+
+      <!-- Recent activity -->
+      <div class="sec-hdr">
+        <div class="sec-title">Recent Activity</div>
+      </div>
+      <div class="card">
+        <div class="person-row">
+          <div style="width:32px;height:32px;border-radius:var(--r-sm);background:var(--green-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <i class="ti ti-speakerphone" style="font-size:15px;color:var(--green);"></i>
+          </div>
+          <div style="flex:1;">
+            <div class="p-name">Announcement posted</div>
+            <div class="p-sub">Office Closure — Friday 30 May</div>
+          </div>
+          <span style="font-size:10px;color:var(--text3);">2h ago</span>
+        </div>
+        <div class="person-row">
+          <div style="width:32px;height:32px;border-radius:var(--r-sm);background:var(--amber-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <i class="ti ti-user-plus" style="font-size:15px;color:var(--amber-text);"></i>
+          </div>
+          <div style="flex:1;">
+            <div class="p-name">Invite sent</div>
+            <div class="p-sub">nurulain@mjmconnect.com</div>
+          </div>
+          <span style="font-size:10px;color:var(--text3);">3h ago</span>
+        </div>
+        <div class="person-row">
+          <div style="width:32px;height:32px;border-radius:var(--r-sm);background:var(--blue-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <i class="ti ti-beach" style="font-size:15px;color:var(--blue-text);"></i>
+          </div>
+          <div style="flex:1;">
+            <div class="p-name">Leave added</div>
+            <div class="p-sub">Rachel Lim · Annual Leave</div>
+          </div>
+          <span style="font-size:10px;color:var(--text3);">Yesterday</span>
+        </div>
+        <div class="person-row">
+          <div style="width:32px;height:32px;border-radius:var(--r-sm);background:var(--purple-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <i class="ti ti-users" style="font-size:15px;color:var(--purple-text);"></i>
+          </div>
+          <div style="flex:1;">
+            <div class="p-name">Duty roster updated</div>
+            <div class="p-sub">Week 22 — Ahmad Hafiz assigned</div>
+          </div>
+          <span style="font-size:10px;color:var(--text3);">2 days ago</span>
+        </div>
+      </div>
+
+      <!-- Pending invites -->
+      <div class="sec-hdr" style="margin-top:4px;">
+        <div class="sec-title">Pending Invites</div>
+        <button class="sec-action" onclick="window.location.href='admin-invite.html'">Manage</button>
+      </div>
+      <div class="card">
+        <div class="person-row">
+          <div class="av av-g">NA</div>
+          <div style="flex:1;">
+            <div class="p-name">Nurul Ain Binti Razak</div>
+            <div class="p-sub">nurulain@mjmconnect.com · sent 2h ago</div>
+          </div>
+          <span class="badge b-amber">Pending</span>
+        </div>
+        <div class="person-row">
+          <div class="av av-c">RL</div>
+          <div style="flex:1;">
+            <div class="p-name">Rachel Lim</div>
+            <div class="p-sub">rachel.lim@mjmconnect.com · sent 1d ago</div>
+          </div>
+          <span class="badge b-amber">Pending</span>
+        </div>
+        <div class="person-row">
+          <div class="av av-a">MH</div>
+          <div style="flex:1;">
+            <div class="p-name">Mohd Hafiz</div>
+            <div class="p-sub">m.hafiz@mjmconnect.com · 7 days ago</div>
+          </div>
+          <span class="badge b-red">Expired</span>
+        </div>
+      </div>
+
+    </div><!-- /dashboard -->
+
+    <!-- ═══════════════════════════
+         ANNOUNCEMENTS
+    ═══════════════════════════ -->
+    <div class="screen-section" id="screen-announce">
+
+      <!-- Success alert -->
+      <div class="alert alert-success" id="ann-success">
+        <i class="ti ti-circle-check"></i>
+        <span>Announcement published successfully. Staff will be notified.</span>
+      </div>
+
+      <!-- Post new button -->
+      <button class="btn-primary" id="post-ann-btn" onclick="showPostForm()">
+        <i class="ti ti-plus"></i> Post New Announcement
+      </button>
+
+      <!-- ── POST FORM ── -->
+      <div class="inline-form" id="post-form">
+        <div class="inline-form-title">
+          <span><i class="ti ti-speakerphone"></i> &nbsp;New Announcement</span>
+          <button class="close-btn" onclick="hidePostForm()">&times;</button>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Title</label>
+          <input class="form-input no-icon" type="text" id="ann-title"
+            placeholder="e.g. Office closure — Friday 30 May" maxlength="80"
+            oninput="updateCharCount()">
+          <div class="char-count" id="title-count">0 / 80</div>
+          <div class="field-error" id="title-error">
+            <i class="ti ti-alert-circle"></i> Title is required.
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Message</label>
+          <textarea class="form-textarea" id="ann-body"
+            placeholder="Write your announcement here…" maxlength="500"
+            oninput="updateBodyCount()"></textarea>
+          <div class="char-count" id="body-count">0 / 500</div>
+          <div class="field-error" id="body-error">
+            <i class="ti ti-alert-circle"></i> Message is required.
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Badge Type</label>
+          <div class="badge-picker">
+            <div class="badge-opt badge-opt-urgent selected" onclick="selectBadge(this,'urgent')">Urgent</div>
+            <div class="badge-opt badge-opt-general" onclick="selectBadge(this,'general')">General</div>
+            <div class="badge-opt badge-opt-hr" onclick="selectBadge(this,'hr')">HR</div>
+            <div class="badge-opt badge-opt-facility" onclick="selectBadge(this,'facility')">Facilities</div>
+            <div class="badge-opt badge-opt-event" onclick="selectBadge(this,'event')">Event</div>
+          </div>
+        </div>
+
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <div class="toggle-label">Notify all staff by email</div>
+            <div class="toggle-sub">Sends an email alert to all registered staff</div>
+          </div>
+          <div class="toggle-switch on" id="notify-toggle" onclick="toggleNotify()">
+            <div class="toggle-knob"></div>
+          </div>
+        </div>
+
+        <div style="margin-top:12px;">
+          <button class="btn-primary" onclick="publishAnnouncement()">
+            <span id="pub-label">Publish Announcement</span>
+            <div class="spinner" id="pub-spinner"></div>
+          </button>
+          <button class="btn-ghost" onclick="hidePostForm()">Cancel</button>
+        </div>
+      </div>
+
+      <!-- ── ANNOUNCEMENT LIST ── -->
+      <div class="sec-hdr">
+        <div class="sec-title">Published <span id="ann-count">(4)</span></div>
+      </div>
+
+      <div id="ann-list">
+
+        <div class="ann-item card-urgent">
+          <div class="ann-meta">
+            <span class="badge b-red">Urgent</span>
+            <span class="ann-time">Today, 8:30 AM</span>
+          </div>
+          <div class="ann-title">Office Closure — Friday 30 May</div>
+          <div class="ann-body">The office will be closed this Friday for public holiday. Please plan accordingly.</div>
+          <div class="ann-actions">
+            <div class="ann-author"><i class="ti ti-user"></i> Posted by HR</div>
+            <div class="btn-icon" onclick="editAnn(this)" title="Edit"><i class="ti ti-pencil"></i></div>
+            <div class="btn-icon danger" onclick="confirmDelete(this)" title="Delete"><i class="ti ti-trash"></i></div>
+          </div>
+        </div>
+
+        <div class="ann-item card-general">
+          <div class="ann-meta">
+            <span class="badge b-green">General</span>
+            <span class="ann-time">Yesterday</span>
+          </div>
+          <div class="ann-title">New Flexi-Work Policy — June 2026</div>
+          <div class="ann-body">Staff may opt for a 4-day compressed workweek. Applications open via HR Portal from 1 June.</div>
+          <div class="ann-actions">
+            <div class="ann-author"><i class="ti ti-user"></i> Posted by HR</div>
+            <div class="btn-icon" onclick="editAnn(this)" title="Edit"><i class="ti ti-pencil"></i></div>
+            <div class="btn-icon danger" onclick="confirmDelete(this)" title="Delete"><i class="ti ti-trash"></i></div>
+          </div>
+        </div>
+
+        <div class="ann-item card-hr">
+          <div class="ann-meta">
+            <span class="badge b-blue">HR</span>
+            <span class="ann-time">25 May</span>
+          </div>
+          <div class="ann-title">Q2 Performance Review Deadline</div>
+          <div class="ann-body">All supervisors must submit appraisal forms by 15 June 2026 via the HR system.</div>
+          <div class="ann-actions">
+            <div class="ann-author"><i class="ti ti-user"></i> Posted by HR</div>
+            <div class="btn-icon" onclick="editAnn(this)" title="Edit"><i class="ti ti-pencil"></i></div>
+            <div class="btn-icon danger" onclick="confirmDelete(this)" title="Delete"><i class="ti ti-trash"></i></div>
+          </div>
+        </div>
+
+        <div class="ann-item card-facility">
+          <div class="ann-meta">
+            <span class="badge b-amber">Facilities</span>
+            <span class="ann-time">22 May</span>
+          </div>
+          <div class="ann-title">New Visitor Management System</div>
+          <div class="ann-body">All visitors must be pre-registered via the VisitorPass app before arriving at HQ.</div>
+          <div class="ann-actions">
+            <div class="ann-author"><i class="ti ti-user"></i> Posted by HR</div>
+            <div class="btn-icon" onclick="editAnn(this)" title="Edit"><i class="ti ti-pencil"></i></div>
+            <div class="btn-icon danger" onclick="confirmDelete(this)" title="Delete"><i class="ti ti-trash"></i></div>
+          </div>
+        </div>
+
+      </div><!-- /ann-list -->
+    </div><!-- /announce -->
+
+    <!-- ═══════════════════════════
+         INVITE STAFF
+    ═══════════════════════════ -->
+    <div class="screen-section" id="screen-invite">
+
+      <div class="alert alert-success" id="invite-success">
+        <i class="ti ti-circle-check"></i>
+        <span id="invite-success-msg">Invite sent successfully.</span>
+      </div>
+      <div class="alert alert-error" id="invite-error">
+        <i class="ti ti-alert-circle"></i>
+        <span id="invite-error-msg">Could not send invite. Please try again.</span>
+      </div>
+
+      <!-- Invite form -->
+      <div class="card" style="margin-bottom:10px;">
+        <div class="card-label">New Staff Invite</div>
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <div class="input-wrap">
+            <i class="ti ti-user input-icon"></i>
+            <input class="form-input" type="text" id="invite-name"
+              placeholder="e.g. Nurul Ain Binti Razak"
+              oninput="clearInviteErrors()">
+          </div>
+          <div class="field-error" id="invite-name-error">
+            <i class="ti ti-alert-circle"></i> Full name is required.
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Work Email</label>
+          <div class="input-wrap">
+            <i class="ti ti-mail input-icon"></i>
+            <input class="form-input" type="email" id="invite-email"
+              placeholder="e.g. nurulain@puigroups.com"
+              inputmode="email" oninput="clearInviteErrors()">
+          </div>
+          <div class="field-error" id="invite-email-error">
+            <i class="ti ti-alert-circle"></i>
+            <span id="invite-email-msg">Please enter a valid email.</span>
+          </div>
+        </div>
+        <div style="background:var(--green-bg);border-radius:var(--r-md);padding:9px 11px;
+          display:flex;gap:7px;align-items:flex-start;margin-bottom:10px;">
+          <i class="ti ti-info-circle" style="font-size:13px;color:var(--green);margin-top:1px;flex-shrink:0;"></i>
+          <span style="font-size:11px;color:var(--green-text);line-height:1.5;">
+            An invite email will be sent with a secure link to set up their account.
+            The link expires in <strong>48 hours</strong>.
+          </span>
+        </div>
+        <button class="btn-primary" id="invite-send-btn" onclick="sendInvite()">
+          <span id="invite-send-label"><i class="ti ti-send"></i>&nbsp; Send Invite Link</span>
+          <div class="spinner" id="invite-spinner"></div>
+        </button>
+      </div>
+
+      <!-- Invite log -->
+      <div class="sec-hdr">
+        <div class="sec-title">Invite Log <span id="invite-log-count"></span></div>
+        <button class="sec-action" onclick="loadInviteLog()">Refresh</button>
+      </div>
+      <div class="card" id="invite-log-card">
+        <div id="invite-log-list">
+          <div style="text-align:center;padding:14px 0;font-size:12px;color:var(--text3);">
+            Loading invite log...
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /invite -->
+
+    <!-- ═══════════════════════════
+         LEAVE
+    ═══════════════════════════ -->
+    <div class="screen-section" id="screen-leave">
+
+      <div class="alert alert-success" id="leave-success">
+        <i class="ti ti-circle-check"></i>
+        <span>Leave entry saved successfully.</span>
+      </div>
+
+      <button class="btn-primary" onclick="showLeaveForm()">
+        <i class="ti ti-plus"></i> Add Leave Entry
+      </button>
+
+      <!-- Add leave inline form -->
+      <div class="inline-form" id="leave-form">
+        <div class="inline-form-title">
+          <span><i class="ti ti-beach"></i> &nbsp;New Leave Entry</span>
+          <button class="close-btn" onclick="hideLeaveForm()">&times;</button>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Staff Name</label>
+          <div class="input-wrap">
+            <i class="ti ti-user input-icon"></i>
+            <input class="form-input" type="text" id="leave-name" placeholder="Full name">
+          </div>
+          <div class="field-error" id="leave-name-error">
+            <i class="ti ti-alert-circle"></i> Name is required.
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Leave Type</label>
+          <div class="input-wrap">
+            <i class="ti ti-tag input-icon"></i>
+            <select class="form-select" id="leave-type">
+              <option value="">Select type…</option>
+              <option>Annual Leave</option>
+              <option>Medical Leave</option>
+              <option>Paternity Leave</option>
+              <option>Maternity Leave</option>
+              <option>Compassionate Leave</option>
+              <option>Unpaid Leave</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div class="form-group">
+            <label class="form-label">From</label>
+            <div class="input-wrap">
+              <i class="ti ti-calendar input-icon"></i>
+              <input class="form-input" type="date" id="leave-from">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">To</label>
+            <div class="input-wrap">
+              <i class="ti ti-calendar input-icon"></i>
+              <input class="form-input" type="date" id="leave-to">
+            </div>
+          </div>
+        </div>
+        <div class="field-error" id="leave-date-error" style="margin-top:-8px;margin-bottom:8px;">
+          <i class="ti ti-alert-circle"></i> Please select valid dates.
+        </div>
+        <button class="btn-primary" onclick="saveLeave()">
+          <span id="leave-save-label">Save Leave Entry</span>
+          <div class="spinner" id="leave-spinner"></div>
+        </button>
+        <button class="btn-ghost" onclick="hideLeaveForm()">Cancel</button>
+      </div>
+
+      <!-- Leave list -->
+      <div class="sec-hdr">
+        <div class="sec-title">Current &amp; Upcoming Leave</div>
+      </div>
+
+      <div id="leave-list">
+        <div class="card">
+          <div class="card-label">On Leave Now</div>
+          <div class="person-row">
+            <div class="av av-c">RL</div>
+            <div style="flex:1;">
+              <div class="p-name">Rachel Lim</div>
+              <div class="p-sub">Annual Leave · 25–30 May · Back Thu</div>
+            </div>
+            <div style="display:flex;gap:6px;">
+              <span class="badge b-amber">AL</span>
+              <div class="btn-icon danger" onclick="confirmDeleteLeave(this)"><i class="ti ti-trash"></i></div>
+            </div>
+          </div>
+          <div class="person-row">
+            <div class="av av-p">KT</div>
+            <div style="flex:1;">
+              <div class="p-name">Kevin Tan</div>
+              <div class="p-sub">Medical Leave · today only</div>
+            </div>
+            <div style="display:flex;gap:6px;">
+              <span class="badge b-red">MC</span>
+              <div class="btn-icon danger" onclick="confirmDeleteLeave(this)"><i class="ti ti-trash"></i></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-label">Upcoming Leave — June 2026</div>
+          <div class="person-row">
+            <div class="av av-b">HF</div>
+            <div style="flex:1;">
+              <div class="p-name">Hafizuddin Razali</div>
+              <div class="p-sub">Annual Leave · 3–6 Jun</div>
+            </div>
+            <div style="display:flex;gap:6px;">
+              <span class="badge b-amber">AL</span>
+              <div class="btn-icon danger" onclick="confirmDeleteLeave(this)"><i class="ti ti-trash"></i></div>
+            </div>
+          </div>
+          <div class="person-row">
+            <div class="av av-g">MF</div>
+            <div style="flex:1;">
+              <div class="p-name">Mohd Firdaus Ismail</div>
+              <div class="p-sub">Paternity Leave · 2–9 Jun</div>
+            </div>
+            <div style="display:flex;gap:6px;">
+              <span class="badge b-blue">PL</span>
+              <div class="btn-icon danger" onclick="confirmDeleteLeave(this)"><i class="ti ti-trash"></i></div>
+            </div>
+          </div>
+          <div class="person-row">
+            <div class="av av-a">RK</div>
+            <div style="flex:1;">
+              <div class="p-name">Rosnah Abd. Karim</div>
+              <div class="p-sub">Annual Leave · 16–20 Jun</div>
+            </div>
+            <div style="display:flex;gap:6px;">
+              <span class="badge b-amber">AL</span>
+              <div class="btn-icon danger" onclick="confirmDeleteLeave(this)"><i class="ti ti-trash"></i></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /leave -->
+
+    <!-- ═══════════════════════════
+         DUTY ROSTER
+    ═══════════════════════════ -->
+    <div class="screen-section" id="screen-duty">
+
+      <div class="alert alert-success" id="duty-success">
+        <i class="ti ti-circle-check"></i>
+        <span>Duty roster updated successfully.</span>
+      </div>
+
+      <button class="btn-primary" onclick="showDutyForm()">
+        <i class="ti ti-plus"></i> Add Duty Assignment
+      </button>
+
+      <!-- Add duty inline form -->
+      <div class="inline-form" id="duty-form">
+        <div class="inline-form-title">
+          <span><i class="ti ti-users"></i> &nbsp;New Duty Assignment</span>
+          <button class="close-btn" onclick="hideDutyForm()">&times;</button>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Staff Name</label>
+          <div class="input-wrap">
+            <i class="ti ti-user input-icon"></i>
+            <input class="form-input" type="text" id="duty-name" placeholder="Full name">
+          </div>
+          <div class="field-error" id="duty-name-error">
+            <i class="ti ti-alert-circle"></i> Name is required.
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Duty Role</label>
+          <div class="input-wrap">
+            <i class="ti ti-briefcase input-icon"></i>
+            <select class="form-select" id="duty-role">
+              <option value="">Select role…</option>
+              <option>Reception / Front Desk</option>
+              <option>Maintenance</option>
+              <option>IT Helpdesk On-Call</option>
+              <option>Building Emergency Warden</option>
+              <option>Driver / Transport</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Week / Period</label>
+          <div class="input-wrap">
+            <i class="ti ti-calendar input-icon"></i>
+            <input class="form-input" type="text" id="duty-period"
+              placeholder="e.g. Week 22 · 26 May – 1 Jun">
+          </div>
+        </div>
+        <button class="btn-primary" onclick="saveDuty()">
+          <span id="duty-save-label">Save Assignment</span>
+          <div class="spinner" id="duty-spinner"></div>
+        </button>
+        <button class="btn-ghost" onclick="hideDutyForm()">Cancel</button>
+      </div>
+
+      <!-- Duty list -->
+      <div class="sec-hdr">
+        <div class="sec-title">Current Roster — Week 22</div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">Reception / Front Desk</div>
+        <div class="duty-slot">
+          <div class="duty-person">
+            <div class="av av-a">NZ</div>
+            <div>
+              <div class="p-name">Nurul Zahra</div>
+              <div class="p-sub">AM shift · 8:00–13:00</div>
+            </div>
+          </div>
+          <div class="duty-right">
+            <span class="badge b-green">On duty</span>
+            <div class="btn-icon danger" onclick="confirmDeleteDuty(this)"><i class="ti ti-trash"></i></div>
+          </div>
+        </div>
+        <div class="duty-slot">
+          <div class="duty-person">
+            <div class="av av-c">DL</div>
+            <div>
+              <div class="p-name">Daniel Loh</div>
+              <div class="p-sub">PM shift · 13:00–18:00</div>
+            </div>
+          </div>
+          <div class="duty-right">
+            <span class="badge b-amber">Upcoming</span>
+            <div class="btn-icon danger" onclick="confirmDeleteDuty(this)"><i class="ti ti-trash"></i></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">Maintenance Team</div>
+        <div class="duty-slot">
+          <div class="duty-person">
+            <div class="av av-g">AH</div>
+            <div>
+              <div class="p-name">Ahmad Hafiz</div>
+              <div class="p-sub">Lead — Floor 3 &amp; 4</div>
+            </div>
+          </div>
+          <div class="duty-right">
+            <span class="badge b-green">On duty</span>
+            <div class="btn-icon danger" onclick="confirmDeleteDuty(this)"><i class="ti ti-trash"></i></div>
+          </div>
+        </div>
+        <div class="duty-slot">
+          <div class="duty-person">
+            <div class="av av-b">JS</div>
+            <div>
+              <div class="p-name">James Soh</div>
+              <div class="p-sub">Support — Floor 1 &amp; 2</div>
+            </div>
+          </div>
+          <div class="duty-right">
+            <span class="badge b-green">On duty</span>
+            <div class="btn-icon danger" onclick="confirmDeleteDuty(this)"><i class="ti ti-trash"></i></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">IT Helpdesk On-Call</div>
+        <div class="duty-slot">
+          <div class="duty-person">
+            <div class="av av-p">KL</div>
+            <div>
+              <div class="p-name">Kevin Lim</div>
+              <div class="p-sub">Mon–Wed · Primary on-call</div>
+            </div>
+          </div>
+          <div class="duty-right">
+            <span class="badge b-green">On duty</span>
+            <div class="btn-icon danger" onclick="confirmDeleteDuty(this)"><i class="ti ti-trash"></i></div>
+          </div>
+        </div>
+        <div class="duty-slot">
+          <div class="duty-person">
+            <div class="av av-r">RA</div>
+            <div>
+              <div class="p-name">Rajan Appu</div>
+              <div class="p-sub">Thu–Fri · Primary on-call</div>
+            </div>
+          </div>
+          <div class="duty-right">
+            <span class="badge b-amber">Thu–Fri</span>
+            <div class="btn-icon danger" onclick="confirmDeleteDuty(this)"><i class="ti ti-trash"></i></div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /duty -->
+
+    <!-- ═══════════════════════════
+         SETTINGS
+    ═══════════════════════════ -->
+    <div class="screen-section" id="screen-settings">
+
+      <!-- Current user info -->
+      <div class="card" style="margin-bottom:10px;">
+        <div class="card-label">Signed In As</div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="av av-g" id="settings-av" style="width:38px;height:38px;font-size:13px;">SA</div>
+          <div style="flex:1;">
+            <div style="font-size:13px;font-weight:600;color:var(--text);" id="settings-name">Super Admin</div>
+            <div style="font-size:11px;color:var(--text2);" id="settings-email">shirleytan@puigroups.com</div>
+          </div>
+          <span class="badge b-purple" id="settings-role-badge">Super Admin</span>
+        </div>
+      </div>
+
+      <!-- Manage Admins -->
+      <div class="sec-hdr">
+        <div class="sec-title">Manage Admins</div>
+      </div>
+
+      <div class="alert alert-success" id="admin-mgmt-success">
+        <i class="ti ti-circle-check"></i>
+        <span id="admin-mgmt-success-msg">Role updated successfully.</span>
+      </div>
+      <div class="alert alert-error" id="admin-mgmt-error">
+        <i class="ti ti-alert-circle"></i>
+        <span id="admin-mgmt-error-msg">Something went wrong.</span>
+      </div>
+
+      <!-- Assign new admin form -->
+      <div class="inline-form visible" id="assign-admin-form" style="margin-bottom:10px;">
+        <div class="inline-form-title">
+          <span><i class="ti ti-shield-check"></i> &nbsp;Assign Admin Role</span>
+        </div>
+        <div style="background:var(--amber-bg);border-radius:var(--r-md);padding:8px 10px;
+          display:flex;gap:7px;align-items:flex-start;margin-bottom:10px;">
+          <i class="ti ti-alert-triangle" style="font-size:13px;color:var(--amber-text);margin-top:1px;flex-shrink:0;"></i>
+          <span style="font-size:11px;color:var(--amber-text);line-height:1.5;">
+            Only Super Admins can assign or remove admin roles. Choose carefully.
+          </span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Staff Email</label>
+          <div class="input-wrap">
+            <i class="ti ti-mail input-icon"></i>
+            <input class="form-input" type="email" id="assign-email"
+              placeholder="Staff's registered email"
+              oninput="clearAdminErrors()">
+          </div>
+          <div class="field-error" id="assign-email-error">
+            <i class="ti ti-alert-circle"></i>
+            <span id="assign-email-msg">Please enter a valid email.</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Assign Role</label>
+          <div class="input-wrap">
+            <i class="ti ti-shield input-icon"></i>
+            <select class="form-select" id="assign-role">
+              <option value="hradmin">HR Admin — can manage announcements, leave, duty &amp; invite staff</option>
+              <option value="staff">Staff — view only access</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn-primary" onclick="assignAdminRole()">
+          <i class="ti ti-shield-check"></i> Update Role
+        </button>
+      </div>
+
+      <!-- Current admins list -->
+      <div class="sec-hdr">
+        <div class="sec-title">Current Admins</div>
+      </div>
+      <div class="card" id="admins-list-card">
+        <div id="admins-list">
+          <!-- populated by JS -->
+        </div>
+        <div id="admins-empty" style="text-align:center;padding:14px 0;font-size:12px;color:var(--text3);display:none;">
+          No HR admins assigned yet.
+        </div>
+      </div>
+
+      <!-- All staff list -->
+      <div class="sec-hdr" style="margin-top:6px;">
+        <div class="sec-title">All Staff <span id="all-staff-count">(0)</span></div>
+      </div>
+      <div class="card">
+        <div id="all-staff-list">
+          <!-- populated by JS -->
+        </div>
+        <div id="all-staff-empty" style="text-align:center;padding:14px 0;font-size:12px;color:var(--text3);display:none;">
+          No staff registered yet. Invite staff first.
+        </div>
+      </div>
+
+      <!-- Danger zone -->
+      <div class="sec-hdr" style="margin-top:6px;">
+        <div class="sec-title" style="color:var(--red-text);">Danger Zone</div>
+      </div>
+      <div class="card" style="border-color:var(--red-bg);">
+        <div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:10px;">
+          Signing out will end your current session. You will need to sign in again to access the admin panel.
+        </div>
+        <button class="btn-primary" style="background:var(--red-text);margin-bottom:0;" onclick="logout()">
+          <i class="ti ti-logout"></i> Sign Out
+        </button>
+      </div>
+
+    </div><!-- /settings -->
+  </div><!-- /screen-body -->
+
+  <!-- BOTTOM NAV -->
+  <div class="nav-bar">
+    <div class="nav-item active" id="nav-dashboard" onclick="switchNav('dashboard')">
+      <i class="ti ti-layout-dashboard"></i><span>Dashboard</span>
+    </div>
+    <div class="nav-item" id="nav-announce" onclick="switchNav('announce')">
+      <div class="nav-dot"><i class="ti ti-speakerphone"></i></div>
+      <span>Announce</span>
+    </div>
+    <div class="nav-item" id="nav-leave" onclick="switchNav('leave')">
+      <i class="ti ti-beach"></i><span>Leave</span>
+    </div>
+    <div class="nav-item" id="nav-duty" onclick="switchNav('duty')">
+      <i class="ti ti-users"></i><span>Duty</span>
+    </div>
+    <div class="nav-item" id="nav-invite" onclick="switchNav('invite');switchTabByName('invite')">
+      <i class="ti ti-user-plus"></i><span>Invite</span>
+    </div>
+    <div class="nav-item" id="nav-settings" onclick="switchNav('settings');switchTabByName('settings')" style="display:none;">
+      <i class="ti ti-settings"></i><span>Settings</span>
+    </div>
+    <div class="nav-item" onclick="window.location.href='index.html'">
+      <i class="ti ti-arrow-left"></i><span>Staff View</span>
+    </div>
+  </div>
+
+</div><!-- /phone -->
+</div><!-- /phone-wrap -->
+
+<!-- ── DELETE CONFIRMATION MODAL ── -->
+<div class="modal-overlay" id="delete-modal">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">Delete this announcement?</div>
+    <div class="modal-body" id="modal-body">This will remove it from the Info Board immediately. This action cannot be undone.</div>
+    <div class="modal-actions">
+      <button class="btn-ghost" style="margin:0;" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" style="margin:0;background:var(--red-text);" id="modal-confirm-btn" onclick="executeDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── CLOCK ──
+  function tick() {
+    const now = new Date();
+    let h = now.getHours(), m = now.getMinutes();
+    const ap = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    document.getElementById('js-clock').textContent =
+      h + ':' + String(m).padStart(2,'0') + ' ' + ap;
+  }
+  tick(); setInterval(tick, 10000);
+
+  // ── TAB SWITCHING ──
+  function switchTab(btn, name) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.screen-section').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-' + name).classList.add('active');
+    syncNav(name);
+    if (name === 'settings') renderSettingsPage();
+    if (name === 'invite') loadInviteLog();
+  }
+  function switchNav(name) {
+    const tabs = document.querySelectorAll('.tab-btn');
+    const map  = { dashboard:0, announce:1, invite:2, leave:3, duty:4, settings:5 };
+    tabs.forEach(t => t.classList.remove('active'));
+    if (map[name] !== undefined) tabs[map[name]].classList.add('active');
+    document.querySelectorAll('.screen-section').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-' + name).classList.add('active');
+    syncNav(name);
+    if (name === 'settings') renderSettingsPage();
+  }
+  function switchNav(name) {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    const el = document.getElementById('nav-' + name);
+    if (el) el.classList.add('active');
+  }
+  function syncNav(name) {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    const el = document.getElementById('nav-' + name);
+    if (el) el.classList.add('active');
+  }
+
+  // ── NOTIFY TOGGLE ──
+  let notifyOn = true;
+  function toggleNotify() {
+    notifyOn = !notifyOn;
+    document.getElementById('notify-toggle').classList.toggle('on', notifyOn);
+  }
+
+  // ── BADGE PICKER ──
+  let selectedBadge = 'urgent';
+  function selectBadge(el, type) {
+    document.querySelectorAll('.badge-opt').forEach(b => b.classList.remove('selected'));
+    el.classList.add('selected');
+    selectedBadge = type;
+  }
+
+  // ── CHAR COUNTS ──
+  function updateCharCount() {
+    const len = document.getElementById('ann-title').value.length;
+    const el  = document.getElementById('title-count');
+    el.textContent = len + ' / 80';
+    el.className = 'char-count' + (len > 70 ? ' warn' : '') + (len >= 80 ? ' over' : '');
+  }
+  function updateBodyCount() {
+    const len = document.getElementById('ann-body').value.length;
+    const el  = document.getElementById('body-count');
+    el.textContent = len + ' / 500';
+    el.className = 'char-count' + (len > 450 ? ' warn' : '') + (len >= 500 ? ' over' : '');
+  }
+
+  // ── POST FORM ──
+  function showPostForm() {
+    document.getElementById('post-form').classList.add('visible');
+    document.getElementById('post-ann-btn').style.display = 'none';
+    document.getElementById('post-form').scrollIntoView({ behavior:'smooth', block:'start' });
+  }
+  function hidePostForm() {
+    document.getElementById('post-form').classList.remove('visible');
+    document.getElementById('post-ann-btn').style.display = 'flex';
+    document.getElementById('ann-title').value = '';
+    document.getElementById('ann-body').value  = '';
+    updateCharCount(); updateBodyCount();
+    clearFormErrors();
+  }
+
+  // ── PUBLISH ANNOUNCEMENT ──
+  function publishAnnouncement() {
+    clearFormErrors();
+    const title = document.getElementById('ann-title').value.trim();
+    const body  = document.getElementById('ann-body').value.trim();
+    let valid   = true;
+    if (!title) {
+      document.getElementById('ann-title').classList.add('error');
+      document.getElementById('title-error').classList.add('visible');
+      valid = false;
+    }
+    if (!body) {
+      document.getElementById('ann-body').classList.add('error');
+      document.getElementById('body-error').classList.add('visible');
+      valid = false;
+    }
+    if (!valid) return;
+
+    // Loading
+    setLoading('pub', true);
+    var user = JSON.parse(sessionStorage.getItem('mjm_user') || '{}');
+    publishToDb(title, body, selectedBadge, notifyOn, user.name || 'HR').then(function() {
+      loadDbAnnouncements();
+    }).catch(function(){});
+    setTimeout(() => {
+      setLoading('pub', false);
+      // Prepend new announcement to list
+      const badgeMap = {
+        urgent:   { cls:'card-urgent',   badgeCls:'b-red',    label:'Urgent' },
+        general:  { cls:'card-general',  badgeCls:'b-green',  label:'General' },
+        hr:       { cls:'card-hr',       badgeCls:'b-blue',   label:'HR' },
+        facility: { cls:'card-facility', badgeCls:'b-amber',  label:'Facilities' },
+        event:    { cls:'card-event',    badgeCls:'b-purple', label:'Event' },
+      };
+      const b    = badgeMap[selectedBadge];
+      const html = `
+        <div class="ann-item ${b.cls}">
+          <div class="ann-meta">
+            <span class="badge ${b.badgeCls}">${b.label}</span>
+            <span class="ann-time">Just now</span>
+          </div>
+          <div class="ann-title">${escHtml(title)}</div>
+          <div class="ann-body">${escHtml(body)}</div>
+          <div class="ann-actions">
+            <div class="ann-author"><i class="ti ti-user"></i> Posted by HR</div>
+            <div class="btn-icon" onclick="editAnn(this)" title="Edit"><i class="ti ti-pencil"></i></div>
+            <div class="btn-icon danger" onclick="confirmDelete(this)" title="Delete"><i class="ti ti-trash"></i></div>
+          </div>
+        </div>`;
+      document.getElementById('ann-list').insertAdjacentHTML('afterbegin', html);
+      // Update count
+      const countEl = document.getElementById('ann-count');
+      const cur = parseInt(countEl.textContent.replace(/\D/g,''));
+      countEl.textContent = '(' + (cur + 1) + ')';
+      hidePostForm();
+      document.getElementById('ann-success').classList.add('visible');
+      setTimeout(() => document.getElementById('ann-success').classList.remove('visible'), 4000);
+    }, 1400);
+  }
+
+  // ── LEAVE FORM ──
+  function showLeaveForm() {
+    document.getElementById('leave-form').classList.add('visible');
+    document.getElementById('leave-form').scrollIntoView({ behavior:'smooth', block:'start' });
+  }
+  function hideLeaveForm() {
+    document.getElementById('leave-form').classList.remove('visible');
+    document.getElementById('leave-name').value = '';
+    document.getElementById('leave-type').value = '';
+    document.getElementById('leave-from').value = '';
+    document.getElementById('leave-to').value   = '';
+    clearFormErrors();
+  }
+  function saveLeave() {
+    clearFormErrors();
+    const name  = document.getElementById('leave-name').value.trim();
+    const type  = document.getElementById('leave-type').value;
+    const from  = document.getElementById('leave-from').value;
+    const to    = document.getElementById('leave-to').value;
+    let valid   = true;
+    if (!name) {
+      document.getElementById('leave-name').classList.add('error');
+      document.getElementById('leave-name-error').classList.add('visible');
+      valid = false;
+    }
+    if (!from || !to) {
+      document.getElementById('leave-date-error').classList.add('visible');
+      valid = false;
+    }
+    if (!valid) return;
+
+    setLoading('leave-save', true);
+    sbFetch('POST', '/rest/v1/leave_records', { staff_name: name, leave_type: type || 'Annual Leave', date_from: from, date_to: to }).then(function() {
+      loadDbLeave();
+    }).catch(function(){});
+    setTimeout(() => {
+      setLoading('leave-save', false);
+      const typeLabel = type || 'Leave';
+      const shortType = typeLabel === 'Annual Leave' ? 'AL'
+        : typeLabel === 'Medical Leave' ? 'MC'
+        : typeLabel === 'Paternity Leave' ? 'PL'
+        : typeLabel === 'Maternity Leave' ? 'ML'
+        : typeLabel === 'Compassionate Leave' ? 'CL' : 'UL';
+      const badgeCls  = typeLabel === 'Medical Leave' ? 'b-red'
+        : typeLabel.includes('Paternity') || typeLabel.includes('Maternity') ? 'b-blue'
+        : 'b-amber';
+      const initials  = name.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+      const fromFmt   = formatDate(from);
+      const toFmt     = formatDate(to);
+      const html = `
+        <div class="person-row" id="lr-${Date.now()}">
+          <div class="av av-g">${initials}</div>
+          <div style="flex:1;">
+            <div class="p-name">${escHtml(name)}</div>
+            <div class="p-sub">${escHtml(typeLabel)} · ${fromFmt}–${toFmt}</div>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <span class="badge ${badgeCls}">${shortType}</span>
+            <div class="btn-icon danger" onclick="confirmDeleteLeave(this)"><i class="ti ti-trash"></i></div>
+          </div>
+        </div>`;
+      // Add to "On Leave Now" card
+      const cards = document.querySelectorAll('#leave-list .card');
+      cards[0].insertAdjacentHTML('beforeend', html);
+      hideLeaveForm();
+      document.getElementById('leave-success').classList.add('visible');
+      setTimeout(() => document.getElementById('leave-success').classList.remove('visible'), 3500);
+    }, 1200);
+  }
+
+  // ── DUTY FORM ──
+  function showDutyForm() {
+    document.getElementById('duty-form').classList.add('visible');
+    document.getElementById('duty-form').scrollIntoView({ behavior:'smooth', block:'start' });
+  }
+  function hideDutyForm() {
+    document.getElementById('duty-form').classList.remove('visible');
+    document.getElementById('duty-name').value   = '';
+    document.getElementById('duty-role').value   = '';
+    document.getElementById('duty-period').value = '';
+    clearFormErrors();
+  }
+  function saveDuty() {
+    clearFormErrors();
+    const name = document.getElementById('duty-name').value.trim();
+    const role = document.getElementById('duty-role').value;
+    if (!name) {
+      document.getElementById('duty-name').classList.add('error');
+      document.getElementById('duty-name-error').classList.add('visible');
+      return;
+    }
+    setLoading('duty-save', true);
+    var dutyRole = document.getElementById('duty-role').value;
+    sbFetch('POST', '/rest/v1/duty_roster', { staff_name: name, duty_role: dutyRole || 'General Duty', period: document.getElementById('duty-period').value.trim() }).then(function() {
+      loadDbDuty();
+    }).catch(function(){});
+    setTimeout(() => {
+      setLoading('duty-save', false);
+      const period   = document.getElementById('duty-period').value.trim() || 'This week';
+      const initials = name.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+      const roleLabel = role || 'General Duty';
+      const html = `
+        <div class="duty-slot">
+          <div class="duty-person">
+            <div class="av av-g">${initials}</div>
+            <div>
+              <div class="p-name">${escHtml(name)}</div>
+              <div class="p-sub">${escHtml(period)}</div>
+            </div>
+          </div>
+          <div class="duty-right">
+            <span class="badge b-green">On duty</span>
+            <div class="btn-icon danger" onclick="confirmDeleteDuty(this)"><i class="ti ti-trash"></i></div>
+          </div>
+        </div>`;
+      // Add to first card
+      document.querySelector('#screen-duty .card').insertAdjacentHTML('beforeend', html);
+      hideDutyForm();
+      document.getElementById('duty-success').classList.add('visible');
+      setTimeout(() => document.getElementById('duty-success').classList.remove('visible'), 3500);
+    }, 1200);
+  }
+
+  // ── DELETE MODAL ──
+  let pendingDeleteEl   = null;
+  let pendingDeleteType = null;
+  function confirmDelete(btn) {
+    pendingDeleteEl   = btn.closest('.ann-item');
+    pendingDeleteType = 'ann';
+    document.getElementById('modal-title').textContent = 'Delete this announcement?';
+    document.getElementById('modal-body').textContent  =
+      'This will remove it from the Info Board immediately. This cannot be undone.';
+    document.getElementById('delete-modal').classList.add('visible');
+  }
+  function confirmDeleteLeave(btn) {
+    pendingDeleteEl   = btn.closest('.person-row');
+    pendingDeleteType = 'leave';
+    document.getElementById('modal-title').textContent = 'Remove this leave entry?';
+    document.getElementById('modal-body').textContent  =
+      'This will remove the leave record from the board. This cannot be undone.';
+    document.getElementById('delete-modal').classList.add('visible');
+  }
+  function confirmDeleteDuty(btn) {
+    pendingDeleteEl   = btn.closest('.duty-slot');
+    pendingDeleteType = 'duty';
+    document.getElementById('modal-title').textContent = 'Remove this duty assignment?';
+    document.getElementById('modal-body').textContent  =
+      'This will remove the assignment from the roster. This cannot be undone.';
+    document.getElementById('delete-modal').classList.add('visible');
+  }
+  function closeModal() {
+    document.getElementById('delete-modal').classList.remove('visible');
+    pendingDeleteEl = null;
+  }
+  function executeDelete() {
+    if (pendingDeleteEl) {
+      pendingDeleteEl.style.transition = 'opacity 0.2s';
+      pendingDeleteEl.style.opacity    = '0';
+      setTimeout(() => {
+        pendingDeleteEl.remove();
+        pendingDeleteEl = null;
+      }, 220);
+    }
+    closeModal();
+  }
+
+  // ── EDIT ANNOUNCEMENT (inline toggle) ──
+  function editAnn(btn) {
+    const item  = btn.closest('.ann-item');
+    const title = item.querySelector('.ann-title').textContent;
+    const body  = item.querySelector('.ann-body').textContent;
+    // Populate post form and scroll to it
+    switchTabByName('announce');
+    document.getElementById('ann-title').value = title;
+    document.getElementById('ann-body').value  = body;
+    updateCharCount(); updateBodyCount();
+    showPostForm();
+    // Remove original
+    item.remove();
+  }
+
+  // ── HELPERS ──
+  function escHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  function formatDate(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return d.getDate() + ' ' + months[d.getMonth()];
+  }
+  function clearFormErrors() {
+    document.querySelectorAll('.field-error').forEach(e => e.classList.remove('visible'));
+    document.querySelectorAll('.form-input, .form-textarea').forEach(i => i.classList.remove('error'));
+  }
+  function setLoading(which, on) {
+    const map = {
+      'pub':       ['pub-label',       'pub-spinner'],
+      'leave-save':['leave-save-label','leave-spinner'],
+      'duty-save': ['duty-save-label', 'duty-spinner'],
+    };
+    if (!map[which]) return;
+    const [labelId, spinnerId] = map[which];
+    const label   = document.getElementById(labelId);
+    const spinner = document.getElementById(spinnerId);
+    label.style.display   = on ? 'none'  : 'inline';
+    spinner.style.display = on ? 'block' : 'none';
+  }
+
+  // Close modal on overlay click
+  document.getElementById('delete-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+
+
+  // ══════════════════════════════════════
+  // SETTINGS — ADMIN MANAGEMENT
+  // ══════════════════════════════════════
+
+  // Role display labels
+  const ROLE_LABELS = {
+    superadmin: 'Super Admin',
+    hradmin:    'HR Admin',
+    staff:      'Staff'
+  };
+  const ROLE_BADGE = {
+    superadmin: 'b-purple',
+    hradmin:    'b-blue',
+    staff:      'b-green'
+  };
+  const AV_COLORS = ['av-g','av-b','av-a','av-c','av-p','av-r'];
+
+  function getStaffList() {
+    return JSON.parse(localStorage.getItem('mjm_staff') || '[]');
+  }
+  function saveStaffList(list) {
+    localStorage.setItem('mjm_staff', JSON.stringify(list));
+  }
+
+  function renderSettingsPage() {
+    const user = JSON.parse(sessionStorage.getItem('mjm_user') || '{}');
+    const list = getStaffList();
+
+    // Current user info
+    const nameParts = (user.name || '').split(' ').filter(Boolean);
+    const initials  = nameParts.slice(0,2).map(p=>p[0].toUpperCase()).join('') || 'SA';
+    const nameEl    = document.getElementById('settings-name');
+    const emailEl   = document.getElementById('settings-email');
+    const avEl      = document.getElementById('settings-av');
+    const rbEl      = document.getElementById('settings-role-badge');
+    if (nameEl)  nameEl.textContent  = user.name  || 'Super Admin';
+    if (emailEl) emailEl.textContent = user.email || '';
+    if (avEl)    avEl.textContent    = initials;
+    if (rbEl) {
+      rbEl.textContent  = ROLE_LABELS[user.role] || user.role;
+      rbEl.className    = 'badge ' + (ROLE_BADGE[user.role] || 'b-green');
+    }
+
+    // Show/hide assign form and settings nav for superadmin only
+    const assignForm  = document.getElementById('assign-admin-form');
+    const settingsNav = document.getElementById('nav-settings');
+    const settingsBtn = document.getElementById('settings-tab-btn');
+    if (user.role === 'superadmin') {
+      if (assignForm)  assignForm.style.display = 'block';
+      if (settingsNav) settingsNav.style.display = 'flex';
+      if (settingsBtn) settingsBtn.style.display = 'inline-block';
+    } else {
+      if (assignForm)  assignForm.style.display = 'none';
+    }
+
+    // Render admins list (superadmin + hradmin)
+    const admins = list.filter(u => u.role === 'superadmin' || u.role === 'hradmin');
+    const adminsEl = document.getElementById('admins-list');
+    const adminsEmpty = document.getElementById('admins-empty');
+    if (adminsEl) {
+      if (admins.length === 0) {
+        adminsEl.innerHTML = '';
+        if (adminsEmpty) adminsEmpty.style.display = 'block';
+      } else {
+        if (adminsEmpty) adminsEmpty.style.display = 'none';
+        adminsEl.innerHTML = admins.map(function(u, i) {
+          var ini = u.name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
+          var avCls = AV_COLORS[i % AV_COLORS.length];
+          var isSelf = u.email === user.email;
+          var canRemove = user.role === 'superadmin' && !isSelf && u.role !== 'superadmin';
+          var removeBtn = canRemove
+            ? '<div class="btn-icon danger" onclick="demoteToStaff(\'' + u.email.replace(/'/g,"\\'") + '\')" title="Remove admin access"><i class="ti ti-user-minus"></i></div>'
+            : '';
+          var selfTag = isSelf ? ' <span style="font-size:10px;color:var(--text3);">(you)</span>' : '';
+          return '<div class="person-row">'
+            + '<div class="av ' + avCls + '">' + ini + '</div>'
+            + '<div style="flex:1;">'
+            + '<div class="p-name">' + escHtml(u.name) + selfTag + '</div>'
+            + '<div class="p-sub">' + escHtml(u.email) + '</div>'
+            + '</div>'
+            + '<div style="display:flex;align-items:center;gap:6px;">'
+            + '<span class="badge ' + (ROLE_BADGE[u.role] || 'b-green') + '">' + (ROLE_LABELS[u.role] || u.role) + '</span>'
+            + removeBtn
+            + '</div>'
+            + '</div>';
+        }).join('');
+      }
+    }
+
+    // Render all staff list
+    const staffOnly = list.filter(u => u.role === 'staff');
+    const staffEl   = document.getElementById('all-staff-list');
+    const staffEmpty= document.getElementById('all-staff-empty');
+    const staffCount= document.getElementById('all-staff-count');
+    if (staffCount) staffCount.textContent = '(' + staffOnly.length + ')';
+    if (staffEl) {
+      if (staffOnly.length === 0) {
+        staffEl.innerHTML = '';
+        if (staffEmpty) staffEmpty.style.display = 'block';
+      } else {
+        if (staffEmpty) staffEmpty.style.display = 'none';
+        staffEl.innerHTML = staffOnly.map(function(u, i) {
+          var ini = u.name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
+          var avCls = AV_COLORS[i % AV_COLORS.length];
+          var canPromote = user.role === 'superadmin';
+          var promoteBtn = canPromote
+            ? '<div class="btn-icon" onclick="promoteToAdmin(\'' + u.email.replace(/'/g,"\\'") + '\')" title="Make HR Admin" style="color:var(--green);border-color:var(--green-bg);background:var(--green-bg);"><i class="ti ti-shield-up"></i></div>'
+            : '';
+          return '<div class="person-row">'
+            + '<div class="av ' + avCls + '">' + ini + '</div>'
+            + '<div style="flex:1;">'
+            + '<div class="p-name">' + escHtml(u.name) + '</div>'
+            + '<div class="p-sub">' + escHtml(u.email) + '</div>'
+            + '</div>'
+            + '<div style="display:flex;align-items:center;gap:6px;">'
+            + '<span class="badge b-green">Staff</span>'
+            + promoteBtn
+            + '</div>'
+            + '</div>';
+        }).join('');
+      }
+    }
+  }
+
+  function assignAdminRole() {
+    clearAdminErrors();
+    const email = document.getElementById('assign-email').value.trim().toLowerCase();
+    const role  = document.getElementById('assign-role').value;
+
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      document.getElementById('assign-email').classList.add('error');
+      document.getElementById('assign-email-msg').textContent = 'Please enter a valid email address.';
+      document.getElementById('assign-email-error').classList.add('visible');
+      return;
+    }
+
+    const list  = getStaffList();
+    const idx   = list.findIndex(u => u.email.toLowerCase() === email);
+
+    if (idx === -1) {
+      document.getElementById('assign-email').classList.add('error');
+      document.getElementById('assign-email-msg').textContent = 'No account found with this email. Staff must be registered first.';
+      document.getElementById('assign-email-error').classList.add('visible');
+      return;
+    }
+
+    if (list[idx].role === 'superadmin') {
+      document.getElementById('assign-email').classList.add('error');
+      document.getElementById('assign-email-msg').textContent = 'Cannot change the Super Admin role.';
+      document.getElementById('assign-email-error').classList.add('visible');
+      return;
+    }
+
+    const oldRole = list[idx].role;
+    list[idx].role = role;
+    saveStaffList(list);
+    syncRoleToDb(list[idx].email, role);
+    document.getElementById('assign-email').value = '';
+    document.getElementById('assign-role').value  = 'hradmin';
+    showAdminSuccess(
+      list[idx].name + ' role updated from ' +
+      (ROLE_LABELS[oldRole] || oldRole) + ' to ' +
+      (ROLE_LABELS[role] || role) + '.'
+    );
+    renderSettingsPage();
+  }
+
+  function promoteToAdmin(email) {
+    const list = getStaffList();
+    const idx  = list.findIndex(u => u.email.toLowerCase() === email.toLowerCase());
+    if (idx === -1) return;
+    list[idx].role = 'hradmin';
+    saveStaffList(list);
+    showAdminSuccess(list[idx].name + ' has been made HR Admin.');
+    renderSettingsPage();
+  }
+
+  function demoteToStaff(email) {
+    if (!confirm('Remove admin access from this person? They will become a regular staff member.')) return;
+    const list = getStaffList();
+    const idx  = list.findIndex(u => u.email.toLowerCase() === email.toLowerCase());
+    if (idx === -1) return;
+    list[idx].role = 'staff';
+    saveStaffList(list);
+    showAdminSuccess(list[idx].name + ' has been set back to Staff.');
+    renderSettingsPage();
+  }
+
+  function showAdminSuccess(msg) {
+    const el = document.getElementById('admin-mgmt-success');
+    document.getElementById('admin-mgmt-success-msg').textContent = msg;
+    el.classList.add('visible');
+    setTimeout(() => el.classList.remove('visible'), 4000);
+  }
+
+  function clearAdminErrors() {
+    document.getElementById('assign-email').classList.remove('error');
+    document.getElementById('assign-email-error').classList.remove('visible');
+    document.getElementById('admin-mgmt-error').classList.remove('visible');
+  }
+
+  // Seed demo staff into localStorage if empty
+  (function seedDemoStaff() {
+    const list = getStaffList();
+    if (list.length <= 1) {
+      const demo = [
+        { id:1, name:'Shirley Tan',        email:'shirleytan@puigroups.com', role:'superadmin', joined: new Date().toISOString() },
+        { id:2, name:'Ahmad Hafiz',         email:'ahmad.hafiz@mjmconnect.com', role:'hradmin',   joined: new Date().toISOString() },
+        { id:3, name:'Nurul Zahra',         email:'nurul.zahra@mjmconnect.com', role:'staff',     joined: new Date().toISOString() },
+        { id:4, name:'Kevin Tan',           email:'kevin.tan@mjmconnect.com',   role:'staff',     joined: new Date().toISOString() },
+        { id:5, name:'Siti Wardah',         email:'siti.wardah@mjmconnect.com', role:'staff',     joined: new Date().toISOString() },
+        { id:6, name:'Rachel Lim',          email:'rachel.lim@mjmconnect.com',  role:'staff',     joined: new Date().toISOString() },
+      ];
+      saveStaffList(demo);
+    }
+  })();
+
+  // Re-render settings page when that tab becomes active
+  const _origSwitchTab = switchTab;
+  // Hook into tab switching to render settings
+  document.addEventListener('DOMContentLoaded', function() {
+    renderSettingsPage();
+    if (window.location.protocol !== 'file:') {
+      loadDbAnnouncements();
+      loadDbLeave();
+      loadDbDuty();
+      loadDbProfiles();
+      loadInviteLog();
+      updatePendingCount();
+    }
+  });
+
+
+  // ── SUPABASE CONFIG ──
+  var SURL  = 'https://jkbxngfwkytscgxnnnnd.supabase.co';
+  var SKEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImprYnhuZ2Z3a3l0c2NneG5ubm5kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNTcyMjcsImV4cCI6MjA5NTYzMzIyN30._FIzBEcmwtAkADDiDZVTS-YQY0kLoGBowL8n7T45Ulk';
+  var SVCKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImprYnhuZ2Z3a3l0c2NneG5ubm5kIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDA1NzIyNywiZXhwIjoyMDk1NjMzMjI3fQ.qPOdtakulLrJXEmSO-FW8a2EiTJE7qLYzdK8Xf6vK3I'; // service role — used only for sending invites
+
+  async function sbFetch(method, path, body, extra_headers) {
+    var headers = { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
+    if (extra_headers) Object.assign(headers, extra_headers);
+    var res = await fetch(SURL + path, { method: method, headers: headers, body: body ? JSON.stringify(body) : undefined });
+    try { return await res.json(); } catch(e) { return null; }
+  }
+
+  // ── LOAD ANNOUNCEMENTS FROM SUPABASE ──
+  async function loadDbAnnouncements() {
+    try {
+      var data = await sbFetch('GET', '/rest/v1/announcements?order=created_at.desc&limit=50');
+      if (!data || data.length === 0) return;
+      var list = document.getElementById('ann-list');
+      if (!list) return;
+      list.innerHTML = '';
+      var countEl = document.getElementById('ann-count');
+      if (countEl) countEl.textContent = '(' + data.length + ')';
+      var badgeMap = { urgent:{cls:'card-urgent',bCls:'b-red',lbl:'Urgent'}, general:{cls:'card-general',bCls:'b-green',lbl:'General'}, hr:{cls:'card-hr',bCls:'b-blue',lbl:'HR'}, facility:{cls:'card-facility',bCls:'b-amber',lbl:'Facilities'}, event:{cls:'card-event',bCls:'b-purple',lbl:'Event'} };
+      data.forEach(function(ann) {
+        var b = badgeMap[ann.badge] || badgeMap['general'];
+        var d = new Date(ann.created_at).toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'});
+        var html = '<div class="ann-item ' + b.cls + '" data-id="' + ann.id + '">'
+          + '<div class="ann-meta"><span class="badge ' + b.bCls + '">' + b.lbl + '</span><span class="ann-time">' + d + '</span></div>'
+          + '<div class="ann-title">' + escHtml(ann.title) + '</div>'
+          + '<div class="ann-body">' + escHtml(ann.body) + '</div>'
+          + '<div class="ann-actions"><div class="ann-author"><i class="ti ti-user"></i> ' + escHtml(ann.posted_by || 'HR') + '</div>'
+          + '<div class="btn-icon danger" onclick="deleteAnnouncementDb(this)" title="Delete"><i class="ti ti-trash"></i></div>'
+          + '</div></div>';
+        list.insertAdjacentHTML('beforeend', html);
+      });
+    } catch(e) { /* Supabase not reachable */ }
+  }
+
+  // ── PUBLISH ANNOUNCEMENT TO SUPABASE ──
+  async function publishToDb(title, body, badge, notifyEmail, postedBy) {
+    var res = await sbFetch('POST', '/rest/v1/announcements', { title: title, body: body, badge: badge, notify_email: notifyEmail, posted_by: postedBy });
+    return res;
+  }
+
+  // ── DELETE ANNOUNCEMENT FROM SUPABASE ──
+  async function deleteAnnouncementDb(btn) {
+    var item = btn.closest('.ann-item');
+    var id   = item ? item.getAttribute('data-id') : null;
+    if (!id) { confirmDelete(btn); return; }
+    if (!confirm('Delete this announcement? This cannot be undone.')) return;
+    try {
+      await sbFetch('DELETE', '/rest/v1/announcements?id=eq.' + id, null, { 'Prefer': '' });
+      item.style.transition = 'opacity 0.2s'; item.style.opacity = '0';
+      setTimeout(function(){ item.remove(); }, 220);
+      var countEl = document.getElementById('ann-count');
+      if (countEl) { var n = parseInt(countEl.textContent.replace(/\D/g,'')) - 1; countEl.textContent = '(' + Math.max(0,n) + ')'; }
+    } catch(e) { alert('Could not delete. Please try again.'); }
+  }
+
+  // ── LOAD LEAVE FROM SUPABASE ──
+  async function loadDbLeave() {
+    try {
+      var data = await sbFetch('GET', '/rest/v1/leave_records?order=created_at.desc&limit=50');
+      if (!data || data.length === 0) return;
+      var card = document.getElementById('leave-list');
+      if (!card) return;
+      card.innerHTML = '<div class="card"><div class="card-label">All Leave Records</div>' +
+        data.map(function(r) {
+          var ini = r.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
+          var shortType = r.leave_type === 'Annual Leave' ? 'AL' : r.leave_type === 'Medical Leave' ? 'MC' : r.leave_type === 'Paternity Leave' ? 'PL' : r.leave_type === 'Maternity Leave' ? 'ML' : 'CL';
+          var bCls = r.leave_type === 'Medical Leave' ? 'b-red' : (r.leave_type.includes('Paternity') || r.leave_type.includes('Maternity')) ? 'b-blue' : 'b-amber';
+          var from = new Date(r.date_from + 'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'});
+          var to   = new Date(r.date_to + 'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'});
+          return '<div class="person-row" data-leave-id="' + r.id + '">'
+            + '<div class="av av-g">' + ini + '</div>'
+            + '<div style="flex:1;"><div class="p-name">' + escHtml(r.staff_name) + '</div><div class="p-sub">' + escHtml(r.leave_type) + ' · ' + from + '–' + to + '</div></div>'
+            + '<div style="display:flex;gap:6px;"><span class="badge ' + bCls + '">' + shortType + '</span>'
+            + '<div class="btn-icon danger" onclick="deleteLeaveDb(this)"><i class="ti ti-trash"></i></div></div>'
+            + '</div>';
+        }).join('') + '</div>';
+    } catch(e) { /* Supabase not reachable */ }
+  }
+
+  async function deleteLeaveDb(btn) {
+    var row = btn.closest('.person-row'), id = row ? row.getAttribute('data-leave-id') : null;
+    if (!id) { confirmDeleteLeave(btn); return; }
+    if (!confirm('Remove this leave entry?')) return;
+    await sbFetch('DELETE', '/rest/v1/leave_records?id=eq.' + id, null, { 'Prefer': '' });
+    row.style.transition = 'opacity 0.2s'; row.style.opacity = '0';
+    setTimeout(function(){ row.remove(); }, 220);
+  }
+
+  // ── LOAD DUTY FROM SUPABASE ──
+  async function loadDbDuty() {
+    try {
+      var data = await sbFetch('GET', '/rest/v1/duty_roster?order=created_at.desc&limit=50');
+      if (!data || data.length === 0) return;
+      var section = document.getElementById('screen-duty');
+      if (!section) return;
+      var existing = section.querySelector('.card');
+      var html = '<div class="card" id="db-duty-card"><div class="card-label">Live Duty Assignments</div>' +
+        data.map(function(r) {
+          var ini = r.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
+          return '<div class="duty-slot" data-duty-id="' + r.id + '">'
+            + '<div class="duty-person"><div class="av av-g">' + ini + '</div><div><div class="p-name">' + escHtml(r.staff_name) + '</div><div class="p-sub">' + escHtml(r.duty_role) + (r.period ? ' · ' + r.period : '') + '</div></div></div>'
+            + '<div class="duty-right"><span class="badge b-green">On duty</span>'
+            + '<div class="btn-icon danger" onclick="deleteDutyDb(this)"><i class="ti ti-trash"></i></div></div>'
+            + '</div>';
+        }).join('') + '</div>';
+      if (existing) existing.insertAdjacentHTML('beforebegin', html);
+      else section.insertAdjacentHTML('afterbegin', html);
+    } catch(e) { /* Supabase not reachable */ }
+  }
+
+  async function deleteDutyDb(btn) {
+    var row = btn.closest('.duty-slot'), id = row ? row.getAttribute('data-duty-id') : null;
+    if (!id) { confirmDeleteDuty(btn); return; }
+    if (!confirm('Remove this duty assignment?')) return;
+    await sbFetch('DELETE', '/rest/v1/duty_roster?id=eq.' + id, null, { 'Prefer': '' });
+    row.style.transition = 'opacity 0.2s'; row.style.opacity = '0';
+    setTimeout(function(){ row.remove(); }, 220);
+  }
+
+  // ── LOAD STAFF PROFILES FROM SUPABASE ──
+  async function loadDbProfiles() {
+    try {
+      var data = await sbFetch('GET', '/rest/v1/profiles?order=created_at.asc&limit=100');
+      if (!data || data.length === 0) return;
+      localStorage.setItem('mjm_staff', JSON.stringify(data.map(function(p) {
+        return { id: p.id, name: p.full_name, email: p.email, role: p.role || 'staff' };
+      })));
+    } catch(e) { /* Supabase not reachable */ }
+  }
+
+  // ── SYNC ADMIN ROLE CHANGES TO SUPABASE ──
+  async function syncRoleToDb(email, role) {
+    await sbFetch('PATCH', '/rest/v1/profiles?email=eq.' + encodeURIComponent(email), { role: role }, { 'Prefer': '' });
+  }
+
+  // ══════════════════════════════════════
+  // INVITE STAFF
+  // ══════════════════════════════════════
+
+  async function sendInvite() {
+    clearInviteErrors();
+    var name  = document.getElementById('invite-name').value.trim();
+    var email = document.getElementById('invite-email').value.trim().toLowerCase();
+    var valid = true;
+
+    if (!name) {
+      document.getElementById('invite-name').classList.add('error');
+      document.getElementById('invite-name-error').classList.add('visible');
+      valid = false;
+    }
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      document.getElementById('invite-email').classList.add('error');
+      document.getElementById('invite-email-msg').textContent = 'Please enter a valid email address.';
+      document.getElementById('invite-email-error').classList.add('visible');
+      valid = false;
+    }
+    if (!valid) return;
+
+    setInviteLoading(true);
+
+    try {
+      // Check if already invited/registered
+      var existing = await sbFetch('GET', '/rest/v1/profiles?email=eq.' + encodeURIComponent(email) + '&select=email,role');
+      if (existing && existing.length > 0) {
+        setInviteLoading(false);
+        document.getElementById('invite-email').classList.add('error');
+        document.getElementById('invite-email-msg').textContent = 'This email already has an account.';
+        document.getElementById('invite-email-error').classList.add('visible');
+        return;
+      }
+
+      // Save invite record to profiles with role=pending
+      await sbFetch('POST', '/rest/v1/profiles', {
+        email: email,
+        full_name: name,
+        role: 'pending',
+        phone: ''
+      });
+
+      // Send invite email via Supabase Auth (requires service role key)
+      var user = JSON.parse(sessionStorage.getItem('mjm_user') || '{}');
+      var res = await fetch(SURL + '/auth/v1/invite', {
+        method: 'POST',
+        headers: {
+          'apikey': SVCKEY,
+          'Authorization': 'Bearer ' + SVCKEY,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email: email,
+          data: { full_name: name, invited_by: user.name || 'HR Admin' }
+        })
+      });
+
+      setInviteLoading(false);
+
+      if (res.ok) {
+        // Clear form
+        document.getElementById('invite-name').value  = '';
+        document.getElementById('invite-email').value = '';
+        // Show success
+        document.getElementById('invite-success-msg').textContent =
+          'Invite sent to ' + email + '. They will receive an email with a setup link.';
+        document.getElementById('invite-success').classList.add('visible');
+        setTimeout(function(){ document.getElementById('invite-success').classList.remove('visible'); }, 5000);
+        // Refresh log
+        loadInviteLog();
+        // Update pending count
+        updatePendingCount();
+      } else {
+        var err = await res.json();
+        document.getElementById('invite-error-msg').textContent =
+          err.msg || err.message || 'Could not send invite. Please try again.';
+        document.getElementById('invite-error').classList.add('visible');
+        setTimeout(function(){ document.getElementById('invite-error').classList.remove('visible'); }, 5000);
+      }
+
+    } catch(e) {
+      setInviteLoading(false);
+      document.getElementById('invite-error-msg').textContent = 'Connection error. Check your internet and try again.';
+      document.getElementById('invite-error').classList.add('visible');
+      setTimeout(function(){ document.getElementById('invite-error').classList.remove('visible'); }, 5000);
+    }
+  }
+
+  async function loadInviteLog() {
+    try {
+      var data = await sbFetch('GET', '/rest/v1/profiles?order=created_at.desc&select=email,full_name,role,created_at&limit=50');
+      var listEl = document.getElementById('invite-log-list');
+      var countEl = document.getElementById('invite-log-count');
+      if (!data || data.length === 0) {
+        listEl.innerHTML = '<div style="text-align:center;padding:14px 0;font-size:12px;color:var(--text3);">No invites sent yet.</div>';
+        return;
+      }
+      var avColors = ['av-g','av-b','av-a','av-c','av-p'];
+      if (countEl) countEl.textContent = '(' + data.length + ')';
+      listEl.innerHTML = data.map(function(u, i) {
+        var ini = (u.full_name || u.email).split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
+        var avCls = avColors[i % avColors.length];
+        var statusBadge, statusText;
+        if (u.role === 'pending') {
+          statusBadge = 'b-amber'; statusText = 'Pending';
+        } else if (u.role === 'staff' || u.role === 'hradmin' || u.role === 'superadmin') {
+          statusBadge = 'b-green'; statusText = 'Joined';
+        } else {
+          statusBadge = 'b-red'; statusText = 'Unknown';
+        }
+        var date = u.created_at ? new Date(u.created_at).toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'}) : '';
+        return '<div class="person-row">'
+          + '<div class="av ' + avCls + '">' + ini + '</div>'
+          + '<div style="flex:1;">'
+          + '<div class="p-name">' + escHtml(u.full_name || '') + '</div>'
+          + '<div class="p-sub">' + escHtml(u.email) + (date ? ' · ' + date : '') + '</div>'
+          + '</div>'
+          + '<span class="badge ' + statusBadge + '">' + statusText + '</span>'
+          + '</div>';
+      }).join('');
+    } catch(e) {
+      document.getElementById('invite-log-list').innerHTML =
+        '<div style="text-align:center;padding:12px 0;font-size:12px;color:var(--text3);">Could not load invite log.</div>';
+    }
+  }
+
+  async function updatePendingCount() {
+    try {
+      var data = await sbFetch('GET', '/rest/v1/profiles?role=eq.pending&select=email');
+      var countEl = document.querySelector('.stat-card.alert .stat-val');
+      if (countEl && data) countEl.textContent = data.length;
+    } catch(e) {}
+  }
+
+  function setInviteLoading(on) {
+    var btn = document.getElementById('invite-send-btn');
+    var lbl = document.getElementById('invite-send-label');
+    var spn = document.getElementById('invite-spinner');
+    btn.disabled = on;
+    lbl.style.display   = on ? 'none'  : 'inline';
+    spn.style.display   = on ? 'block' : 'none';
+  }
+
+  function clearInviteErrors() {
+    document.getElementById('invite-name').classList.remove('error');
+    document.getElementById('invite-email').classList.remove('error');
+    document.getElementById('invite-name-error').classList.remove('visible');
+    document.getElementById('invite-email-error').classList.remove('visible');
+  }
+
+  // Logout
+  function logout() {
+    if (confirm('Sign out of MJMConnect?')) {
+      sessionStorage.removeItem('mjm_user');
+      window.location.href = 'login.html';
+    }
+  }
+</script>
+
+</body>
+</html>

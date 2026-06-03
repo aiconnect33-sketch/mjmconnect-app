@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0F6E56">
+<title>MJMConnect — Sign In</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--green:#0F6E56;--green-mid:#1D9E75;--green-lite:#5DCAA5;--green-bg:#E1F5EE;--green-text:#085041;--red-bg:#FCEBEB;--red-text:#A32D2D;--amber-bg:#FAEEDA;--bg:#F4F6F5;--surface:#FFFFFF;--border:#D8E4E0;--text:#111C18;--text2:#6B7A73;--text3:#9AABA3;--r-md:10px;--r-lg:14px;--r-xl:20px}
+html,body{min-height:100%;font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
+.page{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 16px 40px}
+.login-card{width:100%;max-width:380px;background:var(--surface);border-radius:var(--r-xl);border:0.5px solid var(--border);box-shadow:0 4px 24px rgba(15,110,86,0.08);overflow:hidden}
+.card-header{background:var(--green);padding:28px 24px 22px;text-align:center}
+.logo-icon{width:56px;height:56px;border-radius:16px;background:var(--green-mid);display:flex;align-items:center;justify-content:center;margin:0 auto 12px}
+.logo-icon i{font-size:28px;color:#E1F5EE}
+.app-name{font-size:22px;font-weight:700;color:#E1F5EE}
+.app-name span{color:var(--green-lite);font-weight:400}
+.card-body{padding:24px}
+.section-label{font-size:13px;font-weight:600;color:var(--text);margin-bottom:16px;text-align:center}
+.form-group{margin-bottom:14px}
+.form-label{display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px}
+.input-wrap{position:relative}
+.form-input{width:100%;border:1px solid var(--border);border-radius:var(--r-md);padding:10px 36px;font-size:13px;color:var(--text);background:var(--surface);font-family:inherit;outline:none;transition:border-color 0.15s,box-shadow 0.15s;-webkit-appearance:none}
+.form-input::placeholder{color:var(--text3)}
+.form-input:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(15,110,86,0.1)}
+.form-input.error{border-color:var(--red-text)}
+.input-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--text3);pointer-events:none}
+.input-icon-right{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--text3);background:none;border:none;cursor:pointer;padding:0}
+.field-error{font-size:11px;color:var(--red-text);margin-top:5px;display:none;align-items:center;gap:4px}
+.field-error.visible{display:flex}
+.forgot-row{text-align:right;margin-top:-6px;margin-bottom:16px}
+.link-btn{background:none;border:none;color:var(--green);font-size:12px;font-weight:500;font-family:inherit;cursor:pointer;padding:0}
+.btn-primary{width:100%;background:var(--green);color:#fff;border:none;border-radius:var(--r-md);padding:12px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:background 0.15s;margin-bottom:8px}
+.btn-primary:disabled{background:var(--text3);cursor:not-allowed}
+.or-divider{display:flex;align-items:center;gap:10px;margin:14px 0}
+.or-divider::before,.or-divider::after{content:'';flex:1;height:0.5px;background:var(--border)}
+.or-divider span{font-size:11px;color:var(--text3)}
+.alert{border-radius:var(--r-md);padding:10px 12px;font-size:12px;line-height:1.5;margin-bottom:14px;display:none;align-items:flex-start;gap:8px}
+.alert.visible{display:flex}
+.alert i{font-size:15px;flex-shrink:0;margin-top:1px}
+.alert-error{background:var(--red-bg);color:var(--red-text)}
+.alert-success{background:var(--green-bg);color:var(--green-text)}
+.hdivider{height:0.5px;background:var(--border);margin:0 24px 18px}
+.card-footer{padding:0 24px 22px;text-align:center}
+.no-account-note{font-size:12px;color:var(--text2);line-height:1.6}
+.no-account-note strong{color:var(--text);font-weight:600}
+.no-account-note .small{font-size:11px;color:var(--text3);display:block;margin-top:2px}
+.version-tag{text-align:center;margin-top:20px;font-size:11px;color:#aaa}
+.spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;display:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+.panel{display:none}.panel.active{display:block}
+.back-btn{display:flex;align-items:center;gap:6px;background:none;border:none;color:var(--green);font-size:13px;font-weight:500;font-family:inherit;cursor:pointer;padding:0;margin-bottom:14px}
+</style>
+</head>
+<body>
+<div class="page">
+<div class="login-card">
+  <div class="card-header">
+    <div class="logo-icon"><i class="ti ti-building-community"></i></div>
+    <div class="app-name">MJM<span>Connect</span></div>
+  </div>
+
+  <div id="panel-login" class="panel active">
+    <div class="card-body">
+      <div class="section-label">Sign in to your account</div>
+      <div class="alert alert-error" id="login-alert"><i class="ti ti-alert-circle"></i><span id="login-alert-msg">Incorrect email or password.</span></div>
+      <div class="form-group">
+        <label class="form-label">Work Email</label>
+        <div class="input-wrap">
+          <i class="ti ti-mail input-icon"></i>
+          <input class="form-input" type="email" id="email" placeholder="Enter your work email" autocomplete="email">
+        </div>
+        <div class="field-error" id="email-error"><i class="ti ti-alert-circle"></i><span>Please enter a valid email.</span></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <div class="input-wrap">
+          <i class="ti ti-lock input-icon"></i>
+          <input class="form-input" type="password" id="password" placeholder="Enter your password" autocomplete="current-password">
+          <button class="input-icon-right" type="button" onclick="togglePassword()"><i class="ti ti-eye" id="pw-icon"></i></button>
+        </div>
+        <div class="field-error" id="pw-error"><i class="ti ti-alert-circle"></i><span>Password cannot be empty.</span></div>
+      </div>
+      <div class="forgot-row"><button class="link-btn" onclick="showPanel('forgot')">Forgot password?</button></div>
+      <button class="btn-primary" id="signin-btn" onclick="handleSignIn()">
+        <span id="signin-label">Sign In</span><div class="spinner" id="signin-spinner"></div>
+      </button>
+    </div>
+    <div class="hdivider"></div>
+    <div class="card-footer">
+      <div class="no-account-note">Don't have an account?<br><strong>Contact HR to receive an invite link.</strong><span class="small">Self-registration is not available.</span></div>
+    </div>
+  </div>
+
+  <div id="panel-forgot" class="panel">
+    <div class="card-body">
+      <button class="back-btn" onclick="showPanel('login')"><i class="ti ti-arrow-left"></i> Back to sign in</button>
+      <div class="section-label" style="text-align:left;margin-bottom:6px;">Reset your password</div>
+      <p style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:16px;">Enter your work email and we'll send a reset link. Expires in 30 minutes.</p>
+      <div class="alert alert-success" id="reset-success"><i class="ti ti-circle-check"></i><span>Reset link sent to <strong id="reset-email-shown"></strong>. Check your inbox.</span></div>
+      <div class="alert alert-error" id="reset-error"><i class="ti ti-alert-circle"></i><span>No account found with that email.</span></div>
+      <div class="form-group" id="reset-form-group">
+        <label class="form-label">Work Email</label>
+        <div class="input-wrap">
+          <i class="ti ti-mail input-icon"></i>
+          <input class="form-input" type="email" id="reset-email" placeholder="Enter your work email">
+        </div>
+      </div>
+      <button class="btn-primary" id="reset-btn" onclick="handleReset()">
+        <span id="reset-label">Send Reset Link</span><div class="spinner" id="reset-spinner"></div>
+      </button>
+    </div>
+    <div class="hdivider"></div>
+    <div class="card-footer">
+      <div class="no-account-note">Don't have an account?<br><strong>Contact HR to receive an invite link.</strong><span class="small">Self-registration is not available.</span></div>
+    </div>
+  </div>
+</div>
+<div class="version-tag">MJMConnect · v1.0 · © 2026</div>
+</div>
+
+<script>
+var SURL = 'https://jkbxngfwkytscgxnnnnd.supabase.co';
+var SKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImprYnhuZ2Z3a3l0c2NneG5ubm5kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNTcyMjcsImV4cCI6MjA5NTYzMzIyN30._FIzBEcmwtAkADDiDZVTS-YQY0kLoGBowL8n7T45Ulk';
+
+async function sbFetch(method, path, body) {
+  var res = await fetch(SURL + path, {
+    method: method,
+    headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  try { return await res.json(); } catch(e) { return null; }
+}
+
+async function handleSignIn() {
+  clearErrors();
+  var email = document.getElementById('email').value.trim();
+  var pw    = document.getElementById('password').value;
+  if (!isValidEmail(email)) { document.getElementById('email').classList.add('error'); document.getElementById('email-error').classList.add('visible'); return; }
+  if (!pw) { document.getElementById('password').classList.add('error'); document.getElementById('pw-error').classList.add('visible'); return; }
+  setLoading('signin', true);
+  try {
+    var res = await fetch(SURL + '/auth/v1/token?grant_type=password', {
+      method: 'POST',
+      headers: { 'apikey': SKEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email, password: pw })
+    });
+    var data = await res.json();
+    if (!res.ok || data.error) {
+      setLoading('signin', false);
+      document.getElementById('login-alert-msg').textContent = 'Incorrect email or password. Please try again.';
+      document.getElementById('login-alert').classList.add('visible');
+      document.getElementById('email').classList.add('error');
+      document.getElementById('password').classList.add('error');
+      return;
+    }
+    var profile = await sbFetch('GET', '/rest/v1/profiles?email=eq.' + encodeURIComponent(email) + '&select=*');
+    var role = 'staff', name = email.split('@')[0];
+    if (profile && profile.length > 0) { role = profile[0].role || 'staff'; name = profile[0].full_name || name; }
+    sessionStorage.setItem('mjm_user', JSON.stringify({ email: email, role: role, name: name, access_token: data.access_token }));
+    window.location.href = (role === 'superadmin' || role === 'hradmin') ? 'admin.html' : 'index.html';
+  } catch(e) {
+    setLoading('signin', false);
+    document.getElementById('login-alert-msg').textContent = 'Connection error. Check your internet and try again.';
+    document.getElementById('login-alert').classList.add('visible');
+  }
+}
+
+async function handleReset() {
+  var email = document.getElementById('reset-email').value.trim();
+  if (!isValidEmail(email)) { document.getElementById('reset-email').classList.add('error'); return; }
+  setLoading('reset', true);
+  try {
+    await fetch(SURL + '/auth/v1/recover', { method: 'POST', headers: { 'apikey': SKEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email }) });
+    setLoading('reset', false);
+    document.getElementById('reset-email-shown').textContent = email;
+    document.getElementById('reset-success').classList.add('visible');
+    document.getElementById('reset-form-group').style.display = 'none';
+    document.getElementById('reset-btn').style.display = 'none';
+  } catch(e) { setLoading('reset', false); document.getElementById('reset-error').classList.add('visible'); }
+}
+
+function togglePassword() {
+  var i = document.getElementById('password'), ic = document.getElementById('pw-icon');
+  if (i.type === 'password') { i.type = 'text'; ic.className = 'ti ti-eye-off'; } else { i.type = 'password'; ic.className = 'ti ti-eye'; }
+}
+function showPanel(n) { document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('active'); }); document.getElementById('panel-' + n).classList.add('active'); clearErrors(); }
+function clearErrors() { document.querySelectorAll('.field-error').forEach(function(e){ e.classList.remove('visible'); }); document.querySelectorAll('.form-input').forEach(function(i){ i.classList.remove('error'); }); document.querySelectorAll('.alert').forEach(function(a){ a.classList.remove('visible'); }); }
+function isValidEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()); }
+function setLoading(w, on) {
+  var btn = document.getElementById(w === 'signin' ? 'signin-btn' : 'reset-btn');
+  var lbl = document.getElementById(w === 'signin' ? 'signin-label' : 'reset-label');
+  var spn = document.getElementById(w === 'signin' ? 'signin-spinner' : 'reset-spinner');
+  btn.disabled = on; lbl.style.display = on ? 'none' : 'inline'; spn.style.display = on ? 'block' : 'none';
+}
+document.addEventListener('keydown', function(e) {
+  if (e.key !== 'Enter') return;
+  var a = document.querySelector('.panel.active');
+  if (a && a.id === 'panel-login') handleSignIn();
+  if (a && a.id === 'panel-forgot') handleReset();
+});
+</script>
+</body>
+</html>

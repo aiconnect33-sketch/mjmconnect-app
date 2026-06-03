@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0F6E56">
+<title>MJMConnect</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  /* ── RESET & BASE ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --green-dark:   #0F6E56;
+    --green-mid:    #1D9E75;
+    --green-light:  #5DCAA5;
+    --green-bg:     #E1F5EE;
+    --green-text:   #085041;
+    --red-bg:       #FCEBEB;
+    --red-text:     #A32D2D;
+    --red-dot:      #E24B4A;
+    --amber-bg:     #FAEEDA;
+    --amber-text:   #854F0B;
+    --blue-bg:      #E6F1FB;
+    --blue-text:    #185FA5;
+    --purple-bg:    #EEEDFE;
+    --purple-text:  #534AB7;
+    --coral-bg:     #FAECE7;
+    --coral-text:   #993C1D;
+    --bg:           #F4F6F5;
+    --surface:      #FFFFFF;
+    --border:       #E2E8E5;
+    --text-primary: #111C18;
+    --text-secondary: #6B7A73;
+    --text-light:   #9AABA3;
+    --radius-sm:    6px;
+    --radius-md:    10px;
+    --radius-lg:    14px;
+  }
+
+  html, body {
+    height: 100%;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 14px;
+    background: #1a1a1a;
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── PHONE WRAPPER ── */
+  .phone-wrap {
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 24px 16px 40px;
+  }
+
+  .phone {
+    width: 100%;
+    max-width: 390px;
+    background: var(--surface);
+    border-radius: 40px;
+    overflow: hidden;
+    border: 8px solid #2a2a2a;
+    box-shadow: 0 32px 80px rgba(0,0,0,0.5), 0 0 0 1px #444;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 780px;
+  }
+
+  /* ── STATUS BAR ── */
+  .status-bar {
+    background: var(--green-dark);
+    color: #E1F5EE;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 10px 20px 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .status-bar .status-icons { display: flex; align-items: center; gap: 5px; }
+  .status-bar .status-icons i { font-size: 13px; }
+
+  /* ── TOP BAR ── */
+  .top-bar {
+    background: var(--green-dark);
+    padding: 6px 16px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .wordmark { display: flex; align-items: center; gap: 9px; }
+  .wordmark-icon {
+    width: 32px; height: 32px; border-radius: 9px;
+    background: var(--green-mid);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .wordmark-icon i { font-size: 17px; color: #E1F5EE; }
+  .app-name {
+    font-size: 17px; font-weight: 600; color: #E1F5EE; letter-spacing: 0.01em;
+  }
+  .app-name span { color: var(--green-light); font-weight: 400; }
+  .top-bar-actions { display: flex; align-items: center; gap: 10px; }
+  .top-bar-actions i { font-size: 21px; color: #E1F5EE; }
+  .top-avatar {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--green-mid);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600; color: #E1F5EE;
+  }
+
+  /* ── TAB NAV (horizontal pills) ── */
+  .tab-nav {
+    background: var(--surface);
+    border-bottom: 0.5px solid var(--border);
+    padding: 10px 14px 0;
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    flex-shrink: 0;
+  }
+  .tab-nav::-webkit-scrollbar { display: none; }
+  .tab-btn {
+    flex-shrink: 0;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    padding: 6px 13px 8px;
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
+    white-space: nowrap;
+    background: none;
+    border-top: none; border-left: none; border-right: none;
+    font-family: inherit;
+  }
+  .tab-btn.active {
+    color: var(--green-dark);
+    border-bottom-color: var(--green-dark);
+    font-weight: 600;
+  }
+
+  /* ── SCROLL BODY ── */
+  .screen-body {
+    background: var(--bg);
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .screen-section { display: none; }
+  .screen-section.active { display: block; }
+
+  /* ── ALERT BANNER ── */
+  .alert-banner {
+    background: #FFFBEB;
+    border: 0.5px solid #F5D78A;
+    border-left: 3px solid #F0A500;
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  .alert-banner i { font-size: 15px; color: #F0A500; margin-top: 1px; flex-shrink: 0; }
+  .alert-text { font-size: 12px; color: #7A5800; line-height: 1.5; }
+  .alert-text strong { font-weight: 600; }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    border: 0.5px solid var(--border);
+    padding: 12px;
+    margin-bottom: 10px;
+  }
+  .card-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+    line-height: 1.35;
+  }
+  .card-body {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+  .card-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 6px;
+  }
+  .card-time { font-size: 10px; color: var(--text-light); }
+
+  /* accent left-border announcements */
+  .card-urgent {
+    border-left: 3px solid var(--red-dot);
+    border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+  }
+  .card-info {
+    border-left: 3px solid var(--green-dark);
+    border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+  }
+  .card-event {
+    border-left: 3px solid var(--blue-text);
+    border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+  }
+
+  /* ── BADGES ── */
+  .badge {
+    font-size: 10px; font-weight: 600;
+    padding: 2px 8px; border-radius: 20px;
+    letter-spacing: 0.02em; white-space: nowrap;
+  }
+  .badge-urgent  { background: var(--red-bg);    color: var(--red-text); }
+  .badge-info    { background: var(--green-bg);   color: var(--green-text); }
+  .badge-success { background: var(--green-bg);   color: var(--green-text); }
+  .badge-amber   { background: var(--amber-bg);   color: var(--amber-text); }
+  .badge-blue    { background: var(--blue-bg);    color: var(--blue-text); }
+  .badge-purple  { background: var(--purple-bg);  color: var(--purple-text); }
+  .badge-coral   { background: var(--coral-bg);   color: var(--coral-text); }
+
+  /* ── PERSON ROWS ── */
+  .person-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .person-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .person-row:first-child { padding-top: 0; }
+  .person-name  { font-size: 13px; color: var(--text-primary); font-weight: 500; }
+  .person-sub   { font-size: 11px; color: var(--text-secondary); margin-top: 1px; }
+
+  /* ── AVATARS ── */
+  .avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600; flex-shrink: 0;
+  }
+  .av-green  { background: var(--green-bg);  color: var(--green-text); }
+  .av-blue   { background: var(--blue-bg);   color: var(--blue-text); }
+  .av-amber  { background: var(--amber-bg);  color: var(--amber-text); }
+  .av-coral  { background: var(--coral-bg);  color: var(--coral-text); }
+  .av-purple { background: var(--purple-bg); color: var(--purple-text); }
+  .av-red    { background: var(--red-bg);    color: var(--red-text); }
+
+  /* ── SECTION HEADERS ── */
+  .section-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    margin-top: 4px;
+  }
+  .section-title {
+    font-size: 11px; font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .see-all {
+    font-size: 11px; font-weight: 500;
+    color: var(--green-dark); cursor: pointer;
+  }
+
+  /* ── CALENDAR ── */
+  .cal-nav {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 10px;
+  }
+  .cal-nav-btn {
+    background: var(--bg); border: 0.5px solid var(--border);
+    border-radius: var(--radius-sm); width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--text-secondary);
+  }
+  .cal-nav-btn i { font-size: 15px; }
+  .cal-month-label { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+  .cal-grid {
+    display: grid; grid-template-columns: repeat(7, 1fr);
+    gap: 2px; text-align: center;
+  }
+  .cal-dow {
+    font-size: 10px; font-weight: 600;
+    color: var(--text-light); padding: 2px 0 5px;
+    text-transform: uppercase;
+  }
+  .cal-day {
+    font-size: 11px; padding: 5px 2px;
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary); cursor: pointer;
+    line-height: 1;
+  }
+  .cal-day.today {
+    background: var(--green-dark); color: #fff;
+    font-weight: 600; border-radius: 50%;
+    width: 24px; height: 24px;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto;
+  }
+  .cal-day.on-leave { background: var(--red-bg); color: var(--red-text); border-radius: var(--radius-sm); }
+  .cal-day.has-event { background: var(--green-bg); color: var(--green-text); border-radius: var(--radius-sm); }
+  .cal-dot-row { display: flex; justify-content: center; gap: 2px; margin-top: 2px; }
+  .dot { width: 4px; height: 4px; border-radius: 50%; }
+  .dot-leave { background: var(--red-dot); }
+  .dot-event { background: var(--green-dark); }
+  .legend-row { display: flex; gap: 14px; margin-top: 10px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--text-secondary); }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  /* ── EVENT ROWS ── */
+  .event-row {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 8px 0; border-bottom: 0.5px solid var(--border);
+  }
+  .event-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .event-row:first-child { padding-top: 0; }
+  .event-date-box {
+    background: var(--green-bg);
+    border-radius: var(--radius-sm);
+    min-width: 36px; padding: 4px 6px;
+    text-align: center; flex-shrink: 0;
+  }
+  .event-date-day { font-size: 15px; font-weight: 700; color: var(--green-dark); line-height: 1; }
+  .event-date-mon { font-size: 9px; font-weight: 600; color: var(--green-text); text-transform: uppercase; margin-top: 1px; }
+  .event-info { flex: 1; }
+  .event-title { font-size: 13px; font-weight: 500; color: var(--text-primary); }
+  .event-sub   { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+
+  /* ── DUTY UPCOMING ROW ── */
+  .upcoming-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 0; border-bottom: 0.5px solid var(--border);
+  }
+  .upcoming-row:last-child { border-bottom: none; }
+  .upcoming-label { font-size: 12px; color: var(--text-secondary); }
+  .upcoming-person { display: flex; align-items: center; gap: 6px; }
+  .upcoming-name { font-size: 12px; color: var(--text-primary); font-weight: 500; }
+
+  /* ── BOTTOM NAV ── */
+  .nav-bar {
+    background: var(--surface);
+    border-top: 0.5px solid var(--border);
+    display: flex; justify-content: space-around;
+    padding: 8px 0 18px;
+    flex-shrink: 0;
+  }
+  .nav-item {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    font-size: 10px; font-weight: 500;
+    color: var(--text-secondary); cursor: pointer;
+    padding: 0 12px; transition: color 0.15s;
+  }
+  .nav-item i { font-size: 22px; }
+  .nav-item.active { color: var(--green-dark); }
+  .nav-badge {
+    position: relative; display: inline-block;
+  }
+  .nav-badge::after {
+    content: '';
+    position: absolute; top: 0; right: -2px;
+    width: 7px; height: 7px;
+    background: var(--red-dot); border-radius: 50%;
+    border: 1.5px solid var(--surface);
+  }
+
+  /* ── QUICK STATS STRIP ── */
+  .stats-strip {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px;
+  }
+  .stat-box {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 10px 8px;
+    text-align: center;
+  }
+  .stat-val { font-size: 20px; font-weight: 700; color: var(--green-dark); line-height: 1; }
+  .stat-lbl { font-size: 10px; color: var(--text-secondary); margin-top: 3px; }
+
+  /* ── DIVIDER ── */
+  .divider { height: 0.5px; background: var(--border); margin: 4px 0 10px; }
+</style>
+</head>
+<body>
+<script>
+  // Auth guard
+  (function() {
+    if (!sessionStorage.getItem('mjm_user')) {
+      window.location.href = 'login.html';
+    }
+  })();
+</script>
+
+<div class="phone-wrap">
+<div class="phone">
+
+  <!-- STATUS BAR -->
+  <div class="status-bar">
+    <span id="js-clock">9:41</span>
+    <div class="status-icons">
+      <i class="ti ti-wifi"></i>
+      <i class="ti ti-signal-4g"></i>
+      <i class="ti ti-battery-3"></i>
+    </div>
+  </div>
+
+  <!-- TOP BAR -->
+  <div class="top-bar">
+    <div class="wordmark">
+      <div class="wordmark-icon">
+        <i class="ti ti-building-community"></i>
+      </div>
+      <div class="app-name">MJM<span>Connect</span></div>
+    </div>
+    <div class="top-bar-actions">
+      <div class="nav-badge"><i class="ti ti-bell"></i></div>
+      <div class="top-avatar">ST</div>
+    </div>
+  </div>
+
+  <!-- TAB NAV -->
+  <div class="tab-nav">
+    <button class="tab-btn active" onclick="switchTab(this,'home')">Home</button>
+    <button class="tab-btn" onclick="switchTab(this,'announce')">Announcements</button>
+    <button class="tab-btn" onclick="switchTab(this,'calendar')">Calendar</button>
+    <button class="tab-btn" onclick="switchTab(this,'leave')">Leave</button>
+    <button class="tab-btn" onclick="switchTab(this,'duty')">Duty</button>
+  </div>
+
+  <!-- SCREEN BODY -->
+  <div class="screen-body">
+
+    <!-- ───────────────── HOME ───────────────── -->
+    <div class="screen-section active" id="screen-home">
+
+      <!-- Alert -->
+      <div class="alert-banner">
+        <i class="ti ti-alert-circle"></i>
+        <div class="alert-text">
+          <strong>Reminder:</strong> Monthly Dept. Meeting today at 2:00 PM — Level 3 Meeting Room. Compulsory for all HODs.
+        </div>
+      </div>
+
+      <!-- Quick stats -->
+      <div class="stats-strip">
+        <div class="stat-box">
+          <div class="stat-val">2</div>
+          <div class="stat-lbl">On Leave</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val">3</div>
+          <div class="stat-lbl">Events</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val">5</div>
+          <div class="stat-lbl">On Duty</div>
+        </div>
+      </div>
+
+      <!-- Latest announcements -->
+      <div class="section-row">
+        <div class="section-title">Latest Announcements</div>
+        <div class="see-all" onclick="switchTabByName('announce')">See all</div>
+      </div>
+
+      <div class="card card-urgent">
+        <div class="card-meta">
+          <span class="badge badge-urgent">Urgent</span>
+          <span class="card-time">Today, 8:30 AM</span>
+        </div>
+        <div class="card-title">Office Closure — Friday 30 May</div>
+        <div class="card-body">The office will be closed this Friday for public holiday. Please plan accordingly.</div>
+      </div>
+
+      <div class="card card-info">
+        <div class="card-meta">
+          <span class="badge badge-info">General</span>
+          <span class="card-time">Yesterday</span>
+        </div>
+        <div class="card-title">New Flexi-Work Policy — June 2026</div>
+        <div class="card-body">Staff may opt for a 4-day compressed workweek. Applications open via HR Portal from 1 June.</div>
+      </div>
+
+      <!-- Today on leave -->
+      <div class="section-row" style="margin-top:4px;">
+        <div class="section-title">Today on Leave</div>
+        <div class="see-all" onclick="switchTabByName('leave')">See all</div>
+      </div>
+      <div class="card">
+        <div class="person-row">
+          <div class="avatar av-coral">RL</div>
+          <div style="flex:1;">
+            <div class="person-name">Rachel Lim</div>
+            <div class="person-sub">Annual leave · returns Thursday</div>
+          </div>
+          <span class="badge badge-amber">AL</span>
+        </div>
+        <div class="person-row">
+          <div class="avatar av-purple">KT</div>
+          <div style="flex:1;">
+            <div class="person-name">Kevin Tan</div>
+            <div class="person-sub">Medical leave · 1 day</div>
+          </div>
+          <span class="badge badge-urgent">MC</span>
+        </div>
+      </div>
+
+      <!-- This week's duty -->
+      <div class="section-row">
+        <div class="section-title">This Week's Duty</div>
+        <div class="see-all" onclick="switchTabByName('duty')">See all</div>
+      </div>
+      <div class="card">
+        <div class="person-row">
+          <div class="avatar av-green">AH</div>
+          <div style="flex:1;">
+            <div class="person-name">Ahmad Hafiz</div>
+            <div class="person-sub">Maintenance — Week 22</div>
+          </div>
+          <span class="badge badge-success">On duty</span>
+        </div>
+        <div class="person-row">
+          <div class="avatar av-amber">NZ</div>
+          <div style="flex:1;">
+            <div class="person-name">Nurul Zahra</div>
+            <div class="person-sub">Reception — AM shift</div>
+          </div>
+          <span class="badge badge-success">On duty</span>
+        </div>
+      </div>
+
+      <!-- Upcoming event teaser -->
+      <div class="section-row">
+        <div class="section-title">Next Event</div>
+        <div class="see-all" onclick="switchTabByName('calendar')">Calendar</div>
+      </div>
+      <div class="card card-event">
+        <div class="card-meta">
+          <span class="badge badge-blue">Event</span>
+          <span class="card-time">Thu 29 May · 2:00 PM</span>
+        </div>
+        <div class="card-title">Monthly Department Meeting</div>
+        <div class="card-body">Level 3 Meeting Room · All HODs required · Q2 Review &amp; H2 Planning</div>
+      </div>
+
+    </div><!-- /home -->
+
+    <!-- ───────────────── ANNOUNCEMENTS ───────────────── -->
+    <div class="screen-section" id="screen-announce">
+
+      <div class="card card-urgent">
+        <div class="card-meta">
+          <span class="badge badge-urgent">Urgent</span>
+          <span class="card-time">Today, 8:30 AM</span>
+        </div>
+        <div class="card-title">Office Closure — Friday 30 May</div>
+        <div class="card-body">The office will be closed this Friday for the public holiday. Please plan accordingly and ensure all urgent tasks are completed by Thursday.</div>
+      </div>
+
+      <div class="card card-info">
+        <div class="card-meta">
+          <span class="badge badge-info">General</span>
+          <span class="card-time">Yesterday</span>
+        </div>
+        <div class="card-title">New Flexi-Work Policy — June 2026</div>
+        <div class="card-body">Staff may now opt for a 4-day compressed workweek. Applications open via the HR Portal from 1 June onwards. See HR circular for eligibility details.</div>
+      </div>
+
+      <div class="card card-info">
+        <div class="card-meta">
+          <span class="badge badge-info">General</span>
+          <span class="card-time">27 May</span>
+        </div>
+        <div class="card-title">New Car Park Policy Effective June 1</div>
+        <div class="card-body">All staff must register their vehicle plate number with admin before end of May. Unregistered vehicles will not be allowed entry from June 1.</div>
+      </div>
+
+      <div class="card card-info">
+        <div class="card-meta">
+          <span class="badge badge-info">HR</span>
+          <span class="card-time">25 May</span>
+        </div>
+        <div class="card-title">Q2 Performance Review Deadline</div>
+        <div class="card-body">All supervisors must submit staff appraisal forms by 15 June 2026 via the HR system. Late submissions will not be accepted.</div>
+      </div>
+
+      <div class="card card-info">
+        <div class="card-meta">
+          <span class="badge badge-amber">Facilities</span>
+          <span class="card-time">22 May</span>
+        </div>
+        <div class="card-title">New Visitor Management System</div>
+        <div class="card-body">All visitors must be pre-registered via the VisitorPass app before arriving at HQ. Walk-in visitors will be required to register at the lobby kiosk.</div>
+      </div>
+
+    </div><!-- /announce -->
+
+    <!-- ───────────────── CALENDAR ───────────────── -->
+    <div class="screen-section" id="screen-calendar">
+
+      <div class="card">
+        <div class="cal-nav">
+          <div class="cal-nav-btn"><i class="ti ti-chevron-left"></i></div>
+          <div class="cal-month-label">May 2026</div>
+          <div class="cal-nav-btn"><i class="ti ti-chevron-right"></i></div>
+        </div>
+        <div class="cal-grid">
+          <div class="cal-dow">S</div><div class="cal-dow">M</div><div class="cal-dow">T</div>
+          <div class="cal-dow">W</div><div class="cal-dow">T</div><div class="cal-dow">F</div><div class="cal-dow">S</div>
+          <!-- Row 1 -->
+          <div></div><div></div><div></div><div></div>
+          <div class="cal-day">1</div><div class="cal-day">2</div><div class="cal-day">3</div>
+          <!-- Row 2 -->
+          <div class="cal-day">4</div><div class="cal-day">5</div><div class="cal-day">6</div>
+          <div class="cal-day">7</div><div class="cal-day">8</div>
+          <div class="cal-day has-event">9<div class="cal-dot-row"><div class="dot dot-event"></div></div></div>
+          <div class="cal-day">10</div>
+          <!-- Row 3 -->
+          <div class="cal-day">11</div><div class="cal-day">12</div>
+          <div class="cal-day on-leave">13<div class="cal-dot-row"><div class="dot dot-leave"></div></div></div>
+          <div class="cal-day on-leave">14<div class="cal-dot-row"><div class="dot dot-leave"></div></div></div>
+          <div class="cal-day on-leave">15<div class="cal-dot-row"><div class="dot dot-leave"></div></div></div>
+          <div class="cal-day has-event">16<div class="cal-dot-row"><div class="dot dot-event"></div></div></div>
+          <div class="cal-day">17</div>
+          <!-- Row 4 -->
+          <div class="cal-day">18</div><div class="cal-day">19</div><div class="cal-day">20</div>
+          <div class="cal-day">21</div><div class="cal-day">22</div><div class="cal-day">23</div><div class="cal-day">24</div>
+          <!-- Row 5 -->
+          <div class="cal-day">25</div><div class="cal-day">26</div>
+          <div class="cal-day">27</div>
+          <div class="cal-day on-leave">28<div class="cal-dot-row"><div class="dot dot-leave"></div></div></div>
+          <div class="cal-day today">29</div>
+          <div class="cal-day on-leave">30<div class="cal-dot-row"><div class="dot dot-leave"></div></div></div>
+          <div class="cal-day">31</div>
+        </div>
+        <div class="legend-row">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--red-dot)"></div>On leave</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--green-dark)"></div>Office event</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--green-dark);width:10px;height:10px;border-radius:50%;"></div>Today</div>
+        </div>
+      </div>
+
+      <div class="section-row">
+        <div class="section-title">Upcoming Events</div>
+      </div>
+
+      <div class="card">
+        <div class="event-row">
+          <div class="event-date-box">
+            <div class="event-date-day">29</div>
+            <div class="event-date-mon">May</div>
+          </div>
+          <div class="event-info">
+            <div class="event-title">Monthly Department Meeting</div>
+            <div class="event-sub">2:00 PM · Level 3 Meeting Room · All HODs</div>
+          </div>
+          <span class="badge badge-blue">Today</span>
+        </div>
+        <div class="event-row">
+          <div class="event-date-box">
+            <div class="event-date-day">6</div>
+            <div class="event-date-mon">Jun</div>
+          </div>
+          <div class="event-info">
+            <div class="event-title">Staff Appreciation Luncheon</div>
+            <div class="event-sub">12:00 PM · Primula Ballroom · Smart Casual</div>
+          </div>
+          <span class="badge badge-success">RSVP</span>
+        </div>
+        <div class="event-row">
+          <div class="event-date-box">
+            <div class="event-date-day">9</div>
+            <div class="event-date-mon">Jun</div>
+          </div>
+          <div class="event-info">
+            <div class="event-title">Fire Drill — Block A &amp; B</div>
+            <div class="event-sub">10:00 AM · Assembly at Carpark C</div>
+          </div>
+          <span class="badge badge-amber">Drill</span>
+        </div>
+        <div class="event-row">
+          <div class="event-date-box">
+            <div class="event-date-day">20</div>
+            <div class="event-date-mon">Jun</div>
+          </div>
+          <div class="event-info">
+            <div class="event-title">Hari Raya Aidiladha — Public Holiday</div>
+            <div class="event-sub">Office closed</div>
+          </div>
+          <span class="badge badge-info">P/H</span>
+        </div>
+      </div>
+
+    </div><!-- /calendar -->
+
+    <!-- ───────────────── LEAVE ───────────────── -->
+    <div class="screen-section" id="screen-leave">
+
+      <div class="card">
+        <div class="card-label">On Leave Today · 29 May</div>
+        <div class="person-row">
+          <div class="avatar av-coral">RL</div>
+          <div style="flex:1;">
+            <div class="person-name">Rachel Lim</div>
+            <div class="person-sub">Annual leave · 25–30 May · Back Thursday</div>
+          </div>
+          <span class="badge badge-amber">AL</span>
+        </div>
+        <div class="person-row">
+          <div class="avatar av-purple">KT</div>
+          <div style="flex:1;">
+            <div class="person-name">Kevin Tan</div>
+            <div class="person-sub">Medical leave · today only</div>
+          </div>
+          <span class="badge badge-urgent">MC</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">Upcoming Leave — June 2026</div>
+        <div class="person-row">
+          <div class="avatar av-blue">HF</div>
+          <div style="flex:1;">
+            <div class="person-name">Hafizuddin Razali</div>
+            <div class="person-sub">Operations · 3–6 Jun · Annual leave</div>
+          </div>
+          <span class="badge badge-amber">AL</span>
+        </div>
+        <div class="person-row">
+          <div class="avatar av-green">MF</div>
+          <div style="flex:1;">
+            <div class="person-name">Mohd Firdaus Ismail</div>
+            <div class="person-sub">Admin · 2–9 Jun · Paternity leave</div>
+          </div>
+          <span class="badge badge-blue">PL</span>
+        </div>
+        <div class="person-row">
+          <div class="avatar av-amber">RK</div>
+          <div style="flex:1;">
+            <div class="person-name">Rosnah Abd. Karim</div>
+            <div class="person-sub">HR · 16–20 Jun · Annual leave</div>
+          </div>
+          <span class="badge badge-amber">AL</span>
+        </div>
+        <div class="person-row">
+          <div class="avatar av-coral">SM</div>
+          <div style="flex:1;">
+            <div class="person-name">Siti Mariam Idris</div>
+            <div class="person-sub">Finance · 23–27 Jun · Annual leave</div>
+          </div>
+          <span class="badge badge-amber">AL</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">Leave Legend</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;">
+          <span class="badge badge-amber">AL — Annual Leave</span>
+          <span class="badge badge-urgent">MC — Medical Leave</span>
+          <span class="badge badge-blue">PL — Paternity Leave</span>
+          <span class="badge badge-purple">ML — Maternity Leave</span>
+          <span class="badge badge-success">CL — Compassionate</span>
+        </div>
+      </div>
+
+    </div><!-- /leave -->
+
+    <!-- ───────────────── DUTY ───────────────── -->
+    <div class="screen-section" id="screen-duty">
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <div class="card-label" style="margin:0;">Maintenance Team</div>
+          <span class="badge badge-info">Week 22</span>
+        </div>
+        <div class="person-row">
+          <div class="avatar av-green">AH</div>
+          <div style="flex:1;">
+            <div class="person-name">Ahmad Hafiz</div>
+            <div class="person-sub">Lead — Floor 3 &amp; 4</div>
+          </div>
+          <span class="badge badge-success">On duty</span>
+        </div>
+        <div class="person-row">
+          <div class="avatar av-blue">JS</div>
+          <div style="flex:1;">
+            <div class="person-name">James Soh</div>
+            <div class="person-sub">Support — Floor 1 &amp; 2</div>
+          </div>
+          <span class="badge badge-success">On duty</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <div class="card-label" style="margin:0;">Reception / Front Desk</div>
+          <span class="badge badge-info">Week 22</span>
+        </div>
+        <div class="person-row">
+          <div class="avatar av-amber">NZ</div>
+          <div style="flex:1;">
+            <div class="person-name">Nurul Zahra</div>
+            <div class="person-sub">AM shift · 8:00–13:00</div>
+          </div>
+          <span class="badge badge-success">On duty</span>
+        </div>
+        <div class="person-row">
+          <div class="avatar av-coral">DL</div>
+          <div style="flex:1;">
+            <div class="person-name">Daniel Loh</div>
+            <div class="person-sub">PM shift · 13:00–18:00</div>
+          </div>
+          <span class="badge badge-amber">Upcoming</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <div class="card-label" style="margin:0;">IT Helpdesk On-Call</div>
+          <span class="badge badge-info">Week 22</span>
+        </div>
+        <div class="person-row">
+          <div class="avatar av-purple">KL</div>
+          <div style="flex:1;">
+            <div class="person-name">Kevin Lim</div>
+            <div class="person-sub">Mon–Wed · Primary on-call</div>
+          </div>
+          <span class="badge badge-success">On duty</span>
+        </div>
+        <div class="person-row">
+          <div class="avatar av-red">RA</div>
+          <div style="flex:1;">
+            <div class="person-name">Rajan Appu</div>
+            <div class="person-sub">Thu–Fri · Primary on-call</div>
+          </div>
+          <span class="badge badge-amber">Thu–Fri</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">Upcoming Rotation — Week 23</div>
+        <div class="upcoming-row">
+          <div class="upcoming-label">Maintenance lead</div>
+          <div class="upcoming-person">
+            <div class="avatar av-purple" style="width:24px;height:24px;font-size:9px;">SW</div>
+            <div class="upcoming-name">Siti Wardah</div>
+          </div>
+        </div>
+        <div class="upcoming-row">
+          <div class="upcoming-label">Reception AM</div>
+          <div class="upcoming-person">
+            <div class="avatar av-blue" style="width:24px;height:24px;font-size:9px;">FH</div>
+            <div class="upcoming-name">Farid Hadi</div>
+          </div>
+        </div>
+        <div class="upcoming-row">
+          <div class="upcoming-label">IT on-call</div>
+          <div class="upcoming-person">
+            <div class="avatar av-amber" style="width:24px;height:24px;font-size:9px;">YR</div>
+            <div class="upcoming-name">Yusri Rahman</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /duty -->
+
+  </div><!-- /screen-body -->
+
+  <!-- BOTTOM NAV -->
+  <div class="nav-bar">
+    <div class="nav-item active" id="nav-home" onclick="switchNav('home')">
+      <i class="ti ti-home"></i>
+      <span>Home</span>
+    </div>
+    <div class="nav-item" id="nav-announce" onclick="switchNav('announce')">
+      <div class="nav-badge"><i class="ti ti-speakerphone"></i></div>
+      <span>Board</span>
+    </div>
+    <div class="nav-item" id="nav-calendar" onclick="switchNav('calendar')">
+      <i class="ti ti-calendar"></i>
+      <span>Calendar</span>
+    </div>
+    <div class="nav-item" id="nav-leave" onclick="switchNav('leave')">
+      <i class="ti ti-beach"></i>
+      <span>Leave</span>
+    </div>
+    <div class="nav-item" id="nav-duty" onclick="switchNav('duty')">
+      <i class="ti ti-users"></i>
+      <span>Duty</span>
+    </div>
+  </div>
+
+</div><!-- /phone -->
+</div><!-- /phone-wrap -->
+
+<script>
+  // Live clock
+  function tick() {
+    const now = new Date();
+    let h = now.getHours(), m = now.getMinutes();
+    const ap = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    document.getElementById('js-clock').textContent = h + ':' + String(m).padStart(2,'0') + ' ' + ap;
+  }
+  tick(); setInterval(tick, 10000);
+
+  // Tab switching (top tab bar)
+  function switchTab(btn, name) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.screen-section').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-' + name).classList.add('active');
+    // sync bottom nav
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    const navEl = document.getElementById('nav-' + name);
+    if (navEl) navEl.classList.add('active');
+    else document.getElementById('nav-home').classList.add('active');
+  }
+
+  // Bottom nav switching
+  function switchNav(name) {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('nav-' + name).classList.add('active');
+    document.querySelectorAll('.screen-section').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-' + name).classList.add('active');
+    // sync tab bar
+    const tabMap = { home:0, announce:1, calendar:2, leave:3, duty:4 };
+    const tabs = document.querySelectorAll('.tab-btn');
+    tabs.forEach(t => t.classList.remove('active'));
+    if (tabMap[name] !== undefined) tabs[tabMap[name]].classList.add('active');
+  }
+
+  // "See all" links
+  function switchTabByName(name) {
+    const tabs = document.querySelectorAll('.tab-btn');
+    const map = { home:0, announce:1, calendar:2, leave:3, duty:4 };
+    tabs.forEach(t => t.classList.remove('active'));
+    if (map[name] !== undefined) tabs[map[name]].classList.add('active');
+    document.querySelectorAll('.screen-section').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-' + name).classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    const navEl = document.getElementById('nav-' + name);
+    if (navEl) navEl.classList.add('active');
+  }
+
+
+  // ── SUPABASE CONFIG ──
+  var SURL = 'https://jkbxngfwkytscgxnnnnd.supabase.co';
+  var SKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImprYnhuZ2Z3a3l0c2NneG5ubm5kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNTcyMjcsImV4cCI6MjA5NTYzMzIyN30._FIzBEcmwtAkADDiDZVTS-YQY0kLoGBowL8n7T45Ulk';
+
+  async function sbGet(table, filter) {
+    var url = SURL + '/rest/v1/' + table + '?order=created_at.desc';
+    if (filter) url += '&' + filter;
+    var res = await fetch(url, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
+    try { return await res.json(); } catch(e) { return []; }
+  }
+
+  // Load announcements from Supabase
+  async function loadAnnouncements() {
+    try {
+      var data = await sbGet('announcements', 'limit=20');
+      if (!data || data.length === 0) return;
+      var badgeMap = {
+        urgent:   { cls:'tag-announce', badgeCls:'badge-urgent',  label:'Urgent' },
+        general:  { cls:'tag-announce', badgeCls:'badge-info',    label:'General' },
+        hr:       { cls:'tag-event',    badgeCls:'badge-blue',    label:'HR' },
+        facility: { cls:'tag-announce', badgeCls:'badge-amber',   label:'Facilities' },
+        event:    { cls:'tag-event',    badgeCls:'badge-event',   label:'Event' }
+      };
+      var container = document.getElementById('screen-announce');
+      if (!container) return;
+      var html = '';
+      data.forEach(function(ann) {
+        var b = badgeMap[ann.badge] || badgeMap['general'];
+        var d = new Date(ann.created_at);
+        var dateStr = d.toLocaleDateString('en-MY', { day:'numeric', month:'short' });
+        html += '<div class="card card-info">'
+          + '<div class="card-meta"><span class="badge ' + b.badgeCls + '">' + (ann.badge ? ann.badge.charAt(0).toUpperCase() + ann.badge.slice(1) : 'General') + '</span><span class="card-time">' + dateStr + '</span></div>'
+          + '<div class="card-title">' + escHtml(ann.title) + '</div>'
+          + '<div class="card-body">' + escHtml(ann.body) + '</div>'
+          + '</div>';
+      });
+      // Insert after existing static cards
+      var existing = container.querySelector('.section-row');
+      if (existing) existing.insertAdjacentHTML('afterend', html);
+    } catch(e) { /* Supabase not reachable — using static data */ }
+  }
+
+  // Load leave records
+  async function loadLeave() {
+    try {
+      var data = await sbGet('leave_records', 'limit=20');
+      if (!data || data.length === 0) return;
+      var container = document.getElementById('screen-leave');
+      if (!container) return;
+      var html = '<div class="card" style="margin-top:10px;"><div class="card-label">Live Leave Records</div>';
+      data.forEach(function(r) {
+        var ini = r.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
+        var shortType = r.leave_type === 'Annual Leave' ? 'AL' : r.leave_type === 'Medical Leave' ? 'MC' : r.leave_type === 'Paternity Leave' ? 'PL' : r.leave_type === 'Maternity Leave' ? 'ML' : 'CL';
+        var from = new Date(r.date_from).toLocaleDateString('en-MY',{day:'numeric',month:'short'});
+        var to   = new Date(r.date_to).toLocaleDateString('en-MY',{day:'numeric',month:'short'});
+        html += '<div class="person-row"><div class="av av-g">' + ini + '</div><div style="flex:1;"><div class="p-name">' + escHtml(r.staff_name) + '</div><div class="p-sub">' + escHtml(r.leave_type) + ' · ' + from + '–' + to + '</div></div><span class="badge badge-amber">' + shortType + '</span></div>';
+      });
+      html += '</div>';
+      container.insertAdjacentHTML('beforeend', html);
+    } catch(e) { /* Supabase not reachable — using static data */ }
+  }
+
+  // Load duty roster
+  async function loadDuty() {
+    try {
+      var data = await sbGet('duty_roster', 'limit=20');
+      if (!data || data.length === 0) return;
+      var container = document.getElementById('screen-duty');
+      if (!container) return;
+      var html = '<div class="roster-card" style="margin-top:10px;"><div class="roster-title">Live Duty Assignments</div>';
+      data.forEach(function(r) {
+        var ini = r.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
+        html += '<div class="roster-row"><div class="roster-person"><div class="av av-g" style="width:28px;height:28px;font-size:10px;">' + ini + '</div><div><div class="roster-name">' + escHtml(r.staff_name) + '</div><div class="roster-role">' + escHtml(r.duty_role) + '</div></div></div><div class="roster-day today">' + escHtml(r.period || 'Active') + '</div></div>';
+      });
+      html += '</div>';
+      container.insertAdjacentHTML('beforeend', html);
+    } catch(e) { /* Supabase not reachable — using static data */ }
+  }
+
+  function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  // Load all data when page opens
+  // Only fetch from Supabase when served via http (not file://)
+  window.addEventListener('DOMContentLoaded', function() {
+    if (window.location.protocol !== 'file:') {
+      loadAnnouncements();
+      loadLeave();
+      loadDuty();
+    }
+  });
+
+  // Logout
+  function logout() {
+    if (confirm('Sign out of MJMConnect?')) {
+      sessionStorage.removeItem('mjm_user');
+      window.location.href = 'login.html';
+    }
+  }
+  // Set initials from session
+  (function() {
+    const raw = sessionStorage.getItem('mjm_user');
+    if (raw) {
+      const u = JSON.parse(raw);
+      const parts = (u.name || u.email || '').split(/[@.\s]/);
+      const initials = parts.filter(Boolean).slice(0,2).map(p=>p[0].toUpperCase()).join('');
+      const el = document.getElementById('top-av-initials');
+      if (el) el.textContent = initials || 'ST';
+    }
+  })();
+</script>
+</body>
+</html>
