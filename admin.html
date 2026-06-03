@@ -3,8 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0F6E56">
+<link rel="manifest" href="manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="#0F6E56">
+<meta name="apple-mobile-web-app-title" content="MJMConnect">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <title>MJMConnect — HR Admin</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -1381,24 +1386,24 @@ html, body {
     if (name === 'settings') renderSettingsPage();
     if (name === 'invite') loadInviteLog();
   }
+  // ── BOTTOM NAV — switches both screen and top tab ──
   function switchNav(name) {
-    const tabs = document.querySelectorAll('.tab-btn');
-    const map  = { dashboard:0, announce:1, invite:2, leave:3, duty:4, settings:5 };
-    tabs.forEach(t => t.classList.remove('active'));
+    var tabs = document.querySelectorAll('.tab-btn');
+    var map  = { dashboard:0, announce:1, invite:2, leave:3, duty:4, settings:5 };
+    tabs.forEach(function(t){ t.classList.remove('active'); });
     if (map[name] !== undefined) tabs[map[name]].classList.add('active');
-    document.querySelectorAll('.screen-section').forEach(s => s.classList.remove('active'));
-    document.getElementById('screen-' + name).classList.add('active');
-    syncNav(name);
-    if (name === 'settings') renderSettingsPage();
-  }
-  function switchNav(name) {
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    const el = document.getElementById('nav-' + name);
+    document.querySelectorAll('.screen-section').forEach(function(s){ s.classList.remove('active'); });
+    var screen = document.getElementById('screen-' + name);
+    if (screen) screen.classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
+    var el = document.getElementById('nav-' + name);
     if (el) el.classList.add('active');
+    if (name === 'settings') renderSettingsPage();
+    if (name === 'invite')   loadInviteLog();
   }
   function syncNav(name) {
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    const el = document.getElementById('nav-' + name);
+    document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
+    var el = document.getElementById('nav-' + name);
     if (el) el.classList.add('active');
   }
 
@@ -2254,5 +2259,14 @@ html, body {
   }
 </script>
 
+
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+      navigator.serviceWorker.register('sw.js').catch(function(e){});
+    });
+  }
+</script>
 </body>
 </html>
