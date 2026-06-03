@@ -64,11 +64,11 @@ html,body{min-height:100%;font-family:'Inter',-apple-system,sans-serif;backgroun
 <body>
 
 <script>
-  // If invite token is in URL hash, redirect to register.html
+  // If invite token is in URL hash, redirect to register.html immediately
   (function() {
     var hash = window.location.hash;
-    if (hash && hash.includes('type=invite') && hash.includes('access_token')) {
-      window.location.href = 'register.html' + hash;
+    if (hash && hash.indexOf('type=invite') !== -1 && hash.indexOf('access_token') !== -1) {
+      window.location.replace('register.html' + hash);
     }
   })();
 </script>
@@ -178,7 +178,14 @@ async function handleSignIn() {
     var role = 'staff', name = email.split('@')[0];
     if (profile && profile.length > 0) { role = profile[0].role || 'staff'; name = profile[0].full_name || name; }
     sessionStorage.setItem('mjm_user', JSON.stringify({ email: email, role: role, name: name, access_token: data.access_token }));
-    window.location.href = (role === 'superadmin' || role === 'hradmin') ? 'admin.html' : 'index.html';
+    // Clear any cached pages and redirect
+      if ('caches' in window) {
+        caches.keys().then(function(names) {
+          names.forEach(function(name) { caches.delete(name); });
+        });
+      }
+      var dest = (role === 'superadmin' || role === 'hradmin') ? 'admin.html' : 'index.html';
+      window.location.replace(dest);
   } catch(e) {
     setLoading('signin', false);
     document.getElementById('login-alert-msg').textContent = 'Connection error. Check your internet and try again.';
@@ -219,16 +226,6 @@ document.addEventListener('keydown', function(e) {
   if (a && a.id === 'panel-login') handleSignIn();
   if (a && a.id === 'panel-forgot') handleReset();
 });
-</script>
-
-
-
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function() {
-      navigator.serviceWorker.register('sw.js').catch(function(e){});
-    });
-  }
 </script>
 </body>
 </html>
