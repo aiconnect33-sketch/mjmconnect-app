@@ -2,14 +2,16 @@
 <html lang="en">
 <head>
 <script>
-  // Run immediately before anything loads
   (function() {
     var hash = window.location.hash;
     if (hash && hash.indexOf('type=invite') !== -1 && hash.indexOf('access_token') !== -1) {
-      window.location.replace('register.html' + hash);
+      window.location.replace('register.html' + hash); return;
     }
     if (hash && hash.indexOf('type=recovery') !== -1 && hash.indexOf('access_token') !== -1) {
-      window.location.replace('register.html' + hash);
+      window.location.replace('register.html' + hash); return;
+    }
+    if (!sessionStorage.getItem('mjm_user')) {
+      window.location.replace('login.html');
     }
   })();
 </script>
@@ -22,218 +24,841 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="#0F6E56">
 <meta name="apple-mobile-web-app-title" content="MJMConnect">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
-<title>MJMConnect — Sign In</title>
+<title>MJMConnect</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--green:#0F6E56;--green-mid:#1D9E75;--green-lite:#5DCAA5;--green-bg:#E1F5EE;--green-text:#085041;--red-bg:#FCEBEB;--red-text:#A32D2D;--amber-bg:#FAEEDA;--bg:#F4F6F5;--surface:#FFFFFF;--border:#D8E4E0;--text:#111C18;--text2:#6B7A73;--text3:#9AABA3;--r-md:10px;--r-lg:14px;--r-xl:20px}
-html,body{min-height:100%;font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
-.page{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 16px 40px}
-.login-card{width:100%;max-width:380px;background:var(--surface);border-radius:var(--r-xl);border:0.5px solid var(--border);box-shadow:0 4px 24px rgba(15,110,86,0.08);overflow:hidden}
-.card-header{background:var(--green);padding:28px 24px 22px;text-align:center}
-.logo-icon{width:56px;height:56px;border-radius:16px;background:var(--green-mid);display:flex;align-items:center;justify-content:center;margin:0 auto 12px}
-.logo-icon i{font-size:28px;color:#E1F5EE}
-.app-name{font-size:22px;font-weight:700;color:#E1F5EE}
-.app-name span{color:var(--green-lite);font-weight:400}
-.card-body{padding:24px}
-.section-label{font-size:13px;font-weight:600;color:var(--text);margin-bottom:16px;text-align:center}
-.form-group{margin-bottom:14px}
-.form-label{display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px}
-.input-wrap{position:relative}
-.form-input{width:100%;border:1px solid var(--border);border-radius:var(--r-md);padding:10px 36px;font-size:13px;color:var(--text);background:var(--surface);font-family:inherit;outline:none;transition:border-color 0.15s,box-shadow 0.15s;-webkit-appearance:none}
-.form-input::placeholder{color:var(--text3)}
-.form-input:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(15,110,86,0.1)}
-.form-input.error{border-color:var(--red-text)}
-.input-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--text3);pointer-events:none}
-.input-icon-right{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--text3);background:none;border:none;cursor:pointer;padding:0}
-.field-error{font-size:11px;color:var(--red-text);margin-top:5px;display:none;align-items:center;gap:4px}
-.field-error.visible{display:flex}
-.forgot-row{text-align:right;margin-top:-6px;margin-bottom:16px}
-.link-btn{background:none;border:none;color:var(--green);font-size:12px;font-weight:500;font-family:inherit;cursor:pointer;padding:0}
-.btn-primary{width:100%;background:var(--green);color:#fff;border:none;border-radius:var(--r-md);padding:12px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:background 0.15s;margin-bottom:8px}
-.btn-primary:disabled{background:var(--text3);cursor:not-allowed}
-.or-divider{display:flex;align-items:center;gap:10px;margin:14px 0}
-.or-divider::before,.or-divider::after{content:'';flex:1;height:0.5px;background:var(--border)}
-.or-divider span{font-size:11px;color:var(--text3)}
-.alert{border-radius:var(--r-md);padding:10px 12px;font-size:12px;line-height:1.5;margin-bottom:14px;display:none;align-items:flex-start;gap:8px}
-.alert.visible{display:flex}
-.alert i{font-size:15px;flex-shrink:0;margin-top:1px}
-.alert-error{background:var(--red-bg);color:var(--red-text)}
-.alert-success{background:var(--green-bg);color:var(--green-text)}
-.hdivider{height:0.5px;background:var(--border);margin:0 24px 18px}
-.card-footer{padding:0 24px 22px;text-align:center}
-.no-account-note{font-size:12px;color:var(--text2);line-height:1.6}
-.no-account-note strong{color:var(--text);font-weight:600}
-.no-account-note .small{font-size:11px;color:var(--text3);display:block;margin-top:2px}
-.version-tag{text-align:center;margin-top:20px;font-size:11px;color:#aaa}
-.spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;display:none}
-@keyframes spin{to{transform:rotate(360deg)}}
-.panel{display:none}.panel.active{display:block}
-.back-btn{display:flex;align-items:center;gap:6px;background:none;border:none;color:var(--green);font-size:13px;font-weight:500;font-family:inherit;cursor:pointer;padding:0;margin-bottom:14px}
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --green-dark:   #0F6E56;
+    --green-mid:    #1D9E75;
+    --green-light:  #5DCAA5;
+    --green-bg:     #E1F5EE;
+    --green-text:   #085041;
+    --red-bg:       #FCEBEB;
+    --red-text:     #A32D2D;
+    --red-dot:      #E24B4A;
+    --amber-bg:     #FAEEDA;
+    --amber-text:   #854F0B;
+    --blue-bg:      #E6F1FB;
+    --blue-text:    #185FA5;
+    --purple-bg:    #EEEDFE;
+    --purple-text:  #534AB7;
+    --coral-bg:     #FAECE7;
+    --coral-text:   #993C1D;
+    --bg:           #F4F6F5;
+    --surface:      #FFFFFF;
+    --border:       #E2E8E5;
+    --text-primary: #111C18;
+    --text-secondary: #6B7A73;
+    --text-light:   #9AABA3;
+    --radius-sm:    6px;
+    --radius-md:    10px;
+    --radius-lg:    14px;
+  }
+  html, body {
+    height: 100%;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 14px;
+    background: #1a1a1a;
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+  }
+  .phone-wrap {
+    min-height: 100vh;
+    display: flex; align-items: flex-start; justify-content: center;
+    padding: 24px 16px 40px;
+  }
+  .phone {
+    width: 100%; max-width: 390px;
+    background: var(--surface);
+    border-radius: 40px; overflow: hidden;
+    border: 8px solid #2a2a2a;
+    box-shadow: 0 32px 80px rgba(0,0,0,0.5), 0 0 0 1px #444;
+    position: relative; display: flex; flex-direction: column;
+    min-height: 780px;
+  }
+  .status-bar {
+    background: var(--green-dark); color: #E1F5EE;
+    font-size: 11px; font-weight: 500;
+    padding: 10px 20px 6px;
+    display: flex; justify-content: space-between; align-items: center;
+    flex-shrink: 0;
+  }
+  .status-bar .status-icons { display: flex; align-items: center; gap: 5px; }
+  .status-bar .status-icons i { font-size: 13px; }
+  .top-bar {
+    background: var(--green-dark);
+    padding: 6px 16px 14px;
+    display: flex; justify-content: space-between; align-items: center;
+    flex-shrink: 0;
+  }
+  .wordmark { display: flex; align-items: center; gap: 9px; }
+  .wordmark-icon {
+    width: 32px; height: 32px; border-radius: 9px;
+    background: var(--green-mid);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .wordmark-icon i { font-size: 17px; color: #E1F5EE; }
+  .app-name { font-size: 17px; font-weight: 600; color: #E1F5EE; letter-spacing: 0.01em; }
+  .app-name span { color: var(--green-light); font-weight: 400; }
+  .top-bar-actions { display: flex; align-items: center; gap: 10px; }
+  .top-bar-actions i { font-size: 21px; color: #E1F5EE; }
+  .top-avatar {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--green-mid);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600; color: #E1F5EE;
+    cursor: pointer;
+  }
+  .tab-nav {
+    background: var(--surface);
+    border-bottom: 0.5px solid var(--border);
+    padding: 10px 14px 0;
+    display: flex; gap: 4px;
+    overflow-x: auto; scrollbar-width: none; flex-shrink: 0;
+  }
+  .tab-nav::-webkit-scrollbar { display: none; }
+  .tab-btn {
+    flex-shrink: 0; font-size: 12px; font-weight: 500;
+    color: var(--text-secondary);
+    padding: 6px 13px 8px;
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    cursor: pointer; border-bottom: 2px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
+    white-space: nowrap; background: none;
+    border-top: none; border-left: none; border-right: none;
+    font-family: inherit;
+  }
+  .tab-btn.active { color: var(--green-dark); border-bottom-color: var(--green-dark); font-weight: 600; }
+  .screen-body {
+    background: var(--bg); flex: 1; overflow-y: auto;
+    padding: 12px; -webkit-overflow-scrolling: touch;
+  }
+  .screen-section { display: none; }
+  .screen-section.active { display: block; }
+  .alert-banner {
+    background: #FFFBEB; border: 0.5px solid #F5D78A;
+    border-left: 3px solid #F0A500;
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    padding: 10px 12px; margin-bottom: 10px;
+    display: flex; gap: 8px; align-items: flex-start;
+  }
+  .alert-banner i { font-size: 15px; color: #F0A500; margin-top: 1px; flex-shrink: 0; }
+  .alert-text { font-size: 12px; color: #7A5800; line-height: 1.5; }
+  .alert-text strong { font-weight: 600; }
+  .card {
+    background: var(--surface); border-radius: var(--radius-lg);
+    border: 0.5px solid var(--border); padding: 12px; margin-bottom: 10px;
+  }
+  .card-label {
+    font-size: 10px; font-weight: 600; color: var(--text-secondary);
+    letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 8px;
+  }
+  .card-title { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; line-height: 1.35; }
+  .card-body { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+  .card-meta { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+  .card-time { font-size: 10px; color: var(--text-light); }
+  .card-urgent { border-left: 3px solid var(--red-dot); border-radius: 0 var(--radius-lg) var(--radius-lg) 0; }
+  .card-info { border-left: 3px solid var(--green-dark); border-radius: 0 var(--radius-lg) var(--radius-lg) 0; }
+  .card-event { border-left: 3px solid var(--blue-text); border-radius: 0 var(--radius-lg) var(--radius-lg) 0; }
+  .badge {
+    font-size: 10px; font-weight: 600;
+    padding: 2px 8px; border-radius: 20px;
+    letter-spacing: 0.02em; white-space: nowrap;
+  }
+  .badge-urgent  { background: var(--red-bg);    color: var(--red-text); }
+  .badge-info    { background: var(--green-bg);   color: var(--green-text); }
+  .badge-success { background: var(--green-bg);   color: var(--green-text); }
+  .badge-amber   { background: var(--amber-bg);   color: var(--amber-text); }
+  .badge-blue    { background: var(--blue-bg);    color: var(--blue-text); }
+  .badge-purple  { background: var(--purple-bg);  color: var(--purple-text); }
+  .badge-coral   { background: var(--coral-bg);   color: var(--coral-text); }
+  .person-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 0; border-bottom: 0.5px solid var(--border);
+  }
+  .person-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .person-row:first-child { padding-top: 0; }
+  .person-name { font-size: 13px; color: var(--text-primary); font-weight: 500; }
+  .person-sub  { font-size: 11px; color: var(--text-secondary); margin-top: 1px; }
+  .avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600; flex-shrink: 0;
+  }
+  .av-green  { background: var(--green-bg);  color: var(--green-text); }
+  .av-blue   { background: var(--blue-bg);   color: var(--blue-text); }
+  .av-amber  { background: var(--amber-bg);  color: var(--amber-text); }
+  .av-coral  { background: var(--coral-bg);  color: var(--coral-text); }
+  .av-purple { background: var(--purple-bg); color: var(--purple-text); }
+  .av-red    { background: var(--red-bg);    color: var(--red-text); }
+  .section-row {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 8px; margin-top: 4px;
+  }
+  .section-title {
+    font-size: 11px; font-weight: 600; color: var(--text-secondary);
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .see-all { font-size: 11px; font-weight: 500; color: var(--green-dark); cursor: pointer; }
+
+  /* ── CALENDAR ── */
+  .cal-card {
+    background: var(--surface); border-radius: var(--radius-lg);
+    border: 0.5px solid var(--border); overflow: hidden; margin-bottom: 10px;
+  }
+  .cal-header {
+    background: var(--green-dark); padding: 11px 14px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .cal-nav-btn {
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: #E1F5EE;
+    background: rgba(255,255,255,0.15); border-radius: var(--radius-sm);
+    border: none;
+  }
+  .cal-nav-btn i { font-size: 15px; }
+  .cal-month-label { font-size: 13px; font-weight: 600; color: #E1F5EE; }
+  .cal-body { padding: 10px 10px 12px; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; }
+  .cal-dow { font-size: 10px; font-weight: 600; color: var(--text-light); padding: 2px 0 6px; text-transform: uppercase; }
+  .cal-day {
+    font-size: 11px; color: var(--text-primary); cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; padding: 3px 1px; gap: 2px;
+  }
+  .cal-day span { line-height: 1; }
+  .cal-day.today span {
+    background: var(--green-dark); color: #fff; font-weight: 600;
+    border-radius: 50%; width: 22px; height: 22px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .cal-underline { width: 16px; height: 3px; border-radius: 2px; }
+  .cal-underline.leave { background: #EF9F27; }
+  .cal-day.has-event span {
+    background: #CECBF6; color: #3C3489; font-weight: 500;
+    border-radius: 5px; width: 22px; height: 22px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .cal-day.holiday span {
+    background: #FCEBEB; color: #A32D2D; font-weight: 500;
+    border-radius: 5px; width: 22px; height: 22px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .legend-row {
+    display: flex; gap: 12px; margin-top: 10px; flex-wrap: wrap;
+    border-top: 0.5px solid var(--border); padding-top: 10px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--text-secondary); }
+  .legend-line { width: 14px; height: 3px; border-radius: 2px; }
+
+  /* ── ANNOUNCEMENTS ── */
+  .ann-badge { display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px; }
+
+  /* ── EVENT ROWS ── */
+  .event-row {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 8px 0; border-bottom: 0.5px solid var(--border);
+  }
+  .event-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .event-row:first-child { padding-top: 0; }
+  .event-date-box {
+    background: var(--green-bg); border-radius: var(--radius-sm);
+    min-width: 36px; padding: 4px 6px; text-align: center; flex-shrink: 0;
+  }
+  .event-date-day { font-size: 15px; font-weight: 700; color: var(--green-dark); line-height: 1; }
+  .event-date-mon { font-size: 9px; font-weight: 600; color: var(--green-text); text-transform: uppercase; margin-top: 1px; }
+  .event-info { flex: 1; }
+  .event-title { font-size: 13px; font-weight: 500; color: var(--text-primary); }
+  .event-sub   { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+
+  /* ── ROSTER ── */
+  .roster-card { background: var(--surface); border-radius: var(--radius-lg); border: 0.5px solid var(--border); padding: 12px; margin-bottom: 10px; }
+  .roster-title { font-size: 10px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .roster-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 0.5px solid var(--border); }
+  .roster-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .roster-person { display: flex; align-items: center; gap: 8px; }
+  .roster-name { font-size: 12px; font-weight: 500; color: var(--text-primary); }
+  .roster-role { font-size: 11px; color: var(--text-secondary); }
+  .roster-day { font-size: 11px; font-weight: 500; padding: 3px 8px; border-radius: 20px; background: var(--green-bg); color: var(--green-text); }
+  .roster-day.today { background: var(--green-dark); color: #fff; }
+  .av { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; flex-shrink: 0; }
+  .av-g { background: var(--green-bg); color: var(--green-text); }
+  .p-name { font-size: 13px; color: var(--text-primary); font-weight: 500; }
+  .p-sub  { font-size: 11px; color: var(--text-secondary); margin-top: 1px; }
+
+  /* ── UPCOMING ROW ── */
+  .upcoming-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 0.5px solid var(--border); }
+  .upcoming-row:last-child { border-bottom: none; }
+  .upcoming-label { font-size: 12px; color: var(--text-secondary); }
+  .upcoming-person { display: flex; align-items: center; gap: 6px; }
+  .upcoming-name { font-size: 12px; color: var(--text-primary); font-weight: 500; }
+
+  /* ── BOTTOM NAV ── */
+  .nav-bar {
+    background: var(--surface); border-top: 0.5px solid var(--border);
+    display: flex; justify-content: space-around;
+    padding: 8px 0 18px; flex-shrink: 0;
+  }
+  .nav-item {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    font-size: 10px; font-weight: 500; color: var(--text-secondary);
+    cursor: pointer; padding: 0 12px; transition: color 0.15s;
+  }
+  .nav-item i { font-size: 22px; }
+  .nav-item.active { color: var(--green-dark); }
+  .nav-badge { position: relative; display: inline-block; }
+  .nav-badge::after {
+    content: ''; position: absolute; top: 0; right: -2px;
+    width: 7px; height: 7px; background: var(--red-dot);
+    border-radius: 50%; border: 1.5px solid var(--surface);
+  }
+  .divider { height: 0.5px; background: var(--border); margin: 4px 0 10px; }
 </style>
 </head>
 <body>
 
+<div class="phone-wrap">
+<div class="phone">
 
-<div class="page">
-<div class="login-card">
-  <div class="card-header">
-    <div class="logo-icon"><i class="ti ti-building-community"></i></div>
-    <div class="app-name">MJM<span>Connect</span></div>
-  </div>
-
-  <div id="panel-login" class="panel active">
-    <div class="card-body">
-      <div class="section-label">Sign in to your account</div>
-      <div class="alert alert-error" id="login-alert"><i class="ti ti-alert-circle"></i><span id="login-alert-msg">Incorrect email or password.</span></div>
-      <div class="form-group">
-        <label class="form-label">Work Email</label>
-        <div class="input-wrap">
-          <i class="ti ti-mail input-icon"></i>
-          <input class="form-input" type="email" id="email" placeholder="Enter your work email" autocomplete="email">
-        </div>
-        <div class="field-error" id="email-error"><i class="ti ti-alert-circle"></i><span>Please enter a valid email.</span></div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Password</label>
-        <div class="input-wrap">
-          <i class="ti ti-lock input-icon"></i>
-          <input class="form-input" type="password" id="password" placeholder="Enter your password" autocomplete="current-password">
-          <button class="input-icon-right" type="button" onclick="togglePassword()"><i class="ti ti-eye" id="pw-icon"></i></button>
-        </div>
-        <div class="field-error" id="pw-error"><i class="ti ti-alert-circle"></i><span>Password cannot be empty.</span></div>
-      </div>
-      <div class="forgot-row"><button class="link-btn" onclick="showPanel('forgot')">Forgot password?</button></div>
-      <button class="btn-primary" id="signin-btn" onclick="handleSignIn()">
-        <span id="signin-label">Sign In</span><div class="spinner" id="signin-spinner"></div>
-      </button>
-    </div>
-    <div class="hdivider"></div>
-    <div class="card-footer">
-      <div class="no-account-note">Don't have an account?<br><strong>Contact HR to receive an invite link.</strong><span class="small">Self-registration is not available.</span></div>
+  <!-- STATUS BAR -->
+  <div class="status-bar">
+    <span id="js-clock">9:41</span>
+    <div class="status-icons">
+      <i class="ti ti-wifi"></i>
+      <i class="ti ti-signal-4g"></i>
+      <i class="ti ti-battery-3"></i>
     </div>
   </div>
 
-  <div id="panel-forgot" class="panel">
-    <div class="card-body">
-      <button class="back-btn" onclick="showPanel('login')"><i class="ti ti-arrow-left"></i> Back to sign in</button>
-      <div class="section-label" style="text-align:left;margin-bottom:6px;">Reset your password</div>
-      <p style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:16px;">Enter your work email and we'll send a reset link. Expires in 30 minutes.</p>
-      <div class="alert alert-success" id="reset-success"><i class="ti ti-circle-check"></i><span>Reset link sent to <strong id="reset-email-shown"></strong>. Check your inbox.</span></div>
-      <div class="alert alert-error" id="reset-error"><i class="ti ti-alert-circle"></i><span>No account found with that email.</span></div>
-      <div class="form-group" id="reset-form-group">
-        <label class="form-label">Work Email</label>
-        <div class="input-wrap">
-          <i class="ti ti-mail input-icon"></i>
-          <input class="form-input" type="email" id="reset-email" placeholder="Enter your work email">
-        </div>
-      </div>
-      <button class="btn-primary" id="reset-btn" onclick="handleReset()">
-        <span id="reset-label">Send Reset Link</span><div class="spinner" id="reset-spinner"></div>
-      </button>
+  <!-- TOP BAR -->
+  <div class="top-bar">
+    <div class="wordmark">
+      <div class="wordmark-icon"><i class="ti ti-building-community"></i></div>
+      <div class="app-name">MJM<span>Connect</span></div>
     </div>
-    <div class="hdivider"></div>
-    <div class="card-footer">
-      <div class="no-account-note">Don't have an account?<br><strong>Contact HR to receive an invite link.</strong><span class="small">Self-registration is not available.</span></div>
+    <div class="top-bar-actions">
+      <div class="nav-badge"><i class="ti ti-bell"></i></div>
+      <div class="top-avatar" id="top-av-initials" onclick="window.location.href='profile.html'" title="My Profile">ST</div>
     </div>
   </div>
-</div>
-<div class="version-tag">MJMConnect · v1.0 · © 2026</div>
-</div>
+
+  <!-- TAB NAV -->
+  <div class="tab-nav">
+    <button class="tab-btn active" onclick="switchTab(this,'home')">Home</button>
+    <button class="tab-btn" onclick="switchTab(this,'announce')">Announcements</button>
+    <button class="tab-btn" onclick="switchTab(this,'leave')">Leave</button>
+    <button class="tab-btn" onclick="switchTab(this,'duty')">Duty</button>
+  </div>
+
+  <!-- SCREEN BODY -->
+  <div class="screen-body">
+
+    <!-- ── HOME ── -->
+    <div class="screen-section active" id="screen-home">
+
+      <!-- Urgent announcement banner -->
+      <div class="alert-banner">
+        <i class="ti ti-alert-circle"></i>
+        <div class="alert-text">
+          <strong>Office Closure:</strong> The office will be closed this Friday 30 May for public holiday. Please plan accordingly.
+        </div>
+      </div>
+
+      <!-- Calendar -->
+      <div class="cal-card">
+        <div class="cal-header">
+          <button class="cal-nav-btn"><i class="ti ti-chevron-left"></i></button>
+          <div class="cal-month-label">June 2026</div>
+          <button class="cal-nav-btn"><i class="ti ti-chevron-right"></i></button>
+        </div>
+        <div class="cal-body">
+          <div class="cal-grid">
+            <div class="cal-dow">S</div><div class="cal-dow">M</div><div class="cal-dow">T</div>
+            <div class="cal-dow">W</div><div class="cal-dow">T</div><div class="cal-dow">F</div><div class="cal-dow">S</div>
+            <div class="cal-day"><span>1</span></div>
+            <div class="cal-day"><span>2</span></div>
+            <div class="cal-day today"><span>3</span></div>
+            <div class="cal-day on-leave"><span>4</span><div class="cal-underline leave"></div></div>
+            <div class="cal-day on-leave"><span>5</span><div class="cal-underline leave"></div></div>
+            <div class="cal-day has-event"><span>6</span></div>
+            <div class="cal-day"><span>7</span></div>
+            <div class="cal-day"><span>8</span></div>
+            <div class="cal-day has-event"><span>9</span></div>
+            <div class="cal-day"><span>10</span></div>
+            <div class="cal-day"><span>11</span></div>
+            <div class="cal-day"><span>12</span></div>
+            <div class="cal-day on-leave"><span>13</span><div class="cal-underline leave"></div></div>
+            <div class="cal-day on-leave"><span>14</span><div class="cal-underline leave"></div></div>
+            <div class="cal-day on-leave"><span>15</span><div class="cal-underline leave"></div></div>
+            <div class="cal-day"><span>16</span></div>
+            <div class="cal-day"><span>17</span></div>
+            <div class="cal-day"><span>18</span></div>
+            <div class="cal-day has-event on-leave"><span>19</span><div class="cal-underline leave"></div></div>
+            <div class="cal-day holiday"><span>20</span></div>
+            <div class="cal-day"><span>21</span></div>
+            <div class="cal-day"><span>22</span></div>
+            <div class="cal-day"><span>23</span></div>
+            <div class="cal-day"><span>24</span></div>
+            <div class="cal-day"><span>25</span></div>
+            <div class="cal-day"><span>26</span></div>
+            <div class="cal-day"><span>27</span></div>
+            <div class="cal-day on-leave"><span>28</span><div class="cal-underline leave"></div></div>
+            <div class="cal-day"><span>29</span></div>
+            <div class="cal-day"><span>30</span></div>
+          </div>
+          <div class="legend-row">
+            <div class="legend-item">
+              <div style="width:16px;height:16px;border-radius:50%;background:var(--green-dark);display:flex;align-items:center;justify-content:center;">
+                <span style="font-size:8px;color:#fff;font-weight:600;">3</span>
+              </div>Today
+            </div>
+            <div class="legend-item"><div class="legend-line" style="background:#EF9F27;"></div>Leave</div>
+            <div class="legend-item">
+              <div style="width:16px;height:16px;border-radius:4px;background:#CECBF6;display:flex;align-items:center;justify-content:center;">
+                <span style="font-size:8px;color:#3C3489;font-weight:600;">6</span>
+              </div>Event
+            </div>
+            <div class="legend-item">
+              <div style="width:16px;height:16px;border-radius:4px;background:#FCEBEB;display:flex;align-items:center;justify-content:center;">
+                <span style="font-size:8px;color:#A32D2D;font-weight:600;">20</span>
+              </div>Holiday
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Today on leave -->
+      <div class="section-row">
+        <div class="section-title">Today on Leave</div>
+        <div class="see-all" onclick="switchTabByName('leave')">See all</div>
+      </div>
+      <div class="card">
+        <div class="person-row">
+          <div class="avatar av-coral">RL</div>
+          <div style="flex:1;">
+            <div class="person-name">Rachel Lim</div>
+            <div class="person-sub">Annual leave · returns Thursday</div>
+          </div>
+          <span class="badge badge-amber">AL</span>
+        </div>
+        <div class="person-row">
+          <div class="avatar av-purple">KT</div>
+          <div style="flex:1;">
+            <div class="person-name">Kevin Tan</div>
+            <div class="person-sub">Medical leave · 1 day</div>
+          </div>
+          <span class="badge badge-urgent">MC</span>
+        </div>
+      </div>
+
+      <!-- This week's duty -->
+      <div class="section-row">
+        <div class="section-title">This Week's Duty</div>
+        <div class="see-all" onclick="switchTabByName('duty')">See all</div>
+      </div>
+      <div class="card">
+        <div class="person-row">
+          <div class="avatar av-green">AH</div>
+          <div style="flex:1;">
+            <div class="person-name">Ahmad Hafiz</div>
+            <div class="person-sub">Maintenance — Week 22</div>
+          </div>
+          <span class="badge badge-success">On duty</span>
+        </div>
+        <div class="person-row">
+          <div class="avatar av-amber">NZ</div>
+          <div style="flex:1;">
+            <div class="person-name">Nurul Zahra</div>
+            <div class="person-sub">Reception — AM shift</div>
+          </div>
+          <span class="badge badge-success">On duty</span>
+        </div>
+      </div>
+
+    </div><!-- /home -->
+
+    <!-- ── ANNOUNCEMENTS ── -->
+    <div class="screen-section" id="screen-announce">
+
+      <div class="card card-urgent">
+        <div class="card-meta">
+          <span class="badge badge-urgent">Urgent</span>
+          <span class="card-time">Today, 8:30 AM</span>
+        </div>
+        <div class="card-title">Office Closure — Friday 30 May</div>
+        <div class="card-body">The office will be closed this Friday for public holiday. Please plan accordingly.</div>
+      </div>
+      <div class="card card-info">
+        <div class="card-meta">
+          <span class="badge badge-info">General</span>
+          <span class="card-time">Yesterday</span>
+        </div>
+        <div class="card-title">New Flexi-Work Policy — June 2026</div>
+        <div class="card-body">Staff may opt for a 4-day compressed workweek. Applications open via HR Portal from 1 June.</div>
+      </div>
+      <div class="card card-info">
+        <div class="card-meta">
+          <span class="badge badge-blue">HR</span>
+          <span class="card-time">2 days ago</span>
+        </div>
+        <div class="card-title">Annual Leave Applications — Q3 2026</div>
+        <div class="card-body">Q3 leave applications are now open. Submit via HR Portal by 15 June. Max 2 weeks per application.</div>
+      </div>
+      <div class="card card-info">
+        <div class="card-meta">
+          <span class="badge badge-amber">Facilities</span>
+          <span class="card-time">3 days ago</span>
+        </div>
+        <div class="card-title">Lift Maintenance — Block B</div>
+        <div class="card-body">Block B lift will be under maintenance on 5–6 June. Please use stairwell or Block A lift.</div>
+      </div>
+      <div class="card card-info">
+        <div class="card-meta">
+          <span class="badge badge-info">General</span>
+          <span class="card-time">5 days ago</span>
+        </div>
+        <div class="card-title">New Visitor Management System</div>
+        <div class="card-body">All visitors must be pre-registered via the VisitorPass app before arriving at HQ.</div>
+      </div>
+
+    </div><!-- /announce -->
+
+    <!-- ── LEAVE ── -->
+    <div class="screen-section" id="screen-leave">
+
+      <div class="section-row">
+        <div class="section-title">Currently on Leave</div>
+      </div>
+      <div class="card">
+        <div class="person-row">
+          <div class="avatar av-coral">RL</div>
+          <div style="flex:1;">
+            <div class="person-name">Rachel Lim</div>
+            <div class="person-sub">Annual Leave · 28 May – 5 Jun</div>
+          </div>
+          <span class="badge badge-amber">AL</span>
+        </div>
+        <div class="person-row">
+          <div class="avatar av-purple">KT</div>
+          <div style="flex:1;">
+            <div class="person-name">Kevin Tan</div>
+            <div class="person-sub">Medical Leave · 29 May</div>
+          </div>
+          <span class="badge badge-urgent">MC</span>
+        </div>
+      </div>
+
+      <div class="section-row">
+        <div class="section-title">Upcoming Leave</div>
+      </div>
+      <div class="card">
+        <div class="person-row">
+          <div class="avatar av-green">AH</div>
+          <div style="flex:1;">
+            <div class="person-name">Ahmad Hafiz</div>
+            <div class="person-sub">Annual Leave · 13–15 Jun</div>
+          </div>
+          <span class="badge badge-amber">AL</span>
+        </div>
+        <div class="person-row">
+          <div class="avatar av-blue">HF</div>
+          <div style="flex:1;">
+            <div class="person-name">Hafizuddin Fadzil</div>
+            <div class="person-sub">Annual Leave · 19–21 Jun</div>
+          </div>
+          <span class="badge badge-amber">AL</span>
+        </div>
+        <div class="person-row">
+          <div class="avatar av-amber">NZ</div>
+          <div style="flex:1;">
+            <div class="person-name">Nurul Zahra</div>
+            <div class="person-sub">Annual Leave · 28 Jun – 2 Jul</div>
+          </div>
+          <span class="badge badge-amber">AL</span>
+        </div>
+      </div>
+
+    </div><!-- /leave -->
+
+    <!-- ── DUTY ── -->
+    <div class="screen-section" id="screen-duty">
+
+      <div class="section-row">
+        <div class="section-title">Current Roster — Week 22</div>
+      </div>
+
+      <div class="roster-card">
+        <div class="roster-title">Reception / Front Desk</div>
+        <div class="roster-row">
+          <div class="roster-person">
+            <div class="avatar av-amber">NZ</div>
+            <div>
+              <div class="roster-name">Nurul Zahra</div>
+              <div class="roster-role">AM shift · 8:00–13:00</div>
+            </div>
+          </div>
+          <div class="roster-day today">On duty</div>
+        </div>
+        <div class="roster-row">
+          <div class="roster-person">
+            <div class="avatar av-coral">DL</div>
+            <div>
+              <div class="roster-name">Daniel Loh</div>
+              <div class="roster-role">PM shift · 13:00–18:00</div>
+            </div>
+          </div>
+          <div class="roster-day">Upcoming</div>
+        </div>
+      </div>
+
+      <div class="roster-card">
+        <div class="roster-title">Maintenance Team</div>
+        <div class="roster-row">
+          <div class="roster-person">
+            <div class="avatar av-green">AH</div>
+            <div>
+              <div class="roster-name">Ahmad Hafiz</div>
+              <div class="roster-role">Lead — Floor 3 &amp; 4</div>
+            </div>
+          </div>
+          <div class="roster-day today">On duty</div>
+        </div>
+        <div class="roster-row">
+          <div class="roster-person">
+            <div class="avatar av-blue">JS</div>
+            <div>
+              <div class="roster-name">James Soh</div>
+              <div class="roster-role">Support — Floor 1 &amp; 2</div>
+            </div>
+          </div>
+          <div class="roster-day today">On duty</div>
+        </div>
+      </div>
+
+      <div class="roster-card">
+        <div class="roster-title">IT Helpdesk On-Call</div>
+        <div class="roster-row">
+          <div class="roster-person">
+            <div class="avatar av-purple">KL</div>
+            <div>
+              <div class="roster-name">Kevin Lim</div>
+              <div class="roster-role">Mon–Wed · Primary on-call</div>
+            </div>
+          </div>
+          <div class="roster-day today">On duty</div>
+        </div>
+        <div class="roster-row">
+          <div class="roster-person">
+            <div class="avatar av-red">RA</div>
+            <div>
+              <div class="roster-name">Rajan Appu</div>
+              <div class="roster-role">Thu–Fri · Primary on-call</div>
+            </div>
+          </div>
+          <div class="roster-day">Thu–Fri</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">Upcoming Rotation — Week 23</div>
+        <div class="upcoming-row">
+          <div class="upcoming-label">Maintenance lead</div>
+          <div class="upcoming-person">
+            <div class="avatar av-purple" style="width:24px;height:24px;font-size:9px;">SW</div>
+            <div class="upcoming-name">Siti Wardah</div>
+          </div>
+        </div>
+        <div class="upcoming-row">
+          <div class="upcoming-label">Reception AM</div>
+          <div class="upcoming-person">
+            <div class="avatar av-blue" style="width:24px;height:24px;font-size:9px;">FH</div>
+            <div class="upcoming-name">Farid Hadi</div>
+          </div>
+        </div>
+        <div class="upcoming-row">
+          <div class="upcoming-label">IT on-call</div>
+          <div class="upcoming-person">
+            <div class="avatar av-amber" style="width:24px;height:24px;font-size:9px;">YR</div>
+            <div class="upcoming-name">Yusri Rahman</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /duty -->
+
+  </div><!-- /screen-body -->
+
+  <!-- BOTTOM NAV -->
+  <div class="nav-bar">
+    <div class="nav-item active" id="nav-home" onclick="switchNav('home')">
+      <i class="ti ti-home"></i><span>Home</span>
+    </div>
+    <div class="nav-item" id="nav-announce" onclick="switchNav('announce')">
+      <div class="nav-badge"><i class="ti ti-speakerphone"></i></div><span>Board</span>
+    </div>
+    <div class="nav-item" id="nav-leave" onclick="switchNav('leave')">
+      <i class="ti ti-beach"></i><span>Leave</span>
+    </div>
+    <div class="nav-item" id="nav-duty" onclick="switchNav('duty')">
+      <i class="ti ti-users"></i><span>Duty</span>
+    </div>
+    <div class="nav-item" id="nav-profile" onclick="window.location.href='profile.html'">
+      <i class="ti ti-user-circle"></i><span>Profile</span>
+    </div>
+  </div>
+
+</div><!-- /phone -->
+</div><!-- /phone-wrap -->
 
 <script>
-var SURL = 'https://jkbxngfwkytscgxnnnnd.supabase.co';
-var SKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImprYnhuZ2Z3a3l0c2NneG5ubm5kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNTcyMjcsImV4cCI6MjA5NTYzMzIyN30._FIzBEcmwtAkADDiDZVTS-YQY0kLoGBowL8n7T45Ulk';
-
-async function sbFetch(method, path, body) {
-  var res = await fetch(SURL + path, {
-    method: method,
-    headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
-    body: body ? JSON.stringify(body) : undefined
-  });
-  try { return await res.json(); } catch(e) { return null; }
-}
-
-async function handleSignIn() {
-  clearErrors();
-  var email = document.getElementById('email').value.trim();
-  var pw    = document.getElementById('password').value;
-  if (!isValidEmail(email)) { document.getElementById('email').classList.add('error'); document.getElementById('email-error').classList.add('visible'); return; }
-  if (!pw) { document.getElementById('password').classList.add('error'); document.getElementById('pw-error').classList.add('visible'); return; }
-  setLoading('signin', true);
-  try {
-    var res = await fetch(SURL + '/auth/v1/token?grant_type=password', {
-      method: 'POST',
-      headers: { 'apikey': SKEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email, password: pw })
-    });
-    var data = await res.json();
-    if (!res.ok || data.error) {
-      setLoading('signin', false);
-      document.getElementById('login-alert-msg').textContent = 'Incorrect email or password. Please try again.';
-      document.getElementById('login-alert').classList.add('visible');
-      document.getElementById('email').classList.add('error');
-      document.getElementById('password').classList.add('error');
-      return;
-    }
-    var profile = await sbFetch('GET', '/rest/v1/profiles?email=eq.' + encodeURIComponent(email) + '&select=*');
-    var role = 'staff', name = email.split('@')[0];
-    if (profile && profile.length > 0) { role = profile[0].role || 'staff'; name = profile[0].full_name || name; }
-    sessionStorage.setItem('mjm_user', JSON.stringify({ email: email, role: role, name: name, access_token: data.access_token }));
-    var dest = (role === 'superadmin' || role === 'hradmin') ? 'admin.html' : 'index.html';
-    // Clear cache then redirect
-    if ('caches' in window) {
-      caches.keys().then(function(names) {
-        return Promise.all(names.map(function(n) { return caches.delete(n); }));
-      }).then(function() {
-        window.location.replace(dest);
-      }).catch(function() {
-        window.location.replace(dest);
-      });
-    } else {
-      window.location.replace(dest);
-    }
-  } catch(e) {
-    setLoading('signin', false);
-    document.getElementById('login-alert-msg').textContent = 'Connection error. Check your internet and try again.';
-    document.getElementById('login-alert').classList.add('visible');
+  function tick() {
+    var now = new Date();
+    var h = now.getHours(), m = now.getMinutes();
+    var ap = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    document.getElementById('js-clock').textContent = h + ':' + String(m).padStart(2,'0') + ' ' + ap;
   }
-}
+  tick(); setInterval(tick, 10000);
 
-async function handleReset() {
-  var email = document.getElementById('reset-email').value.trim();
-  if (!isValidEmail(email)) { document.getElementById('reset-email').classList.add('error'); return; }
-  setLoading('reset', true);
-  try {
-    await fetch(SURL + '/auth/v1/recover', { method: 'POST', headers: { 'apikey': SKEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email }) });
-    setLoading('reset', false);
-    document.getElementById('reset-email-shown').textContent = email;
-    document.getElementById('reset-success').classList.add('visible');
-    document.getElementById('reset-form-group').style.display = 'none';
-    document.getElementById('reset-btn').style.display = 'none';
-  } catch(e) { setLoading('reset', false); document.getElementById('reset-error').classList.add('visible'); }
-}
+  function switchTab(btn, name) {
+    document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+    document.querySelectorAll('.screen-section').forEach(function(s){ s.classList.remove('active'); });
+    document.getElementById('screen-' + name).classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
+    var navEl = document.getElementById('nav-' + name);
+    if (navEl) navEl.classList.add('active');
+    else document.getElementById('nav-home').classList.add('active');
+  }
 
-function togglePassword() {
-  var i = document.getElementById('password'), ic = document.getElementById('pw-icon');
-  if (i.type === 'password') { i.type = 'text'; ic.className = 'ti ti-eye-off'; } else { i.type = 'password'; ic.className = 'ti ti-eye'; }
-}
-function showPanel(n) { document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('active'); }); document.getElementById('panel-' + n).classList.add('active'); clearErrors(); }
-function clearErrors() { document.querySelectorAll('.field-error').forEach(function(e){ e.classList.remove('visible'); }); document.querySelectorAll('.form-input').forEach(function(i){ i.classList.remove('error'); }); document.querySelectorAll('.alert').forEach(function(a){ a.classList.remove('visible'); }); }
-function isValidEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()); }
-function setLoading(w, on) {
-  var btn = document.getElementById(w === 'signin' ? 'signin-btn' : 'reset-btn');
-  var lbl = document.getElementById(w === 'signin' ? 'signin-label' : 'reset-label');
-  var spn = document.getElementById(w === 'signin' ? 'signin-spinner' : 'reset-spinner');
-  btn.disabled = on; lbl.style.display = on ? 'none' : 'inline'; spn.style.display = on ? 'block' : 'none';
-}
-document.addEventListener('keydown', function(e) {
-  if (e.key !== 'Enter') return;
-  var a = document.querySelector('.panel.active');
-  if (a && a.id === 'panel-login') handleSignIn();
-  if (a && a.id === 'panel-forgot') handleReset();
-});
+  function switchNav(name) {
+    document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
+    document.getElementById('nav-' + name).classList.add('active');
+    document.querySelectorAll('.screen-section').forEach(function(s){ s.classList.remove('active'); });
+    document.getElementById('screen-' + name).classList.add('active');
+    var tabMap = { home:0, announce:1, leave:2, duty:3 };
+    var tabs = document.querySelectorAll('.tab-btn');
+    tabs.forEach(function(t){ t.classList.remove('active'); });
+    if (tabMap[name] !== undefined) tabs[tabMap[name]].classList.add('active');
+  }
+
+  function switchTabByName(name) {
+    var tabs = document.querySelectorAll('.tab-btn');
+    var map = { home:0, announce:1, leave:2, duty:3 };
+    tabs.forEach(function(t){ t.classList.remove('active'); });
+    if (map[name] !== undefined) tabs[map[name]].classList.add('active');
+    document.querySelectorAll('.screen-section').forEach(function(s){ s.classList.remove('active'); });
+    document.getElementById('screen-' + name).classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
+    var navEl = document.getElementById('nav-' + name);
+    if (navEl) navEl.classList.add('active');
+  }
+
+  // Supabase config
+  var SURL = 'https://jkbxngfwkytscgxnnnnd.supabase.co';
+  var SKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImprYnhuZ2Z3a3l0c2NneG5ubm5kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNTcyMjcsImV4cCI6MjA5NTYzMzIyN30._FIzBEcmwtAkADDiDZVTS-YQY0kLoGBowL8n7T45Ulk';
+
+  async function sbGet(table, filter) {
+    var url = SURL + '/rest/v1/' + table + '?order=created_at.desc';
+    if (filter) url += '&' + filter;
+    var res = await fetch(url, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
+    try { return await res.json(); } catch(e) { return []; }
+  }
+
+  function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  async function loadAnnouncements() {
+    try {
+      var data = await sbGet('announcements', 'limit=20');
+      if (!data || data.length === 0) return;
+      var badgeMap = {
+        urgent:   'badge-urgent', general: 'badge-info',
+        hr:       'badge-blue',   facility: 'badge-amber', event: 'badge-blue'
+      };
+      var container = document.getElementById('screen-announce');
+      if (!container) return;
+      var html = '';
+      data.forEach(function(ann) {
+        var bCls = badgeMap[ann.badge] || 'badge-info';
+        var label = ann.badge ? ann.badge.charAt(0).toUpperCase() + ann.badge.slice(1) : 'General';
+        var cardCls = ann.badge === 'urgent' ? 'card-urgent' : 'card-info';
+        var d = new Date(ann.created_at).toLocaleDateString('en-MY', { day:'numeric', month:'short' });
+        html += '<div class="card ' + cardCls + '">'
+          + '<div class="card-meta"><span class="badge ' + bCls + '">' + escHtml(label) + '</span><span class="card-time">' + d + '</span></div>'
+          + '<div class="card-title">' + escHtml(ann.title) + '</div>'
+          + '<div class="card-body">' + escHtml(ann.body) + '</div>'
+          + '</div>';
+      });
+      container.insertAdjacentHTML('afterbegin', html);
+    } catch(e) {}
+  }
+
+  async function loadLeave() {
+    try {
+      var data = await sbGet('leave_records', 'limit=20');
+      if (!data || data.length === 0) return;
+      var container = document.getElementById('screen-leave');
+      if (!container) return;
+      var html = '<div class="card"><div class="card-label">Live Leave Records</div>';
+      data.forEach(function(r) {
+        var ini = r.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
+        var shortType = r.leave_type === 'Annual Leave' ? 'AL' : r.leave_type === 'Medical Leave' ? 'MC' : 'CL';
+        var from = new Date(r.date_from + 'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'});
+        var to   = new Date(r.date_to + 'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'});
+        html += '<div class="person-row"><div class="av av-g">' + ini + '</div>'
+          + '<div style="flex:1;"><div class="p-name">' + escHtml(r.staff_name) + '</div>'
+          + '<div class="p-sub">' + escHtml(r.leave_type) + ' · ' + from + '–' + to + '</div></div>'
+          + '<span class="badge badge-amber">' + shortType + '</span></div>';
+      });
+      html += '</div>';
+      container.insertAdjacentHTML('afterbegin', html);
+    } catch(e) {}
+  }
+
+  async function loadDuty() {
+    try {
+      var data = await sbGet('duty_roster', 'limit=20');
+      if (!data || data.length === 0) return;
+      var container = document.getElementById('screen-duty');
+      if (!container) return;
+      var html = '<div class="roster-card"><div class="roster-title">Live Duty Assignments</div>';
+      data.forEach(function(r) {
+        var ini = r.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
+        html += '<div class="roster-row"><div class="roster-person"><div class="av av-g">' + ini + '</div>'
+          + '<div><div class="roster-name">' + escHtml(r.staff_name) + '</div>'
+          + '<div class="roster-role">' + escHtml(r.duty_role) + '</div></div></div>'
+          + '<div class="roster-day today">' + escHtml(r.period || 'Active') + '</div></div>';
+      });
+      html += '</div>';
+      container.insertAdjacentHTML('afterbegin', html);
+    } catch(e) {}
+  }
+
+  window.addEventListener('DOMContentLoaded', function() {
+    if (window.location.protocol !== 'file:') {
+      loadAnnouncements();
+      loadLeave();
+      loadDuty();
+    }
+    // Set initials from session
+    var raw = sessionStorage.getItem('mjm_user');
+    if (raw) {
+      var u = JSON.parse(raw);
+      var parts = (u.name || u.email || '').split(/[@.\s]/);
+      var initials = parts.filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
+      var el = document.getElementById('top-av-initials');
+      if (el) el.textContent = initials || 'ST';
+    }
+  });
+
+  function logout() {
+    if (confirm('Sign out of MJMConnect?')) {
+      sessionStorage.removeItem('mjm_user');
+      window.location.href = 'login.html';
+    }
+  }
 </script>
 </body>
 </html>
