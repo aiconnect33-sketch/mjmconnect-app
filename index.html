@@ -887,23 +887,9 @@
             </div>
             <div style="display:flex;gap:12px;margin-top:10px;flex-wrap:wrap;border-top:0.5px solid var(--border);padding-top:10px;">
               <div class="legend-item"><div style="width:14px;height:14px;border-radius:50%;background:var(--green-dark);"></div>Today</div>
-              <div class="legend-item"><div style="width:14px;height:14px;border-radius:4px;background:#FCEBEB;border:1px solid #F09595;"></div>Booked</div>
+              <div class="legend-item"><div style="width:14px;height:14px;border-radius:4px;background:#FCEBEB;border:1px solid #F09595;"></div>Booked · tap to view</div>
             </div>
           </div>
-        </div>
-
-        <!-- Vehicle bookings list -->
-        <div class="section-row"><div class="section-title">Upcoming Bookings</div></div>
-        <div id="v-list"><div class="book-empty">Loading...</div></div>
-
-        <!-- Vehicle daily timeline -->
-        <div class="section-row" style="margin-top:4px;"><div class="section-title">Daily Timeline</div></div>
-        <div class="card" style="margin-bottom:10px;">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-            <i class="ti ti-calendar" style="color:var(--text-secondary);font-size:15px;"></i>
-            <input type="date" id="v-timeline-date" class="book-form-input" style="flex:1;margin:0;" onchange="loadVehicleTimeline()">
-          </div>
-          <div id="v-timeline"><div class="book-empty">Pick a date to see bookings.</div></div>
         </div>
 
       </div><!-- /vehicle panel -->
@@ -968,26 +954,42 @@
         <div class="book-alert book-alert-success" id="r-success"><i class="ti ti-circle-check"></i><span>Room booked successfully!</span></div>
         <div class="book-alert book-alert-error" id="r-error"><i class="ti ti-alert-circle"></i><span id="r-error-msg">Could not save booking.</span></div>
 
-        <!-- Date picker for timeline -->
-        <div class="section-row"><div class="section-title">Daily Timeline</div></div>
-        <div class="card" style="margin-bottom:10px;">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-            <i class="ti ti-calendar" style="color:var(--text-secondary);font-size:15px;"></i>
-            <input type="date" id="r-timeline-date" class="book-form-input" style="flex:1;margin:0;"
-              onchange="loadRoomTimeline()" value="">
+        <!-- Room calendar -->
+        <div class="section-row"><div class="section-title">Availability</div></div>
+        <div class="cal-card" style="margin-bottom:10px;">
+          <div class="cal-header">
+            <button class="cal-nav-btn" onclick="rCalPrev()"><i class="ti ti-chevron-left"></i></button>
+            <div class="cal-month-label" id="r-cal-label">June 2026</div>
+            <button class="cal-nav-btn" onclick="rCalNext()"><i class="ti ti-chevron-right"></i></button>
           </div>
-          <div id="r-timeline"><div class="book-empty">Pick a date to see bookings.</div></div>
+          <div class="cal-body">
+            <div class="cal-grid" id="r-cal-grid">
+              <div class="cal-dow">S</div><div class="cal-dow">M</div><div class="cal-dow">T</div>
+              <div class="cal-dow">W</div><div class="cal-dow">T</div><div class="cal-dow">F</div><div class="cal-dow">S</div>
+            </div>
+            <div style="display:flex;gap:12px;margin-top:10px;flex-wrap:wrap;border-top:0.5px solid var(--border);padding-top:10px;">
+              <div class="legend-item"><div style="width:14px;height:14px;border-radius:50%;background:var(--green-dark);"></div>Today</div>
+              <div class="legend-item"><div style="width:14px;height:14px;border-radius:4px;background:#FCEBEB;border:1px solid #F09595;"></div>Booked · tap to view</div>
+            </div>
+          </div>
         </div>
-
-        <!-- Room bookings list -->
-        <div class="section-row"><div class="section-title">Upcoming Bookings</div></div>
-        <div id="r-list"><div class="book-empty">Loading...</div></div>
 
       </div><!-- /room panel -->
 
     </div><!-- /book -->
 
   </div><!-- /screen-body -->
+
+  <!-- ── DAY DETAIL MODAL (shared) ── -->
+  <div id="book-day-modal" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,0.45);" onclick="closeDayModal()">
+    <div style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:var(--surface);border-radius:18px 18px 0 0;padding:20px 16px 32px;" onclick="event.stopPropagation()">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div id="book-day-modal-title" style="font-size:14px;font-weight:700;color:var(--text-primary);"></div>
+        <button onclick="closeDayModal()" style="background:none;border:none;font-size:20px;color:var(--text-secondary);cursor:pointer;line-height:1;">&times;</button>
+      </div>
+      <div id="book-day-modal-body"></div>
+    </div>
+  </div>
 
   <!-- BOTTOM NAV -->
   <div class="nav-bar">
@@ -1165,22 +1167,17 @@
   // ══════════════════════════════
 
   var bookTabInited = false;
-  var vCalYear, vCalMonth;
+  var vCalYear, vCalMonth, rCalYear, rCalMonth;
 
   function initBookTab() {
     if (bookTabInited) return;
     bookTabInited = true;
     var now = new Date();
     vCalYear = now.getFullYear(); vCalMonth = now.getMonth();
-    // Set today as default date for room timeline
-    var today = now.toISOString().split('T')[0];
-    document.getElementById('r-timeline-date').value = today;
-    document.getElementById('v-timeline-date').value = today;
+    rCalYear = now.getFullYear(); rCalMonth = now.getMonth();
     if (window.location.protocol !== 'file:') {
       loadVehicleCalendar();
-      loadVehicleList();
-      loadRoomList();
-      loadRoomTimeline();
+      loadRoomCalendar();
     }
   }
 
@@ -1345,7 +1342,11 @@
       var isToday  = (d === today.getDate() && vCalMonth === today.getMonth() && vCalYear === today.getFullYear());
       var isBooked = bookedDates && bookedDates[dateStr];
       if (isToday)  cell.classList.add('today');
-      if (isBooked) cell.classList.add('booked');
+      if (isBooked) {
+        cell.classList.add('booked');
+        cell.style.cursor = 'pointer';
+        (function(ds){ cell.onclick = function(){ showDayDetail('vehicle', ds); }; })(dateStr);
+      }
       cell.innerHTML = '<span>' + d + '</span>';
       grid.appendChild(cell);
     }
@@ -1353,63 +1354,6 @@
 
   function vCalPrev() { vCalMonth--; if (vCalMonth < 0) { vCalMonth = 11; vCalYear--; } loadVehicleCalendar(); }
   function vCalNext() { vCalMonth++; if (vCalMonth > 11) { vCalMonth = 0; vCalYear++; } loadVehicleCalendar(); }
-
-  // ── VEHICLE: LIST ──
-  async function loadVehicleList() {
-    var el = document.getElementById('v-list');
-    var today = new Date().toISOString().split('T')[0];
-    try {
-      var data = await sbGet('vehicle_bookings', 'booking_date=gte.' + today + '&order=booking_date.asc,time_from.asc&limit=20');
-      if (!data || data.length === 0) {
-        el.innerHTML = '<div class="book-empty">No upcoming bookings.</div>'; return;
-      }
-      var me = getCurrentUserName();
-      el.innerHTML = data.map(function(b) {
-        var isMine  = b.booked_by === me;
-        var timeStr = b.is_full_day ? 'Full Day' : fmtTime(b.time_from) + ' – ' + fmtTime(b.time_to);
-        return '<div class="book-item">'
-          + '<div class="book-item-header"><div class="book-item-name">' + escHtml(b.booked_by) + '</div>'
-          + '<span class="badge ' + (isMine ? 'badge-info' : 'badge-amber') + '">' + (isMine ? 'Mine' : 'Booked') + '</span></div>'
-          + '<div class="book-item-date"><i class="ti ti-calendar" style="font-size:11px;"></i> '
-          + fmtDate(b.booking_date) + ' &nbsp;·&nbsp; ' + timeStr + '</div>'
-          + (b.purpose ? '<div class="book-item-purpose">' + escHtml(b.purpose) + '</div>' : '')
-          + (isMine ? '<button class="book-cancel-btn" onclick="cancelVehicleBooking(\'' + b.id + '\')"><i class="ti ti-trash"></i> Cancel my booking</button>' : '')
-          + '</div>';
-      }).join('');
-    } catch(e) { el.innerHTML = '<div class="book-empty">Could not load bookings.</div>'; }
-  }
-
-  async function cancelVehicleBooking(id) {
-    if (!confirm('Cancel your vehicle booking?')) return;
-    try {
-      var res = await fetch(SURL + '/rest/v1/vehicle_bookings?id=eq.' + id, {
-        method: 'DELETE',
-        headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY }
-      });
-      if (res.ok) { bookTabInited = false; initBookTab(); }
-    } catch(e) {}
-  }
-
-  // ── VEHICLE: TIMELINE ──
-  async function loadVehicleTimeline() {
-    var date = document.getElementById('v-timeline-date').value;
-    var el   = document.getElementById('v-timeline');
-    if (!date) { el.innerHTML = '<div class="book-empty">Pick a date to see bookings.</div>'; return; }
-    el.innerHTML = '<div class="book-empty">Loading...</div>';
-    try {
-      var data = await sbGet('vehicle_bookings', 'booking_date=eq.' + date + '&order=time_from.asc');
-      if (!data || data.length === 0) {
-        el.innerHTML = '<div class="book-empty">No bookings on this date. Vehicle is available.</div>'; return;
-      }
-      el.innerHTML = data.map(function(b) {
-        var timeStr = b.is_full_day ? 'Full Day' : fmtTime(b.time_from) + ' – ' + fmtTime(b.time_to);
-        return '<div class="timeline-slot">'
-          + '<div class="timeline-time">' + timeStr + '</div>'
-          + '<div class="timeline-bar booked">' + escHtml(b.booked_by) + (b.purpose ? ' · ' + escHtml(b.purpose) : '') + '</div>'
-          + '</div>';
-      }).join('');
-    } catch(e) { el.innerHTML = '<div class="book-empty">Could not load timeline.</div>'; }
-  }
 
   // ── ROOM: SHOW/HIDE FORM ──
   function showRoomForm() {
@@ -1500,49 +1444,9 @@
     }
   }
 
-  // ── ROOM: TIMELINE ──
-  async function loadRoomTimeline() {
-    var date = document.getElementById('r-timeline-date').value;
-    var el   = document.getElementById('r-timeline');
-    if (!date) { el.innerHTML = '<div class="book-empty">Pick a date to see bookings.</div>'; return; }
-    el.innerHTML = '<div class="book-empty">Loading...</div>';
-    try {
-      var data = await sbGet('room_bookings', 'booking_date=eq.' + date + '&order=time_from.asc');
-      if (!data || data.length === 0) {
-        el.innerHTML = '<div class="book-empty">No bookings on this date. Room is fully available.</div>'; return;
-      }
-      el.innerHTML = data.map(function(b) {
-        return '<div class="timeline-slot">'
-          + '<div class="timeline-time">' + fmtTime(b.time_from) + ' – ' + fmtTime(b.time_to) + '</div>'
-          + '<div class="timeline-bar booked">' + escHtml(b.booked_by) + (b.purpose ? ' · ' + escHtml(b.purpose) : '') + '</div>'
-          + '</div>';
-      }).join('');
-    } catch(e) { el.innerHTML = '<div class="book-empty">Could not load timeline.</div>'; }
-  }
-
-  // ── ROOM: LIST ──
-  async function loadRoomList() {
-    var el    = document.getElementById('r-list');
-    var today = new Date().toISOString().split('T')[0];
-    try {
-      var data = await sbGet('room_bookings', 'booking_date=gte.' + today + '&order=booking_date.asc,time_from.asc&limit=20');
-      if (!data || data.length === 0) {
-        el.innerHTML = '<div class="book-empty">No upcoming bookings.</div>'; return;
-      }
-      var me = getCurrentUserName();
-      el.innerHTML = data.map(function(b) {
-        var isMine = b.booked_by === me;
-        return '<div class="book-item">'
-          + '<div class="book-item-header"><div class="book-item-name">' + escHtml(b.booked_by) + '</div>'
-          + '<span class="badge ' + (isMine ? 'badge-info' : 'badge-blue') + '">' + (isMine ? 'Mine' : 'Booked') + '</span></div>'
-          + '<div class="book-item-date"><i class="ti ti-calendar" style="font-size:11px;"></i> '
-          + fmtDate(b.booking_date) + ' &nbsp;·&nbsp; ' + fmtTime(b.time_from) + '–' + fmtTime(b.time_to) + '</div>'
-          + (b.purpose ? '<div class="book-item-purpose">' + escHtml(b.purpose) + '</div>' : '')
-          + (isMine ? '<button class="book-cancel-btn" onclick="cancelRoomBooking(\'' + b.id + '\')"><i class="ti ti-trash"></i> Cancel my booking</button>' : '')
-          + '</div>';
-      }).join('');
-    } catch(e) { el.innerHTML = '<div class="book-empty">Could not load bookings.</div>'; }
-  }
+  // ── ROOM: TIMELINE + LIST (replaced by tap-on-date modal) ──
+  async function loadRoomTimeline() {}
+  async function loadRoomList() {}
 
   async function cancelRoomBooking(id) {
     if (!confirm('Cancel your room booking?')) return;
@@ -1551,8 +1455,105 @@
         method: 'DELETE',
         headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY }
       });
-      if (res.ok) { bookTabInited = false; initBookTab(); }
+      if (res.ok) { closeDayModal(); bookTabInited = false; initBookTab(); }
     } catch(e) {}
+  }
+
+  async function cancelVehicleBookingFromModal(id) {
+    if (!confirm('Cancel your vehicle booking?')) return;
+    try {
+      var res = await fetch(SURL + '/rest/v1/vehicle_bookings?id=eq.' + id, {
+        method: 'DELETE',
+        headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY }
+      });
+      if (res.ok) { closeDayModal(); bookTabInited = false; initBookTab(); }
+    } catch(e) {}
+  }
+
+  // ── ROOM: CALENDAR ──
+  async function loadRoomCalendar() {
+    var bookedDates = {};
+    try {
+      var data = await sbGet('room_bookings', 'select=booking_date');
+      if (data && data.length) {
+        data.forEach(function(b) { bookedDates[b.booking_date] = true; });
+      }
+    } catch(e) {}
+    renderRoomCalendar(bookedDates);
+  }
+
+  function renderRoomCalendar(bookedDates) {
+    var grid  = document.getElementById('r-cal-grid');
+    var label = document.getElementById('r-cal-label');
+    if (!grid || !label) return;
+    var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    label.textContent = MONTHS[rCalMonth] + ' ' + rCalYear;
+    while (grid.children.length > 7) grid.removeChild(grid.lastChild);
+    var firstDay = new Date(rCalYear, rCalMonth, 1).getDay();
+    var daysInMonth = new Date(rCalYear, rCalMonth + 1, 0).getDate();
+    var today = new Date();
+    for (var i = 0; i < firstDay; i++) { grid.appendChild(document.createElement('div')); }
+    for (var d = 1; d <= daysInMonth; d++) {
+      var cell = document.createElement('div');
+      cell.className = 'cal-day';
+      var dateStr = rCalYear + '-' + String(rCalMonth+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+      var isToday  = (d === today.getDate() && rCalMonth === today.getMonth() && rCalYear === today.getFullYear());
+      var isBooked = bookedDates && bookedDates[dateStr];
+      if (isToday)  cell.classList.add('today');
+      if (isBooked) {
+        cell.classList.add('booked');
+        cell.style.cursor = 'pointer';
+        (function(ds){ cell.onclick = function(){ showDayDetail('room', ds); }; })(dateStr);
+      }
+      cell.innerHTML = '<span>' + d + '</span>';
+      grid.appendChild(cell);
+    }
+  }
+
+  function rCalPrev() { rCalMonth--; if (rCalMonth < 0) { rCalMonth = 11; rCalYear--; } loadRoomCalendar(); }
+  function rCalNext() { rCalMonth++; if (rCalMonth > 11) { rCalMonth = 0; rCalYear++; } loadRoomCalendar(); }
+
+  // ── DAY DETAIL MODAL ──
+  async function showDayDetail(type, dateStr) {
+    var modal = document.getElementById('book-day-modal');
+    var title = document.getElementById('book-day-modal-title');
+    var body  = document.getElementById('book-day-modal-body');
+    var icon  = type === 'vehicle' ? '🚗' : '🏢';
+    title.textContent = icon + ' ' + fmtDate(dateStr);
+    body.innerHTML = '<div class="book-empty">Loading...</div>';
+    modal.style.display = 'block';
+    try {
+      var me = getCurrentUserName();
+      var data;
+      if (type === 'vehicle') {
+        data = await sbGet('vehicle_bookings', 'booking_date=eq.' + dateStr + '&order=time_from.asc');
+      } else {
+        data = await sbGet('room_bookings', 'booking_date=eq.' + dateStr + '&order=time_from.asc');
+      }
+      if (!data || data.length === 0) {
+        body.innerHTML = '<div class="book-empty">No bookings found.</div>'; return;
+      }
+      body.innerHTML = data.map(function(b) {
+        var isMine = b.booked_by === me;
+        var timeStr = type === 'vehicle'
+          ? (b.is_full_day ? 'Full Day' : fmtTime(b.time_from) + ' – ' + fmtTime(b.time_to))
+          : fmtTime(b.time_from) + ' – ' + fmtTime(b.time_to);
+        var cancelFn = type === 'vehicle'
+          ? 'cancelVehicleBookingFromModal(\'' + b.id + '\')'
+          : 'cancelRoomBooking(\'' + b.id + '\')';
+        return '<div class="book-item" style="margin-bottom:8px;">'
+          + '<div class="book-item-header"><div class="book-item-name">' + escHtml(b.booked_by) + '</div>'
+          + '<span class="badge ' + (isMine ? 'badge-info' : 'badge-amber') + '">' + (isMine ? 'Mine' : 'Booked') + '</span></div>'
+          + '<div class="book-item-date"><i class="ti ti-clock" style="font-size:11px;"></i> ' + timeStr + '</div>'
+          + (b.purpose ? '<div class="book-item-purpose">' + escHtml(b.purpose) + '</div>' : '')
+          + (isMine ? '<button class="book-cancel-btn" onclick="' + cancelFn + '"><i class="ti ti-trash"></i> Cancel my booking</button>' : '')
+          + '</div>';
+      }).join('');
+    } catch(e) { body.innerHTML = '<div class="book-empty">Could not load bookings.</div>'; }
+  }
+
+  function closeDayModal() {
+    document.getElementById('book-day-modal').style.display = 'none';
   }
 
   // ── HELPERS ──
