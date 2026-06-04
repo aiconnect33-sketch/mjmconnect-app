@@ -560,9 +560,9 @@ html, body {
   <div class="tab-nav">
     <button class="tab-btn active" onclick="switchTab(this,'dashboard')">Dashboard</button>
     <button class="tab-btn" onclick="switchTab(this,'announce')">Announcements</button>
-    <button class="tab-btn" onclick="switchTab(this,'invite')">Invite Staff</button>
     <button class="tab-btn" onclick="switchTab(this,'leave')">Leave</button>
     <button class="tab-btn" onclick="switchTab(this,'duty')">Duty</button>
+    <button class="tab-btn" onclick="switchTab(this,'invite')">Invite Staff</button>
     <button class="tab-btn" id="settings-tab-btn" onclick="switchTab(this,'settings')">Settings</button>
   </div>
 
@@ -572,128 +572,59 @@ html, body {
     <!-- ═══════════════════════════
          DASHBOARD
     ═══════════════════════════ -->
+    <!-- ═══════════════════════════
+         DASHBOARD
+    ═══════════════════════════ -->
     <div class="screen-section active" id="screen-dashboard">
 
-      <!-- Stats -->
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-val">24</div>
-          <div class="stat-lbl">Total Staff</div>
+      <!-- Urgent banner — only shown for urgent announcements -->
+      <div id="admin-urgent-banner" style="display:none;background:#FFFBEB;border:0.5px solid #F5D78A;border-left:3px solid #F0A500;border-radius:0 var(--r-md) var(--r-md) 0;padding:10px 12px;margin-bottom:10px;align-items:flex-start;gap:8px;">
+        <i class="ti ti-alert-circle" style="font-size:15px;color:#F0A500;margin-top:1px;flex-shrink:0;"></i>
+        <div id="admin-urgent-text" style="font-size:12px;color:#7A5800;line-height:1.5;"></div>
+      </div>
+
+      <!-- Calendar -->
+      <div style="background:var(--surface);border-radius:var(--r-lg);border:0.5px solid var(--border);overflow:hidden;margin-bottom:10px;">
+        <div style="background:var(--green);padding:11px 14px;display:flex;justify-content:space-between;align-items:center;">
+          <button onclick="calPrev()" style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:#E1F5EE;background:rgba(255,255,255,0.15);border-radius:var(--r-sm);border:none;cursor:pointer;"><i class="ti ti-chevron-left" style="font-size:15px;"></i></button>
+          <div id="cal-month-label" style="font-size:13px;font-weight:600;color:#E1F5EE;">Loading...</div>
+          <button onclick="calNext()" style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:#E1F5EE;background:rgba(255,255,255,0.15);border-radius:var(--r-sm);border:none;cursor:pointer;"><i class="ti ti-chevron-right" style="font-size:15px;"></i></button>
         </div>
-        <div class="stat-card warn">
-          <div class="stat-val">2</div>
-          <div class="stat-lbl">On Leave</div>
-        </div>
-        <div class="stat-card alert">
-          <div class="stat-val">3</div>
-          <div class="stat-lbl">Pending Invites</div>
+        <div style="padding:10px 10px 12px;">
+          <div id="cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;">
+            <div style="font-size:10px;font-weight:600;color:var(--text3);padding:2px 0 6px;">S</div>
+            <div style="font-size:10px;font-weight:600;color:var(--text3);padding:2px 0 6px;">M</div>
+            <div style="font-size:10px;font-weight:600;color:var(--text3);padding:2px 0 6px;">T</div>
+            <div style="font-size:10px;font-weight:600;color:var(--text3);padding:2px 0 6px;">W</div>
+            <div style="font-size:10px;font-weight:600;color:var(--text3);padding:2px 0 6px;">T</div>
+            <div style="font-size:10px;font-weight:600;color:var(--text3);padding:2px 0 6px;">F</div>
+            <div style="font-size:10px;font-weight:600;color:var(--text3);padding:2px 0 6px;">S</div>
+          </div>
+          <div style="display:flex;gap:12px;margin-top:10px;flex-wrap:wrap;border-top:0.5px solid var(--border);padding-top:10px;">
+            <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text2);"><div style="width:14px;height:14px;border-radius:50%;background:var(--green);"></div>Today</div>
+            <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text2);"><div style="width:14px;height:3px;border-radius:2px;background:#EF9F27;"></div>Leave</div>
+            <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text2);"><div style="width:14px;height:14px;border-radius:4px;background:#CECBF6;"></div>Event</div>
+            <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text2);"><div style="width:14px;height:14px;border-radius:4px;background:#FCEBEB;border:1px solid #F09595;"></div>Holiday</div>
+          </div>
         </div>
       </div>
 
-      <!-- Quick actions -->
+      <!-- Today on Leave -->
       <div class="sec-hdr">
-        <div class="sec-title">Quick Actions</div>
+        <div class="sec-title">Today on Leave</div>
+        <button class="sec-action" onclick="switchTabByName('leave')">See all</button>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
-        <button class="card" style="text-align:center;cursor:pointer;border:none;font-family:inherit;"
-          onclick="switchTabByName('announce');setTimeout(()=>showPostForm(),100)">
-          <i class="ti ti-speakerphone" style="font-size:22px;color:var(--green);display:block;margin-bottom:6px;"></i>
-          <div style="font-size:12px;font-weight:600;color:var(--text);">Post Announcement</div>
-        </button>
-        <button class="card" style="text-align:center;cursor:pointer;border:none;font-family:inherit;"
-          onclick="switchTabByName('invite')">
-          <i class="ti ti-user-plus" style="font-size:22px;color:var(--green);display:block;margin-bottom:6px;"></i>
-          <div style="font-size:12px;font-weight:600;color:var(--text);">Invite Staff</div>
-        </button>
-        <button class="card" style="text-align:center;cursor:pointer;border:none;font-family:inherit;"
-          onclick="switchTabByName('leave');setTimeout(()=>showLeaveForm(),100)">
-          <i class="ti ti-beach" style="font-size:22px;color:var(--green);display:block;margin-bottom:6px;"></i>
-          <div style="font-size:12px;font-weight:600;color:var(--text);">Add Leave</div>
-        </button>
-        <button class="card" style="text-align:center;cursor:pointer;border:none;font-family:inherit;"
-          onclick="switchTabByName('duty');setTimeout(()=>showDutyForm(),100)">
-          <i class="ti ti-users" style="font-size:22px;color:var(--green);display:block;margin-bottom:6px;"></i>
-          <div style="font-size:12px;font-weight:600;color:var(--text);">Update Duty</div>
-        </button>
+      <div class="card" id="admin-leave-today">
+        <div style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0;">Loading...</div>
       </div>
 
-      <!-- Recent activity -->
+      <!-- This week duty -->
       <div class="sec-hdr">
-        <div class="sec-title">Recent Activity</div>
+        <div class="sec-title">This Week's Duty</div>
+        <button class="sec-action" onclick="switchTabByName('duty')">See all</button>
       </div>
-      <div class="card">
-        <div class="person-row">
-          <div style="width:32px;height:32px;border-radius:var(--r-sm);background:var(--green-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-            <i class="ti ti-speakerphone" style="font-size:15px;color:var(--green);"></i>
-          </div>
-          <div style="flex:1;">
-            <div class="p-name">Announcement posted</div>
-            <div class="p-sub">Office Closure — Friday 30 May</div>
-          </div>
-          <span style="font-size:10px;color:var(--text3);">2h ago</span>
-        </div>
-        <div class="person-row">
-          <div style="width:32px;height:32px;border-radius:var(--r-sm);background:var(--amber-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-            <i class="ti ti-user-plus" style="font-size:15px;color:var(--amber-text);"></i>
-          </div>
-          <div style="flex:1;">
-            <div class="p-name">Invite sent</div>
-            <div class="p-sub">nurulain@mjmconnect.com</div>
-          </div>
-          <span style="font-size:10px;color:var(--text3);">3h ago</span>
-        </div>
-        <div class="person-row">
-          <div style="width:32px;height:32px;border-radius:var(--r-sm);background:var(--blue-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-            <i class="ti ti-beach" style="font-size:15px;color:var(--blue-text);"></i>
-          </div>
-          <div style="flex:1;">
-            <div class="p-name">Leave added</div>
-            <div class="p-sub">Rachel Lim · Annual Leave</div>
-          </div>
-          <span style="font-size:10px;color:var(--text3);">Yesterday</span>
-        </div>
-        <div class="person-row">
-          <div style="width:32px;height:32px;border-radius:var(--r-sm);background:var(--purple-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-            <i class="ti ti-users" style="font-size:15px;color:var(--purple-text);"></i>
-          </div>
-          <div style="flex:1;">
-            <div class="p-name">Duty roster updated</div>
-            <div class="p-sub">Week 22 — Ahmad Hafiz assigned</div>
-          </div>
-          <span style="font-size:10px;color:var(--text3);">2 days ago</span>
-        </div>
-      </div>
-
-      <!-- Pending invites -->
-      <div class="sec-hdr" style="margin-top:4px;">
-        <div class="sec-title">Pending Invites</div>
-        <button class="sec-action" onclick="window.location.href='admin-invite.html'">Manage</button>
-      </div>
-      <div class="card">
-        <div class="person-row">
-          <div class="av av-g">NA</div>
-          <div style="flex:1;">
-            <div class="p-name">Nurul Ain Binti Razak</div>
-            <div class="p-sub">nurulain@mjmconnect.com · sent 2h ago</div>
-          </div>
-          <span class="badge b-amber">Pending</span>
-        </div>
-        <div class="person-row">
-          <div class="av av-c">RL</div>
-          <div style="flex:1;">
-            <div class="p-name">Rachel Lim</div>
-            <div class="p-sub">rachel.lim@mjmconnect.com · sent 1d ago</div>
-          </div>
-          <span class="badge b-amber">Pending</span>
-        </div>
-        <div class="person-row">
-          <div class="av av-a">MH</div>
-          <div style="flex:1;">
-            <div class="p-name">Mohd Hafiz</div>
-            <div class="p-sub">m.hafiz@mjmconnect.com · 7 days ago</div>
-          </div>
-          <span class="badge b-red">Expired</span>
-        </div>
+      <div class="card" id="admin-duty-today">
+        <div style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0;">Loading...</div>
       </div>
 
     </div><!-- /dashboard -->
@@ -1323,31 +1254,7 @@ html, body {
     </div><!-- /settings -->
   </div><!-- /screen-body -->
 
-  <!-- BOTTOM NAV -->
-  <div class="nav-bar">
-    <div class="nav-item active" id="nav-dashboard" onclick="switchNav('dashboard')">
-      <i class="ti ti-layout-dashboard"></i><span>Dashboard</span>
-    </div>
-    <div class="nav-item" id="nav-announce" onclick="switchNav('announce')">
-      <div class="nav-dot"><i class="ti ti-speakerphone"></i></div>
-      <span>Announce</span>
-    </div>
-    <div class="nav-item" id="nav-leave" onclick="switchNav('leave')">
-      <i class="ti ti-beach"></i><span>Leave</span>
-    </div>
-    <div class="nav-item" id="nav-duty" onclick="switchNav('duty')">
-      <i class="ti ti-users"></i><span>Duty</span>
-    </div>
-    <div class="nav-item" id="nav-invite" onclick="switchNav('invite');switchTabByName('invite')">
-      <i class="ti ti-user-plus"></i><span>Invite</span>
-    </div>
-    <div class="nav-item" id="nav-settings" onclick="switchNav('settings');switchTabByName('settings')" style="display:none;">
-      <i class="ti ti-settings"></i><span>Settings</span>
-    </div>
-    <div class="nav-item" onclick="window.location.href='index.html'">
-      <i class="ti ti-arrow-left"></i><span>Staff View</span>
-    </div>
-  </div>
+
 
 </div><!-- /phone -->
 </div><!-- /phone-wrap -->
@@ -1389,7 +1296,7 @@ html, body {
   // ── BOTTOM NAV — switches both screen and top tab ──
   function switchNav(name) {
     var tabs = document.querySelectorAll('.tab-btn');
-    var map  = { dashboard:0, announce:1, invite:2, leave:3, duty:4, settings:5 };
+    var map  = { dashboard:0, announce:1, leave:2, duty:3, invite:4, settings:5 };
     tabs.forEach(function(t){ t.classList.remove('active'); });
     if (map[name] !== undefined) tabs[map[name]].classList.add('active');
     document.querySelectorAll('.screen-section').forEach(function(s){ s.classList.remove('active'); });
@@ -1506,6 +1413,11 @@ html, body {
       const cur = parseInt(countEl.textContent.replace(/\D/g,''));
       countEl.textContent = '(' + (cur + 1) + ')';
       hidePostForm();
+      if (selectedBadge === 'urgent') {
+        var ub = document.getElementById('admin-urgent-banner');
+        var ut = document.getElementById('admin-urgent-text');
+        if (ub && ut) { ut.innerHTML = '<strong>Urgent:</strong> ' + escHtml(title); ub.style.display = 'flex'; }
+      }
       document.getElementById('ann-success').classList.add('visible');
       setTimeout(() => document.getElementById('ann-success').classList.remove('visible'), 4000);
     }, 1400);
@@ -1952,6 +1864,8 @@ html, body {
       loadDbAnnouncements();
       loadDbLeave();
       loadDbDuty();
+      loadAdminCalendar();
+      loadAdminLeaveDuty();
       loadDbProfiles();
       loadInviteLog();
       updatePendingCount();
@@ -1994,6 +1908,7 @@ html, body {
           + '</div></div>';
         list.insertAdjacentHTML('beforeend', html);
       });
+      updateUrgentBanner(data);
     } catch(e) { /* Supabase not reachable */ }
   }
 
@@ -2258,6 +2173,110 @@ html, body {
       window.location.href = 'login.html';
     }
   }
+
+  // ── ADMIN DASHBOARD ──
+  var calYear, calMonth;
+  (function(){ var n = new Date(); calYear = n.getFullYear(); calMonth = n.getMonth(); })();
+  var MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+  function renderAdminCalendar(leaveDates) {
+    var grid = document.getElementById('cal-grid');
+    var label = document.getElementById('cal-month-label');
+    if (!grid || !label) return;
+    label.textContent = MONTH_NAMES[calMonth] + ' ' + calYear;
+    while (grid.children.length > 7) grid.removeChild(grid.lastChild);
+    var firstDay = new Date(calYear, calMonth, 1).getDay();
+    var daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+    var today = new Date();
+    for (var i = 0; i < firstDay; i++) { grid.appendChild(document.createElement('div')); }
+    for (var d = 1; d <= daysInMonth; d++) {
+      var cell = document.createElement('div');
+      cell.style.cssText = 'font-size:11px;color:var(--text);display:flex;flex-direction:column;align-items:center;padding:3px 1px;gap:2px;';
+      var isToday = (d === today.getDate() && calMonth === today.getMonth() && calYear === today.getFullYear());
+      var dateStr = calYear + '-' + String(calMonth+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+      var hasLeave = leaveDates && leaveDates[dateStr];
+      var spanStyle = isToday
+        ? 'display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--green);color:#fff;font-weight:600;line-height:1;'
+        : 'line-height:1;';
+      cell.innerHTML = '<span style="' + spanStyle + '">' + d + '</span>'
+        + (hasLeave ? '<div style="width:16px;height:3px;border-radius:2px;background:#EF9F27;"></div>' : '');
+      grid.appendChild(cell);
+    }
+  }
+
+  function calPrev() { calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; } loadAdminCalendar(); }
+  function calNext() { calMonth++; if (calMonth > 11) { calMonth = 0; calYear++; } loadAdminCalendar(); }
+
+  async function loadAdminCalendar() {
+    var leaveDates = {};
+    try {
+      if (window.location.protocol !== 'file:') {
+        var data = await sbFetch('GET', '/rest/v1/leave_records?select=date_from,date_to&limit=200');
+        if (data && data.length) {
+          data.forEach(function(r) {
+            if (!r.date_from || !r.date_to) return;
+            var cur = new Date(r.date_from + 'T00:00:00');
+            var end = new Date(r.date_to + 'T00:00:00');
+            while (cur <= end) {
+              leaveDates[cur.getFullYear() + '-' + String(cur.getMonth()+1).padStart(2,'0') + '-' + String(cur.getDate()).padStart(2,'0')] = true;
+              cur.setDate(cur.getDate() + 1);
+            }
+          });
+        }
+      }
+    } catch(e) {}
+    renderAdminCalendar(leaveDates);
+  }
+
+  function updateUrgentBanner(data) {
+    var banner = document.getElementById('admin-urgent-banner');
+    var bannerText = document.getElementById('admin-urgent-text');
+    if (!banner || !bannerText) return;
+    var urgent = null;
+    if (data) { for (var i = 0; i < data.length; i++) { if (data[i].badge === 'urgent') { urgent = data[i]; break; } } }
+    if (urgent) { bannerText.innerHTML = '<strong>Urgent:</strong> ' + escHtml(urgent.title); banner.style.display = 'flex'; }
+    else { banner.style.display = 'none'; }
+  }
+
+  async function loadAdminLeaveDuty() {
+    var today = new Date().toISOString().split('T')[0];
+    try {
+      var leaveEl = document.getElementById('admin-leave-today');
+      if (leaveEl && window.location.protocol !== 'file:') {
+        var leaves = await sbFetch('GET', '/rest/v1/leave_records?date_from=lte.' + today + '&date_to=gte.' + today + '&select=*&limit=10');
+        if (leaves && leaves.length) {
+          var html = '';
+          leaves.forEach(function(r) {
+            var ini = r.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
+            var from = new Date(r.date_from+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'});
+            var to   = new Date(r.date_to+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'});
+            var type = r.leave_type === 'Annual Leave' ? 'AL' : 'MC';
+            html += '<div class="person-row"><div class="av av-a" style="width:32px;height:32px;font-size:11px;">' + ini + '</div>'
+              + '<div style="flex:1;"><div class="p-name">' + escHtml(r.staff_name) + '</div><div class="p-sub">' + escHtml(r.leave_type) + ' · ' + from + '–' + to + '</div></div>'
+              + '<span class="badge b-amber">' + type + '</span></div>';
+          });
+          leaveEl.innerHTML = html;
+        } else { leaveEl.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0;">No one on leave today.</div>'; }
+      }
+    } catch(e) {}
+    try {
+      var dutyEl = document.getElementById('admin-duty-today');
+      if (dutyEl && window.location.protocol !== 'file:') {
+        var duties = await sbFetch('GET', '/rest/v1/duty_roster?order=created_at.desc&limit=6');
+        if (duties && duties.length) {
+          var dhtml = '';
+          duties.forEach(function(r) {
+            var ini = r.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
+            dhtml += '<div class="person-row"><div class="av av-g" style="width:32px;height:32px;font-size:11px;">' + ini + '</div>'
+              + '<div style="flex:1;"><div class="p-name">' + escHtml(r.staff_name) + '</div><div class="p-sub">' + escHtml(r.duty_role || '') + '</div></div>'
+              + '<span class="badge b-green">On duty</span></div>';
+          });
+          dutyEl.innerHTML = dhtml;
+        } else { dutyEl.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0;">No duty assignments this week.</div>'; }
+      }
+    } catch(e) {}
+  }
+
 </script>
 </body>
 </html>
