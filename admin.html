@@ -144,7 +144,7 @@ html, body {
 .screen-body {
   background: var(--bg);
   flex: 1; overflow-y: auto;
-  padding: 14px 14px 90px;
+  padding: 14px 14px 20px;
   -webkit-overflow-scrolling: touch;
 }
 .screen-section { display: none; }
@@ -487,12 +487,13 @@ html, body {
 
 /* ── BOTTOM NAV ── */
 .nav-bar {
-  position: fixed; bottom: 0;
-  width: 100%; max-width: 430px;
+  position: sticky; bottom: 0;
+  width: 100%;
   background: var(--surface);
   border-top: 0.5px solid var(--border);
   display: flex; justify-content: space-around;
   padding: 8px 0 20px; z-index: 100;
+  flex-shrink: 0;
 }
 .nav-item {
   display: flex; flex-direction: column; align-items: center; gap: 3px;
@@ -558,12 +559,11 @@ html, body {
 
   <!-- TAB NAV -->
   <div class="tab-nav">
-    <button class="tab-btn active" onclick="switchTab(this,'dashboard')">Dashboard</button>
-    <button class="tab-btn" onclick="switchTab(this,'announce')">Announcements</button>
+    <button class="tab-btn active" onclick="switchTab(this,'dashboard')">Home</button>
+    <button class="tab-btn" onclick="switchTab(this,'announce')">Announcement</button>
     <button class="tab-btn" onclick="switchTab(this,'leave')">Leave</button>
+    <button class="tab-btn" onclick="switchTab(this,'event')">Event</button>
     <button class="tab-btn" onclick="switchTab(this,'duty')">Duty</button>
-    <button class="tab-btn" onclick="switchTab(this,'invite')">Invite Staff</button>
-    <button class="tab-btn" id="settings-tab-btn" onclick="switchTab(this,'settings')">Settings</button>
   </div>
 
   <!-- SCREEN BODY -->
@@ -1130,6 +1130,81 @@ html, body {
     </div><!-- /duty -->
 
     <!-- ═══════════════════════════
+         EVENT
+    ═══════════════════════════ -->
+    <div class="screen-section" id="screen-event">
+
+      <div class="alert alert-success" id="event-success">
+        <i class="ti ti-circle-check"></i>
+        <span>Event saved successfully.</span>
+      </div>
+
+      <button class="btn-primary" onclick="showEventForm()">
+        <i class="ti ti-plus"></i> Add Event
+      </button>
+
+      <div class="inline-form" id="event-form">
+        <div class="inline-form-title">
+          <span><i class="ti ti-calendar-event"></i> &nbsp;New Event</span>
+          <button class="close-btn" onclick="hideEventForm()">&times;</button>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Event Title</label>
+          <div class="input-wrap">
+            <i class="ti ti-calendar-event input-icon"></i>
+            <input class="form-input" type="text" id="event-title" placeholder="e.g. Annual Dinner 2026">
+          </div>
+          <div class="field-error" id="event-title-error">
+            <i class="ti ti-alert-circle"></i> Title is required.
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div class="form-group">
+            <label class="form-label">Date</label>
+            <div class="input-wrap">
+              <i class="ti ti-calendar input-icon"></i>
+              <input class="form-input" type="date" id="event-date">
+            </div>
+            <div class="field-error" id="event-date-error">
+              <i class="ti ti-alert-circle"></i> Required.
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Time <span class="optional-tag">(optional)</span></label>
+            <div class="input-wrap">
+              <i class="ti ti-clock input-icon"></i>
+              <input class="form-input" type="time" id="event-time">
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description <span class="optional-tag">(optional)</span></label>
+          <textarea class="form-textarea" id="event-desc" placeholder="Additional details…" style="min-height:70px;"></textarea>
+        </div>
+        <button class="btn-primary" onclick="saveEvent()">
+          <span id="event-save-label">Save Event</span>
+          <div class="spinner" id="event-spinner"></div>
+        </button>
+        <button class="btn-ghost" onclick="hideEventForm()">Cancel</button>
+      </div>
+
+      <div class="sec-hdr">
+        <div class="sec-title">Upcoming <span id="event-upcoming-count"></span></div>
+      </div>
+      <div id="event-upcoming-list">
+        <div style="font-size:12px;color:var(--text3);text-align:center;padding:14px 0;">Loading...</div>
+      </div>
+
+      <div class="sec-hdr" style="margin-top:4px;">
+        <div class="sec-title">Past (last 30 days) <span id="event-past-count"></span></div>
+      </div>
+      <div id="event-past-list">
+        <div style="font-size:12px;color:var(--text3);text-align:center;padding:14px 0;">Loading...</div>
+      </div>
+
+    </div><!-- /event -->
+
+    <!-- ═══════════════════════════
          SETTINGS
     ═══════════════════════════ -->
     <div class="screen-section" id="screen-settings">
@@ -1243,9 +1318,35 @@ html, body {
     </div><!-- /settings -->
   </div><!-- /screen-body -->
 
+  <!-- BOTTOM NAV -->
+  <div class="nav-bar">
+    <div class="nav-item active" id="nav-booking" onclick="window.location.href='index.html'">
+      <i class="ti ti-calendar-event"></i><span>Booking</span>
+    </div>
+    <div class="nav-item" id="nav-invite" onclick="switchNav('invite')">
+      <i class="ti ti-user-plus"></i><span>Invite</span>
+    </div>
+    <div class="nav-item" id="nav-profile" onclick="window.location.href='profile.html'">
+      <i class="ti ti-user-circle"></i><span>Profile</span>
+    </div>
+    <div class="nav-item" id="nav-settings" onclick="switchNav('settings')">
+      <i class="ti ti-settings"></i><span>Settings</span>
+    </div>
+  </div>
 
 </div><!-- /phone -->
 </div><!-- /phone-wrap -->
+
+<!-- ── DAY DETAIL MODAL ── -->
+<div id="cal-day-modal" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,0.45);" onclick="closeCalDayModal()">
+  <div style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:var(--surface);border-radius:20px 20px 0 0;padding:20px 16px 32px;" onclick="event.stopPropagation()">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div id="cal-day-modal-title" style="font-size:14px;font-weight:700;color:var(--text);"></div>
+      <button onclick="closeCalDayModal()" style="background:none;border:none;font-size:20px;color:var(--text2);cursor:pointer;line-height:1;">&times;</button>
+    </div>
+    <div id="cal-day-modal-body"></div>
+  </div>
+</div>
 
 <!-- ── DELETE CONFIRMATION MODAL ── -->
 <div class="modal-overlay" id="delete-modal">
@@ -1279,12 +1380,13 @@ html, body {
     document.getElementById('screen-' + name).classList.add('active');
     syncNav(name);
     if (name === 'settings') renderSettingsPage();
-    if (name === 'invite') loadInviteLog();
+    if (name === 'invite')   loadInviteLog();
+    if (name === 'event')    loadDbEvents();
   }
-  // ── BOTTOM NAV — switches both screen and top tab ──
+  // ── BOTTOM NAV ──
   function switchNav(name) {
     var tabs = document.querySelectorAll('.tab-btn');
-    var map  = { dashboard:0, announce:1, leave:2, duty:3, invite:4, settings:5 };
+    var map  = { dashboard:0, announce:1, leave:2, event:3, duty:4 };
     tabs.forEach(function(t){ t.classList.remove('active'); });
     if (map[name] !== undefined) tabs[map[name]].classList.add('active');
     document.querySelectorAll('.screen-section').forEach(function(s){ s.classList.remove('active'); });
@@ -1295,6 +1397,20 @@ html, body {
     if (el) el.classList.add('active');
     if (name === 'settings') renderSettingsPage();
     if (name === 'invite')   loadInviteLog();
+    if (name === 'event')    loadDbEvents();
+  }
+  function switchTabByName(name) {
+    var tabs = document.querySelectorAll('.tab-btn');
+    var map  = { dashboard:0, announce:1, leave:2, event:3, duty:4 };
+    tabs.forEach(function(t){ t.classList.remove('active'); });
+    if (map[name] !== undefined) tabs[map[name]].classList.add('active');
+    document.querySelectorAll('.screen-section').forEach(function(s){ s.classList.remove('active'); });
+    var screen = document.getElementById('screen-' + name);
+    if (screen) screen.classList.add('active');
+    syncNav(name);
+    if (name === 'settings') renderSettingsPage();
+    if (name === 'invite')   loadInviteLog();
+    if (name === 'event')    loadDbEvents();
   }
   function syncNav(name) {
     document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
@@ -1850,6 +1966,11 @@ html, body {
   // Re-render settings page when that tab becomes active
   const _origSwitchTab = switchTab;
   // Hook into tab switching to render settings
+  // ── ADMIN DASHBOARD ──
+  var calYear, calMonth;
+  (function(){ var n = new Date(); calYear = n.getFullYear(); calMonth = n.getMonth(); })();
+  var MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
   document.addEventListener('DOMContentLoaded', function() {
     renderSettingsPage();
     if (window.location.protocol !== 'file:') {
@@ -1861,6 +1982,7 @@ html, body {
       loadDbProfiles();
       loadInviteLog();
       updatePendingCount();
+      loadDbEvents();
     }
   });
 
@@ -2167,11 +2289,7 @@ html, body {
   }
 
   // ── ADMIN DASHBOARD ──
-  var calYear, calMonth;
-  (function(){ var n = new Date(); calYear = n.getFullYear(); calMonth = n.getMonth(); })();
-  var MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-
-  function renderAdminCalendar(leaveDates) {
+  function renderAdminCalendar(leaveDates, eventDates) {
     var grid = document.getElementById('cal-grid');
     var label = document.getElementById('cal-month-label');
     if (!grid || !label) return;
@@ -2184,14 +2302,24 @@ html, body {
     for (var d = 1; d <= daysInMonth; d++) {
       var cell = document.createElement('div');
       cell.style.cssText = 'font-size:11px;color:var(--text);display:flex;flex-direction:column;align-items:center;padding:3px 1px;gap:2px;';
-      var isToday = (d === today.getDate() && calMonth === today.getMonth() && calYear === today.getFullYear());
-      var dateStr = calYear + '-' + String(calMonth+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+      var isToday  = (d === today.getDate() && calMonth === today.getMonth() && calYear === today.getFullYear());
+      var dateStr  = calYear + '-' + String(calMonth+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
       var hasLeave = leaveDates && leaveDates[dateStr];
-      var spanStyle = isToday
-        ? 'display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--green);color:#fff;font-weight:600;line-height:1;'
-        : 'line-height:1;';
+      var hasEvent = eventDates && eventDates[dateStr];
+      var spanStyle;
+      if (isToday) {
+        spanStyle = 'display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--green);color:#fff;font-weight:600;line-height:1;';
+      } else if (hasEvent) {
+        spanStyle = 'display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:4px;background:#CECBF6;color:#3C3489;font-weight:500;line-height:1;cursor:pointer;';
+      } else {
+        spanStyle = 'line-height:1;';
+      }
       cell.innerHTML = '<span style="' + spanStyle + '">' + d + '</span>'
-        + (hasLeave ? '<div style="width:16px;height:3px;border-radius:2px;background:#EF9F27;"></div>' : '');
+        + (hasLeave ? '<div style="width:16px;height:3px;border-radius:2px;background:#EF9F27;cursor:pointer;"></div>' : '');
+      if (hasLeave || hasEvent) {
+        cell.style.cursor = 'pointer';
+        (function(ds, hl, he){ cell.onclick = function(){ showCalDayDetail(ds, hl, he); }; })(dateStr, hasLeave, hasEvent);
+      }
       grid.appendChild(cell);
     }
   }
@@ -2201,11 +2329,12 @@ html, body {
 
   async function loadAdminCalendar() {
     var leaveDates = {};
+    var eventDates = {};
     try {
       if (window.location.protocol !== 'file:') {
-        var data = await sbFetch('GET', '/rest/v1/leave_records?select=date_from,date_to&limit=200');
-        if (data && data.length) {
-          data.forEach(function(r) {
+        var leaveData = await sbFetch('GET', '/rest/v1/leave_records?select=date_from,date_to&limit=200');
+        if (leaveData && leaveData.length) {
+          leaveData.forEach(function(r) {
             if (!r.date_from || !r.date_to) return;
             var cur = new Date(r.date_from + 'T00:00:00');
             var end = new Date(r.date_to + 'T00:00:00');
@@ -2215,17 +2344,22 @@ html, body {
             }
           });
         }
+        var evData = await sbFetch('GET', '/rest/v1/events?select=event_date&limit=200');
+        if (evData && evData.length) {
+          evData.forEach(function(e){ eventDates[e.event_date] = true; });
+        }
       }
     } catch(e) {}
-    renderAdminCalendar(leaveDates);
+    renderAdminCalendar(leaveDates, eventDates);
   }
 
   function updateUrgentBanner(data) {
     var banner = document.getElementById('admin-urgent-banner');
     var bannerText = document.getElementById('admin-urgent-text');
     if (!banner || !bannerText) return;
+    var cut7 = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     var urgents = [];
-    if (data) { data.forEach(function(a){ if (a.badge === 'urgent') urgents.push(a); }); }
+    if (data) { data.forEach(function(a){ if (a.badge === 'urgent' && new Date(a.created_at) >= cut7) urgents.push(a); }); }
     if (urgents.length) {
       bannerText.innerHTML = urgents.map(function(a){
         return '<div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:2px;">'
@@ -2281,6 +2415,164 @@ html, body {
         }
       }
     } catch(e) {}
+  }
+
+  // ── EVENT HELPERS ──
+  function fmtEventTime(str) {
+    if (!str) return '';
+    var parts = str.split(':'), h = parseInt(parts[0]), m = parts[1];
+    var ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12;
+    return h + ':' + m + ' ' + ap;
+  }
+  function fmtDateLong(str) {
+    if (!str) return '';
+    return new Date(str + 'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'});
+  }
+
+  // ── EVENT FORM ──
+  function showEventForm() {
+    document.getElementById('event-form').classList.add('visible');
+    document.getElementById('event-form').scrollIntoView({ behavior:'smooth', block:'start' });
+  }
+  function hideEventForm() {
+    document.getElementById('event-form').classList.remove('visible');
+    document.getElementById('event-title').value = '';
+    document.getElementById('event-date').value  = '';
+    document.getElementById('event-time').value  = '';
+    document.getElementById('event-desc').value  = '';
+    document.getElementById('event-title-error').classList.remove('visible');
+    document.getElementById('event-date-error').classList.remove('visible');
+    document.getElementById('event-title').classList.remove('error');
+    document.getElementById('event-date').classList.remove('error');
+  }
+
+  async function saveEvent() {
+    var title = document.getElementById('event-title').value.trim();
+    var date  = document.getElementById('event-date').value;
+    var time  = document.getElementById('event-time').value;
+    var desc  = document.getElementById('event-desc').value.trim();
+    var valid = true;
+    document.getElementById('event-title-error').classList.remove('visible');
+    document.getElementById('event-date-error').classList.remove('visible');
+    document.getElementById('event-title').classList.remove('error');
+    document.getElementById('event-date').classList.remove('error');
+    if (!title) { document.getElementById('event-title').classList.add('error'); document.getElementById('event-title-error').classList.add('visible'); valid = false; }
+    if (!date)  { document.getElementById('event-date').classList.add('error');  document.getElementById('event-date-error').classList.add('visible');  valid = false; }
+    if (!valid) return;
+    var lbl = document.getElementById('event-save-label');
+    var spn = document.getElementById('event-spinner');
+    lbl.style.display = 'none'; spn.style.display = 'block';
+    var user = JSON.parse(sessionStorage.getItem('mjm_user') || '{}');
+    try {
+      await sbFetch('POST', '/rest/v1/events', {
+        title: title, event_date: date,
+        event_time: time || null, description: desc || null,
+        created_by: user.name || 'HR Admin'
+      });
+      lbl.style.display = 'inline'; spn.style.display = 'none';
+      hideEventForm();
+      document.getElementById('event-success').classList.add('visible');
+      setTimeout(function(){ document.getElementById('event-success').classList.remove('visible'); }, 3500);
+      loadDbEvents();
+      loadAdminCalendar();
+    } catch(e) { lbl.style.display = 'inline'; spn.style.display = 'none'; }
+  }
+
+  async function loadDbEvents() {
+    var today = new Date().toISOString().split('T')[0];
+    var cut30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    var upEl  = document.getElementById('event-upcoming-list');
+    var pastEl= document.getElementById('event-past-list');
+    var upCnt = document.getElementById('event-upcoming-count');
+    var paCnt = document.getElementById('event-past-count');
+    if (!upEl) return;
+    try {
+      var data = await sbFetch('GET', '/rest/v1/events?order=event_date.asc&limit=200');
+      if (!data) return;
+      var upcoming = data.filter(function(e){ return e.event_date >= today; });
+      var past     = data.filter(function(e){ return e.event_date >= cut30 && e.event_date < today; }).reverse();
+      if (upCnt) upCnt.textContent = upcoming.length ? '(' + upcoming.length + ')' : '';
+      if (paCnt) paCnt.textContent = past.length     ? '(' + past.length + ')' : '';
+      function renderEvList(items, el, canDelete) {
+        if (!items.length) { el.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:14px 0;">None.</div>'; return; }
+        el.innerHTML = items.map(function(ev) {
+          var d = fmtDateLong(ev.event_date);
+          var t = ev.event_time ? ' · ' + fmtEventTime(ev.event_time) : '';
+          return '<div class="ann-item card-event" data-event-id="' + ev.id + '">'
+            + '<div class="ann-meta"><span class="badge b-purple">Event</span><span class="ann-time">' + d + t + '</span></div>'
+            + '<div class="ann-title">' + escHtml(ev.title) + '</div>'
+            + (ev.description ? '<div class="ann-body">' + escHtml(ev.description) + '</div>' : '')
+            + '<div class="ann-actions"><div class="ann-author"><i class="ti ti-user"></i> ' + escHtml(ev.created_by || 'HR') + '</div>'
+            + (canDelete ? '<div class="btn-icon danger" onclick="deleteEventDb(this)"><i class="ti ti-trash"></i></div>' : '')
+            + '</div></div>';
+        }).join('');
+      }
+      renderEvList(upcoming, upEl, true);
+      if (pastEl) renderEvList(past, pastEl, false);
+    } catch(e) {
+      upEl.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:14px 0;">Could not load events.</div>';
+    }
+  }
+
+  async function deleteEventDb(btn) {
+    var item = btn.closest('.ann-item');
+    var id   = item ? item.getAttribute('data-event-id') : null;
+    if (!confirm('Delete this event?')) return;
+    if (id) await sbFetch('DELETE', '/rest/v1/events?id=eq.' + id, null, { 'Prefer': '' });
+    item.style.transition = 'opacity 0.2s'; item.style.opacity = '0';
+    setTimeout(function(){ item.remove(); loadAdminCalendar(); }, 220);
+  }
+
+  // ── CALENDAR DAY DETAIL MODAL ──
+  async function showCalDayDetail(dateStr, hasLeave, hasEvent) {
+    var modal = document.getElementById('cal-day-modal');
+    var title = document.getElementById('cal-day-modal-title');
+    var body  = document.getElementById('cal-day-modal-body');
+    title.textContent = fmtDateLong(dateStr);
+    body.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:10px 0;">Loading...</div>';
+    modal.style.display = 'block';
+    var html = '';
+    try {
+      if (hasLeave) {
+        var leaves = await sbFetch('GET', '/rest/v1/leave_records?date_from=lte.' + dateStr + '&date_to=gte.' + dateStr + '&select=*');
+        if (leaves && leaves.length) {
+          html += '<div style="font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">On Leave</div>';
+          html += leaves.map(function(r) {
+            var ini  = r.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
+            var from = new Date(r.date_from+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'});
+            var to   = new Date(r.date_to+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'});
+            var shortType = r.leave_type === 'Annual Leave' ? 'AL' : r.leave_type === 'Medical Leave' ? 'MC' : 'CL';
+            var bCls = r.leave_type === 'Medical Leave' ? 'b-red' : 'b-amber';
+            return '<div class="person-row" style="padding:7px 0;">'
+              + '<div class="av av-a" style="width:30px;height:30px;font-size:10px;">' + ini + '</div>'
+              + '<div style="flex:1;"><div class="p-name">' + escHtml(r.staff_name) + '</div>'
+              + '<div class="p-sub">' + escHtml(r.leave_type) + ' · ' + from + '–' + to + '</div></div>'
+              + '<span class="badge ' + bCls + '">' + shortType + '</span></div>';
+          }).join('');
+        }
+      }
+      if (hasEvent) {
+        var events = await sbFetch('GET', '/rest/v1/events?event_date=eq.' + dateStr + '&order=event_time.asc');
+        if (events && events.length) {
+          if (html) html += '<div style="height:1px;background:var(--border);margin:8px 0;"></div>';
+          html += '<div style="font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Events</div>';
+          html += events.map(function(ev) {
+            var t = ev.event_time ? fmtEventTime(ev.event_time) : 'All day';
+            return '<div style="padding:7px 0;border-bottom:0.5px solid var(--border);">'
+              + '<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
+              + '<div style="font-size:12px;font-weight:600;color:var(--text);">' + escHtml(ev.title) + '</div>'
+              + '<span class="badge b-purple">' + t + '</span></div>'
+              + (ev.description ? '<div style="font-size:11px;color:var(--text2);margin-top:3px;">' + escHtml(ev.description) + '</div>' : '')
+              + '</div>';
+          }).join('');
+        }
+      }
+      body.innerHTML = html || '<div style="font-size:12px;color:var(--text3);text-align:center;padding:10px 0;">No details found.</div>';
+    } catch(e) { body.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:10px 0;">Could not load details.</div>'; }
+  }
+
+  function closeCalDayModal() {
+    document.getElementById('cal-day-modal').style.display = 'none';
   }
 
 </script>
