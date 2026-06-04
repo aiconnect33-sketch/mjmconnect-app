@@ -577,17 +577,16 @@ html, body {
     ═══════════════════════════ -->
     <div class="screen-section active" id="screen-dashboard">
 
-      <!-- Urgent banner — only shown for urgent announcements -->
-      <div id="admin-urgent-banner" style="display:none;background:#FFFBEB;border:0.5px solid #F5D78A;border-left:3px solid #F0A500;border-radius:0 var(--r-md) var(--r-md) 0;padding:10px 12px;margin-bottom:10px;align-items:flex-start;gap:8px;">
-        <i class="ti ti-alert-circle" style="font-size:15px;color:#F0A500;margin-top:1px;flex-shrink:0;"></i>
-        <div id="admin-urgent-text" style="font-size:12px;color:#7A5800;line-height:1.5;"></div>
+      <!-- Urgent banner — shows ALL urgent announcements -->
+      <div id="admin-urgent-banner" style="display:none;background:#FFFBEB;border:0.5px solid #F5D78A;border-left:3px solid #F0A500;border-radius:0 var(--r-md) var(--r-md) 0;padding:10px 12px;margin-bottom:10px;">
+        <div id="admin-urgent-text" style="font-size:12px;color:#7A5800;line-height:1.6;"></div>
       </div>
 
       <!-- Calendar -->
       <div style="background:var(--surface);border-radius:var(--r-lg);border:0.5px solid var(--border);overflow:hidden;margin-bottom:10px;">
         <div style="background:var(--green);padding:11px 14px;display:flex;justify-content:space-between;align-items:center;">
           <button onclick="calPrev()" style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:#E1F5EE;background:rgba(255,255,255,0.15);border-radius:var(--r-sm);border:none;cursor:pointer;"><i class="ti ti-chevron-left" style="font-size:15px;"></i></button>
-          <div id="cal-month-label" style="font-size:13px;font-weight:600;color:#E1F5EE;">Loading...</div>
+          <div id="cal-month-label" style="font-size:13px;font-weight:600;color:#E1F5EE;">June 2026</div>
           <button onclick="calNext()" style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:#E1F5EE;background:rgba(255,255,255,0.15);border-radius:var(--r-sm);border:none;cursor:pointer;"><i class="ti ti-chevron-right" style="font-size:15px;"></i></button>
         </div>
         <div style="padding:10px 10px 12px;">
@@ -682,16 +681,6 @@ html, body {
             <div class="badge-opt badge-opt-hr" onclick="selectBadge(this,'hr')">HR</div>
             <div class="badge-opt badge-opt-facility" onclick="selectBadge(this,'facility')">Facilities</div>
             <div class="badge-opt badge-opt-event" onclick="selectBadge(this,'event')">Event</div>
-          </div>
-        </div>
-
-        <div class="toggle-row">
-          <div class="toggle-info">
-            <div class="toggle-label">Notify all staff by email</div>
-            <div class="toggle-sub">Sends an email alert to all registered staff</div>
-          </div>
-          <div class="toggle-switch on" id="notify-toggle" onclick="toggleNotify()">
-            <div class="toggle-knob"></div>
           </div>
         </div>
 
@@ -1255,7 +1244,6 @@ html, body {
   </div><!-- /screen-body -->
 
 
-
 </div><!-- /phone -->
 </div><!-- /phone-wrap -->
 
@@ -1379,9 +1367,7 @@ html, body {
     // Loading
     setLoading('pub', true);
     var user = JSON.parse(sessionStorage.getItem('mjm_user') || '{}');
-    publishToDb(title, body, selectedBadge, notifyOn, user.name || 'HR').then(function() {
-      loadDbAnnouncements();
-    }).catch(function(){});
+    publishToDb(title, body, selectedBadge, notifyOn, user.name || 'HR').catch(function(){});
     setTimeout(() => {
       setLoading('pub', false);
       // Prepend new announcement to list
@@ -1416,7 +1402,13 @@ html, body {
       if (selectedBadge === 'urgent') {
         var ub = document.getElementById('admin-urgent-banner');
         var ut = document.getElementById('admin-urgent-text');
-        if (ub && ut) { ut.innerHTML = '<strong>Urgent:</strong> ' + escHtml(title); ub.style.display = 'flex'; }
+        if (ub && ut) {
+          var newItem = '<div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:2px;">'
+            + '<i class="ti ti-alert-circle" style="font-size:13px;color:#F0A500;flex-shrink:0;margin-top:1px;"></i>'
+            + '<span><strong>Urgent:</strong> ' + escHtml(title) + '</span></div>';
+          ut.innerHTML = newItem + ut.innerHTML;
+          ub.style.display = 'block';
+        }
       }
       document.getElementById('ann-success').classList.add('visible');
       setTimeout(() => document.getElementById('ann-success').classList.remove('visible'), 4000);
@@ -2232,10 +2224,18 @@ html, body {
     var banner = document.getElementById('admin-urgent-banner');
     var bannerText = document.getElementById('admin-urgent-text');
     if (!banner || !bannerText) return;
-    var urgent = null;
-    if (data) { for (var i = 0; i < data.length; i++) { if (data[i].badge === 'urgent') { urgent = data[i]; break; } } }
-    if (urgent) { bannerText.innerHTML = '<strong>Urgent:</strong> ' + escHtml(urgent.title); banner.style.display = 'flex'; }
-    else { banner.style.display = 'none'; }
+    var urgents = [];
+    if (data) { data.forEach(function(a){ if (a.badge === 'urgent') urgents.push(a); }); }
+    if (urgents.length) {
+      bannerText.innerHTML = urgents.map(function(a){
+        return '<div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:2px;">'
+          + '<i class="ti ti-alert-circle" style="font-size:13px;color:#F0A500;flex-shrink:0;margin-top:1px;"></i>'
+          + '<span><strong>Urgent:</strong> ' + escHtml(a.title) + '</span></div>';
+      }).join('');
+      banner.style.display = 'block';
+    } else {
+      banner.style.display = 'none';
+    }
   }
 
   async function loadAdminLeaveDuty() {
@@ -2252,11 +2252,14 @@ html, body {
             var to   = new Date(r.date_to+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'});
             var type = r.leave_type === 'Annual Leave' ? 'AL' : 'MC';
             html += '<div class="person-row"><div class="av av-a" style="width:32px;height:32px;font-size:11px;">' + ini + '</div>'
-              + '<div style="flex:1;"><div class="p-name">' + escHtml(r.staff_name) + '</div><div class="p-sub">' + escHtml(r.leave_type) + ' · ' + from + '–' + to + '</div></div>'
+              + '<div style="flex:1;"><div class="p-name">' + escHtml(r.staff_name) + '</div>'
+              + '<div class="p-sub">' + escHtml(r.leave_type) + ' · ' + from + '–' + to + '</div></div>'
               + '<span class="badge b-amber">' + type + '</span></div>';
           });
           leaveEl.innerHTML = html;
-        } else { leaveEl.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0;">No one on leave today.</div>'; }
+        } else {
+          leaveEl.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0;">No one on leave today.</div>';
+        }
       }
     } catch(e) {}
     try {
@@ -2268,11 +2271,14 @@ html, body {
           duties.forEach(function(r) {
             var ini = r.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
             dhtml += '<div class="person-row"><div class="av av-g" style="width:32px;height:32px;font-size:11px;">' + ini + '</div>'
-              + '<div style="flex:1;"><div class="p-name">' + escHtml(r.staff_name) + '</div><div class="p-sub">' + escHtml(r.duty_role || '') + '</div></div>'
+              + '<div style="flex:1;"><div class="p-name">' + escHtml(r.staff_name) + '</div>'
+              + '<div class="p-sub">' + escHtml(r.duty_role || '') + '</div></div>'
               + '<span class="badge b-green">On duty</span></div>';
           });
           dutyEl.innerHTML = dhtml;
-        } else { dutyEl.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0;">No duty assignments this week.</div>'; }
+        } else {
+          dutyEl.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0;">No duty assignments this week.</div>';
+        }
       }
     } catch(e) {}
   }
