@@ -2064,6 +2064,7 @@ html, body {
       setTimeout(function(){ item.remove(); }, 220);
       var countEl = document.getElementById('ann-count');
       if (countEl) { var n = parseInt(countEl.textContent.replace(/\D/g,'')) - 1; countEl.textContent = '(' + Math.max(0,n) + ')'; }
+      loadDbAnnouncements();
     } catch(e) { alert('Could not delete. Please try again.'); }
   }
 
