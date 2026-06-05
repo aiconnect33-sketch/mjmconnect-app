@@ -1363,9 +1363,9 @@ html, body {
 <script>
   // ── CLOCK ──
   function tick() {
-    const now = new Date();
-    let h = now.getHours(), m = now.getMinutes();
-    const ap = h >= 12 ? 'PM' : 'AM';
+    var now = new Date();
+    var h = now.getHours(), m = now.getMinutes();
+    var ap = h >= 12 ? 'PM' : 'AM';
     h = h % 12 || 12;
     document.getElementById('js-clock').textContent =
       h + ':' + String(m).padStart(2,'0') + ' ' + ap;
@@ -1419,14 +1419,14 @@ html, body {
   }
 
   // ── NOTIFY TOGGLE ──
-  let notifyOn = true;
+  var notifyOn = true;
   function toggleNotify() {
     notifyOn = !notifyOn;
     document.getElementById('notify-toggle').classList.toggle('on', notifyOn);
   }
 
   // ── BADGE PICKER ──
-  let selectedBadge = 'urgent';
+  var selectedBadge = 'urgent';
   function selectBadge(el, type) {
     document.querySelectorAll('.badge-opt').forEach(b => b.classList.remove('selected'));
     el.classList.add('selected');
@@ -1435,14 +1435,14 @@ html, body {
 
   // ── CHAR COUNTS ──
   function updateCharCount() {
-    const len = document.getElementById('ann-title').value.length;
-    const el  = document.getElementById('title-count');
+    var len = document.getElementById('ann-title').value.length;
+    var el  = document.getElementById('title-count');
     el.textContent = len + ' / 80';
     el.className = 'char-count' + (len > 70 ? ' warn' : '') + (len >= 80 ? ' over' : '');
   }
   function updateBodyCount() {
-    const len = document.getElementById('ann-body').value.length;
-    const el  = document.getElementById('body-count');
+    var len = document.getElementById('ann-body').value.length;
+    var el  = document.getElementById('body-count');
     el.textContent = len + ' / 500';
     el.className = 'char-count' + (len > 450 ? ' warn' : '') + (len >= 500 ? ' over' : '');
   }
@@ -1458,6 +1458,7 @@ html, body {
     document.getElementById('post-ann-btn').style.display = 'flex';
     document.getElementById('ann-title').value = '';
     document.getElementById('ann-body').value  = '';
+    editingAnnId = null;
     updateCharCount(); updateBodyCount();
     clearFormErrors();
   }
@@ -1465,9 +1466,9 @@ html, body {
   // ── PUBLISH ANNOUNCEMENT ──
   function publishAnnouncement() {
     clearFormErrors();
-    const title = document.getElementById('ann-title').value.trim();
-    const body  = document.getElementById('ann-body').value.trim();
-    let valid   = true;
+    var title = document.getElementById('ann-title').value.trim();
+    var body  = document.getElementById('ann-body').value.trim();
+    var valid   = true;
     if (!title) {
       document.getElementById('ann-title').classList.add('error');
       document.getElementById('title-error').classList.add('visible');
@@ -1483,19 +1484,30 @@ html, body {
     // Loading
     setLoading('pub', true);
     var user = JSON.parse(sessionStorage.getItem('mjm_user') || '{}');
-    publishToDb(title, body, selectedBadge, notifyOn, user.name || 'HR').catch(function(){});
-    setTimeout(() => {
-      setLoading('pub', false);
+    if (editingAnnId) {
+      // PATCH existing record — preserves original created_at so banner timing is unchanged
+      sbFetch('PATCH', '/rest/v1/announcements?id=eq.' + editingAnnId, { title: title, body: body, badge: selectedBadge, posted_by: user.name || 'HR' }, { 'Prefer': '' }).then(function(){
+        editingAnnId = null;
+        setLoading('pub', false);
+        hidePostForm();
+        loadDbAnnouncements();
+        document.getElementById('ann-success').classList.add('visible');
+        setTimeout(function(){ document.getElementById('ann-success').classList.remove('visible'); }, 4000);
+      }).catch(function(){ editingAnnId = null; setLoading('pub', false); });
+    } else {
+      publishToDb(title, body, selectedBadge, notifyOn, user.name || 'HR').catch(function(){});
+      setTimeout(() => {
+        setLoading('pub', false);
       // Prepend new announcement to list
-      const badgeMap = {
+      var badgeMap = {
         urgent:   { cls:'card-urgent',   badgeCls:'b-red',    label:'Urgent' },
         general:  { cls:'card-general',  badgeCls:'b-green',  label:'General' },
         hr:       { cls:'card-hr',       badgeCls:'b-blue',   label:'HR' },
         facility: { cls:'card-facility', badgeCls:'b-amber',  label:'Facilities' },
         event:    { cls:'card-event',    badgeCls:'b-purple', label:'Event' },
       };
-      const b    = badgeMap[selectedBadge];
-      const html = `
+      var b    = badgeMap[selectedBadge];
+      var html = `
         <div class="ann-item ${b.cls}">
           <div class="ann-meta">
             <span class="badge ${b.badgeCls}">${b.label}</span>
@@ -1511,24 +1523,27 @@ html, body {
         </div>`;
       document.getElementById('ann-list').insertAdjacentHTML('afterbegin', html);
       // Update count
-      const countEl = document.getElementById('ann-count');
-      const cur = parseInt(countEl.textContent.replace(/\D/g,''));
+      var countEl = document.getElementById('ann-count');
+      var cur = parseInt(countEl.textContent.replace(/\D/g,''));
       countEl.textContent = '(' + (cur + 1) + ')';
       hidePostForm();
       if (selectedBadge === 'urgent') {
         var ub = document.getElementById('admin-urgent-banner');
         var ut = document.getElementById('admin-urgent-text');
         if (ub && ut) {
-          var newItem = '<div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:2px;">'
-            + '<i class="ti ti-alert-circle" style="font-size:13px;color:#F0A500;flex-shrink:0;margin-top:1px;"></i>'
-            + '<span><strong>Urgent:</strong> ' + escHtml(title) + '</span></div>';
+          var newItem = '<div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:6px;">'
+            + '<i class="ti ti-alert-circle" style="font-size:13px;color:#F0A500;flex-shrink:0;margin-top:2px;"></i>'
+            + '<div><div style="font-weight:700;font-size:12px;color:#7A5800;margin-bottom:2px;">' + escHtml(title) + '</div>'
+            + '<div style="font-size:12px;color:#7A5800;line-height:1.5;">' + escHtml(body) + '</div></div></div>';
           ut.innerHTML = newItem + ut.innerHTML;
           ub.style.display = 'block';
         }
       }
       document.getElementById('ann-success').classList.add('visible');
       setTimeout(() => document.getElementById('ann-success').classList.remove('visible'), 4000);
+      loadDbAnnouncements();
     }, 1400);
+    } // end else (new announcement)
   }
 
   // ── LEAVE FORM ──
@@ -1546,11 +1561,11 @@ html, body {
   }
   function saveLeave() {
     clearFormErrors();
-    const name  = document.getElementById('leave-name').value.trim();
-    const type  = document.getElementById('leave-type').value;
-    const from  = document.getElementById('leave-from').value;
-    const to    = document.getElementById('leave-to').value;
-    let valid   = true;
+    var name  = document.getElementById('leave-name').value.trim();
+    var type  = document.getElementById('leave-type').value;
+    var from  = document.getElementById('leave-from').value;
+    var to    = document.getElementById('leave-to').value;
+    var valid   = true;
     if (!name) {
       document.getElementById('leave-name').classList.add('error');
       document.getElementById('leave-name-error').classList.add('visible');
@@ -1568,19 +1583,19 @@ html, body {
     }).catch(function(){});
     setTimeout(() => {
       setLoading('leave-save', false);
-      const typeLabel = type || 'Leave';
-      const shortType = typeLabel === 'Annual Leave' ? 'AL'
+      var typeLabel = type || 'Leave';
+      var shortType = typeLabel === 'Annual Leave' ? 'AL'
         : typeLabel === 'Medical Leave' ? 'MC'
         : typeLabel === 'Paternity Leave' ? 'PL'
         : typeLabel === 'Maternity Leave' ? 'ML'
         : typeLabel === 'Compassionate Leave' ? 'CL' : 'UL';
-      const badgeCls  = typeLabel === 'Medical Leave' ? 'b-red'
+      var badgeCls  = typeLabel === 'Medical Leave' ? 'b-red'
         : typeLabel.includes('Paternity') || typeLabel.includes('Maternity') ? 'b-blue'
         : 'b-amber';
-      const initials  = name.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();
-      const fromFmt   = formatDate(from);
-      const toFmt     = formatDate(to);
-      const html = `
+      var initials  = name.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+      var fromFmt   = formatDate(from);
+      var toFmt     = formatDate(to);
+      var html = `
         <div class="person-row" id="lr-${Date.now()}">
           <div class="av av-g">${initials}</div>
           <div style="flex:1;">
@@ -1593,7 +1608,7 @@ html, body {
           </div>
         </div>`;
       // Add to "On Leave Now" card
-      const cards = document.querySelectorAll('#leave-list .card');
+      var cards = document.querySelectorAll('#leave-list .card');
       cards[0].insertAdjacentHTML('beforeend', html);
       hideLeaveForm();
       document.getElementById('leave-success').classList.add('visible');
@@ -1615,8 +1630,8 @@ html, body {
   }
   function saveDuty() {
     clearFormErrors();
-    const name = document.getElementById('duty-name').value.trim();
-    const role = document.getElementById('duty-role').value;
+    var name = document.getElementById('duty-name').value.trim();
+    var role = document.getElementById('duty-role').value;
     if (!name) {
       document.getElementById('duty-name').classList.add('error');
       document.getElementById('duty-name-error').classList.add('visible');
@@ -1629,10 +1644,10 @@ html, body {
     }).catch(function(){});
     setTimeout(() => {
       setLoading('duty-save', false);
-      const period   = document.getElementById('duty-period').value.trim() || 'This week';
-      const initials = name.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();
-      const roleLabel = role || 'General Duty';
-      const html = `
+      var period   = document.getElementById('duty-period').value.trim() || 'This week';
+      var initials = name.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+      var roleLabel = role || 'General Duty';
+      var html = `
         <div class="duty-slot">
           <div class="duty-person">
             <div class="av av-g">${initials}</div>
@@ -1655,8 +1670,8 @@ html, body {
   }
 
   // ── DELETE MODAL ──
-  let pendingDeleteEl   = null;
-  let pendingDeleteType = null;
+  var pendingDeleteEl   = null;
+  var pendingDeleteType = null;
   function confirmDelete(btn) {
     pendingDeleteEl   = btn.closest('.ann-item');
     pendingDeleteType = 'ann';
@@ -1687,21 +1702,25 @@ html, body {
   }
   function executeDelete() {
     if (pendingDeleteEl) {
-      pendingDeleteEl.style.transition = 'opacity 0.2s';
-      pendingDeleteEl.style.opacity    = '0';
-      setTimeout(() => {
-        pendingDeleteEl.remove();
-        pendingDeleteEl = null;
+      var elToRemove = pendingDeleteEl;
+      pendingDeleteEl = null;
+      elToRemove.style.transition = 'opacity 0.2s';
+      elToRemove.style.opacity    = '0';
+      setTimeout(function(){
+        if (elToRemove && elToRemove.parentNode) elToRemove.remove();
       }, 220);
     }
     closeModal();
   }
 
   // ── EDIT ANNOUNCEMENT (inline toggle) ──
+  var editingAnnId = null;
+
   function editAnn(btn) {
-    const item  = btn.closest('.ann-item');
-    const title = item.querySelector('.ann-title').textContent;
-    const body  = item.querySelector('.ann-body').textContent;
+    var item  = btn.closest('.ann-item');
+    var title = item.querySelector('.ann-title').textContent;
+    var body  = item.querySelector('.ann-body').textContent;
+    editingAnnId = item.getAttribute('data-id') || null;
     // Populate post form and scroll to it
     switchTabByName('announce');
     document.getElementById('ann-title').value = title;
@@ -1718,8 +1737,8 @@ html, body {
   }
   function formatDate(dateStr) {
     if (!dateStr) return '';
-    const d = new Date(dateStr);
-    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var d = new Date(dateStr);
+    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     return d.getDate() + ' ' + months[d.getMonth()];
   }
   function clearFormErrors() {
@@ -1727,15 +1746,15 @@ html, body {
     document.querySelectorAll('.form-input, .form-textarea').forEach(i => i.classList.remove('error'));
   }
   function setLoading(which, on) {
-    const map = {
+    var map = {
       'pub':       ['pub-label',       'pub-spinner'],
       'leave-save':['leave-save-label','leave-spinner'],
       'duty-save': ['duty-save-label', 'duty-spinner'],
     };
     if (!map[which]) return;
-    const [labelId, spinnerId] = map[which];
-    const label   = document.getElementById(labelId);
-    const spinner = document.getElementById(spinnerId);
+    var [labelId, spinnerId] = map[which];
+    var label   = document.getElementById(labelId);
+    var spinner = document.getElementById(spinnerId);
     label.style.display   = on ? 'none'  : 'inline';
     spinner.style.display = on ? 'block' : 'none';
   }
@@ -1751,17 +1770,17 @@ html, body {
   // ══════════════════════════════════════
 
   // Role display labels
-  const ROLE_LABELS = {
+  var ROLE_LABELS = {
     superadmin: 'Super Admin',
     hradmin:    'HR Admin',
     staff:      'Staff'
   };
-  const ROLE_BADGE = {
+  var ROLE_BADGE = {
     superadmin: 'b-purple',
     hradmin:    'b-blue',
     staff:      'b-green'
   };
-  const AV_COLORS = ['av-g','av-b','av-a','av-c','av-p','av-r'];
+  var AV_COLORS = ['av-g','av-b','av-a','av-c','av-p','av-r'];
 
   function getStaffList() {
     return JSON.parse(localStorage.getItem('mjm_staff') || '[]');
@@ -1771,16 +1790,16 @@ html, body {
   }
 
   function renderSettingsPage() {
-    const user = JSON.parse(sessionStorage.getItem('mjm_user') || '{}');
-    const list = getStaffList();
+    var user = JSON.parse(sessionStorage.getItem('mjm_user') || '{}');
+    var list = getStaffList();
 
     // Current user info
-    const nameParts = (user.name || '').split(' ').filter(Boolean);
-    const initials  = nameParts.slice(0,2).map(p=>p[0].toUpperCase()).join('') || 'SA';
-    const nameEl    = document.getElementById('settings-name');
-    const emailEl   = document.getElementById('settings-email');
-    const avEl      = document.getElementById('settings-av');
-    const rbEl      = document.getElementById('settings-role-badge');
+    var nameParts = (user.name || '').split(' ').filter(Boolean);
+    var initials  = nameParts.slice(0,2).map(p=>p[0].toUpperCase()).join('') || 'SA';
+    var nameEl    = document.getElementById('settings-name');
+    var emailEl   = document.getElementById('settings-email');
+    var avEl      = document.getElementById('settings-av');
+    var rbEl      = document.getElementById('settings-role-badge');
     if (nameEl)  nameEl.textContent  = user.name  || 'Super Admin';
     if (emailEl) emailEl.textContent = user.email || '';
     if (avEl)    avEl.textContent    = initials;
@@ -1790,9 +1809,9 @@ html, body {
     }
 
     // Show/hide assign form and settings nav for superadmin only
-    const assignForm  = document.getElementById('assign-admin-form');
-    const settingsNav = document.getElementById('nav-settings');
-    const settingsBtn = document.getElementById('settings-tab-btn');
+    var assignForm  = document.getElementById('assign-admin-form');
+    var settingsNav = document.getElementById('nav-settings');
+    var settingsBtn = document.getElementById('settings-tab-btn');
     if (user.role === 'superadmin') {
       if (assignForm)  assignForm.style.display = 'block';
       if (settingsNav) settingsNav.style.display = 'flex';
@@ -1802,9 +1821,9 @@ html, body {
     }
 
     // Render admins list (superadmin + hradmin)
-    const admins = list.filter(u => u.role === 'superadmin' || u.role === 'hradmin');
-    const adminsEl = document.getElementById('admins-list');
-    const adminsEmpty = document.getElementById('admins-empty');
+    var admins = list.filter(u => u.role === 'superadmin' || u.role === 'hradmin');
+    var adminsEl = document.getElementById('admins-list');
+    var adminsEmpty = document.getElementById('admins-empty');
     if (adminsEl) {
       if (admins.length === 0) {
         adminsEl.innerHTML = '';
@@ -1836,10 +1855,10 @@ html, body {
     }
 
     // Render all staff list
-    const staffOnly = list.filter(u => u.role === 'staff');
-    const staffEl   = document.getElementById('all-staff-list');
-    const staffEmpty= document.getElementById('all-staff-empty');
-    const staffCount= document.getElementById('all-staff-count');
+    var staffOnly = list.filter(u => u.role === 'staff');
+    var staffEl   = document.getElementById('all-staff-list');
+    var staffEmpty= document.getElementById('all-staff-empty');
+    var staffCount= document.getElementById('all-staff-count');
     if (staffCount) staffCount.textContent = '(' + staffOnly.length + ')';
     if (staffEl) {
       if (staffOnly.length === 0) {
@@ -1872,8 +1891,8 @@ html, body {
 
   function assignAdminRole() {
     clearAdminErrors();
-    const email = document.getElementById('assign-email').value.trim().toLowerCase();
-    const role  = document.getElementById('assign-role').value;
+    var email = document.getElementById('assign-email').value.trim().toLowerCase();
+    var role  = document.getElementById('assign-role').value;
 
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       document.getElementById('assign-email').classList.add('error');
@@ -1882,8 +1901,8 @@ html, body {
       return;
     }
 
-    const list  = getStaffList();
-    const idx   = list.findIndex(u => u.email.toLowerCase() === email);
+    var list  = getStaffList();
+    var idx   = list.findIndex(u => u.email.toLowerCase() === email);
 
     if (idx === -1) {
       document.getElementById('assign-email').classList.add('error');
@@ -1899,7 +1918,7 @@ html, body {
       return;
     }
 
-    const oldRole = list[idx].role;
+    var oldRole = list[idx].role;
     list[idx].role = role;
     saveStaffList(list);
     syncRoleToDb(list[idx].email, role);
@@ -1914,8 +1933,8 @@ html, body {
   }
 
   function promoteToAdmin(email) {
-    const list = getStaffList();
-    const idx  = list.findIndex(u => u.email.toLowerCase() === email.toLowerCase());
+    var list = getStaffList();
+    var idx  = list.findIndex(u => u.email.toLowerCase() === email.toLowerCase());
     if (idx === -1) return;
     list[idx].role = 'hradmin';
     saveStaffList(list);
@@ -1925,8 +1944,8 @@ html, body {
 
   function demoteToStaff(email) {
     if (!confirm('Remove admin access from this person? They will become a regular staff member.')) return;
-    const list = getStaffList();
-    const idx  = list.findIndex(u => u.email.toLowerCase() === email.toLowerCase());
+    var list = getStaffList();
+    var idx  = list.findIndex(u => u.email.toLowerCase() === email.toLowerCase());
     if (idx === -1) return;
     list[idx].role = 'staff';
     saveStaffList(list);
@@ -1935,7 +1954,7 @@ html, body {
   }
 
   function showAdminSuccess(msg) {
-    const el = document.getElementById('admin-mgmt-success');
+    var el = document.getElementById('admin-mgmt-success');
     document.getElementById('admin-mgmt-success-msg').textContent = msg;
     el.classList.add('visible');
     setTimeout(() => el.classList.remove('visible'), 4000);
@@ -1949,9 +1968,9 @@ html, body {
 
   // Seed demo staff into localStorage if empty
   (function seedDemoStaff() {
-    const list = getStaffList();
+    var list = getStaffList();
     if (list.length <= 1) {
-      const demo = [
+      var demo = [
         { id:1, name:'Shirley Tan',        email:'shirleytan@puigroups.com', role:'superadmin', joined: new Date().toISOString() },
         { id:2, name:'Ahmad Hafiz',         email:'ahmad.hafiz@mjmconnect.com', role:'hradmin',   joined: new Date().toISOString() },
         { id:3, name:'Nurul Zahra',         email:'nurul.zahra@mjmconnect.com', role:'staff',     joined: new Date().toISOString() },
@@ -1964,7 +1983,7 @@ html, body {
   })();
 
   // Re-render settings page when that tab becomes active
-  const _origSwitchTab = switchTab;
+  var _origSwitchTab = switchTab;
   // Hook into tab switching to render settings
   // ── ADMIN DASHBOARD ──
   var calYear, calMonth;
@@ -2362,9 +2381,10 @@ html, body {
     if (data) { data.forEach(function(a){ if (a.badge === 'urgent' && new Date(a.created_at) >= cut7) urgents.push(a); }); }
     if (urgents.length) {
       bannerText.innerHTML = urgents.map(function(a){
-        return '<div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:2px;">'
-          + '<i class="ti ti-alert-circle" style="font-size:13px;color:#F0A500;flex-shrink:0;margin-top:1px;"></i>'
-          + '<span><strong>Urgent:</strong> ' + escHtml(a.title) + '</span></div>';
+        return '<div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:6px;">'
+          + '<i class="ti ti-alert-circle" style="font-size:13px;color:#F0A500;flex-shrink:0;margin-top:2px;"></i>'
+          + '<div><div style="font-weight:700;font-size:12px;color:#7A5800;margin-bottom:2px;">' + escHtml(a.title) + '</div>'
+          + '<div style="font-size:12px;color:#7A5800;line-height:1.5;">' + escHtml(a.body) + '</div></div></div>';
       }).join('');
       banner.style.display = 'block';
     } else {
