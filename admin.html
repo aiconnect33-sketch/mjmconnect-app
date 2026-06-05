@@ -2378,7 +2378,7 @@ html, body {
     if (!banner || !bannerText) return;
     var cut7 = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     var urgents = [];
-    if (data) { data.forEach(function(a){ if (a.badge === 'urgent' && new Date(a.created_at) >= cut7) urgents.push(a); }); }
+    if (data) { data.forEach(function(a){ if (new Date(a.created_at) >= cut7) urgents.push(a); }); }
     if (urgents.length) {
       bannerText.innerHTML = urgents.map(function(a){
         return '<div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:6px;">'
