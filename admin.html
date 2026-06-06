@@ -2032,8 +2032,10 @@ html, body {
       data.forEach(function(ann) {
         var b = badgeMap[ann.badge] || badgeMap['general'];
         var d = new Date(ann.created_at).toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'});
+        var t = new Date(ann.created_at).toLocaleTimeString('en-MY',{hour:'numeric',minute:'2-digit',hour12:true});
+        var dt = d + ' · ' + t;
         var html = '<div class="ann-item ' + b.cls + '" data-id="' + ann.id + '">'
-          + '<div class="ann-meta"><span class="badge ' + b.bCls + '">' + b.lbl + '</span><span class="ann-time">' + d + '</span></div>'
+          + '<div class="ann-meta"><span class="badge ' + b.bCls + '">' + b.lbl + '</span><span class="ann-time">' + dt + '</span></div>'
           + '<div class="ann-title">' + escHtml(ann.title) + '</div>'
           + '<div class="ann-body">' + escHtml(ann.body) + '</div>'
           + '<div class="ann-actions"><div class="ann-author"><i class="ti ti-user"></i> ' + escHtml(ann.posted_by || 'HR') + '</div>'
@@ -2386,7 +2388,9 @@ html, body {
         return '<div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:6px;">'
           + '<i class="ti ti-alert-circle" style="font-size:13px;color:#F0A500;flex-shrink:0;margin-top:2px;"></i>'
           + '<div><div style="font-weight:700;font-size:12px;color:#7A5800;margin-bottom:2px;">' + escHtml(a.title) + '</div>'
-          + '<div style="font-size:12px;color:#7A5800;line-height:1.5;">' + escHtml(a.body) + '</div></div></div>';
+          + '<div style="font-size:12px;color:#7A5800;line-height:1.5;">' + escHtml(a.body) + '</div>'
+          + '<div style="font-size:10px;color:#A07000;margin-top:3px;">' + new Date(a.created_at).toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'}) + ' · ' + new Date(a.created_at).toLocaleTimeString('en-MY',{hour:'numeric',minute:'2-digit',hour12:true}) + '</div>'
+          + '</div></div>';
       }).join('');
       banner.style.display = 'block';
     } else {
