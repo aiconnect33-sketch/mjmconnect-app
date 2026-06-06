@@ -994,12 +994,13 @@ html, body {
           <button class="close-btn" onclick="hideDutyForm()">&times;</button>
         </div>
 
-        <!-- Duty Role: free text input -->
+        <!-- Duty Role: free text input with previous roles as suggestions -->
         <div class="form-group">
           <label class="form-label">Duty Role</label>
           <div class="input-wrap">
             <i class="ti ti-briefcase input-icon"></i>
-            <input class="form-input" type="text" id="duty-role-input" placeholder="e.g. Reception, Maintenance…">
+            <input class="form-input" type="text" id="duty-role-input" placeholder="e.g. Reception, Maintenance…" list="duty-role-list" autocomplete="off">
+            <datalist id="duty-role-list"></datalist>
           </div>
           <div class="field-error" id="duty-role-error">
             <i class="ti ti-alert-circle"></i> Duty role is required.
@@ -1585,6 +1586,17 @@ html, body {
       var data = await sbFetch('GET', '/rest/v1/profiles?role=neq.pending&order=full_name.asc&select=id,full_name&limit=200');
       if (data && data.length) {
         dutyStaffAll = data.map(function(s){ return s.full_name; });
+      }
+    } catch(e) {}
+    // Load existing duty roles into datalist
+    try {
+      var roleData = await sbFetch('GET', '/rest/v1/duty_roster?select=duty_role&limit=200');
+      var dl = document.getElementById('duty-role-list');
+      if (dl && roleData && roleData.length) {
+        var unique = [];
+        roleData.forEach(function(r){ if (r.duty_role && unique.indexOf(r.duty_role) === -1) unique.push(r.duty_role); });
+        unique.sort();
+        dl.innerHTML = unique.map(function(role){ return '<option value="' + escHtml(role) + '">'; }).join('');
       }
     } catch(e) {}
   }
@@ -2483,22 +2495,32 @@ html, body {
     try {
       var dutyEl = document.getElementById('admin-duty-today');
       if (dutyEl && window.location.protocol !== 'file:') {
-        var duties = await sbFetch('GET', '/rest/v1/duty_roster?date_from=lte.' + today + '&date_to=gte.' + today + '&order=staff_name.asc&limit=50');
+        var duties = await sbFetch('GET', '/rest/v1/duty_roster?date_from=lte.' + today + '&date_to=gte.' + today + '&order=duty_role.asc,staff_name.asc&limit=50');
         if (duties && duties.length) {
-          var dhtml = '';
+          // Group by duty role
+          var roleGroups = {};
           duties.forEach(function(r) {
-            var ini  = r.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
-            var from = r.date_from ? new Date(r.date_from+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'}) : '';
-            var to   = r.date_to   ? new Date(r.date_to+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'}) : '';
+            var role = r.duty_role || 'General Duty';
+            if (!roleGroups[role]) roleGroups[role] = { members: [], date_from: r.date_from, date_to: r.date_to };
+            roleGroups[role].members.push(r);
+          });
+          var dhtml = '';
+          Object.keys(roleGroups).forEach(function(role) {
+            var g    = roleGroups[role];
+            var from = g.date_from ? new Date(g.date_from+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'}) : '';
+            var to   = g.date_to   ? new Date(g.date_to+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'}) : '';
             var period = from === to ? from : from + ' – ' + to;
-            dhtml += '<div class="person-row">'
-              + '<div class="av av-g" style="width:32px;height:32px;font-size:11px;">' + ini + '</div>'
-              + '<div style="flex:1;">'
-              + '<div class="p-name">' + escHtml(r.staff_name) + '</div>'
-              + '<div class="p-sub">' + escHtml(r.duty_role || '') + '</div>'
-              + '<div class="p-sub">' + period + '</div>'
-              + '</div>'
-              + '<span class="badge b-green">On duty</span></div>';
+            dhtml += '<div style="margin-bottom:10px;">'
+              + '<div style="font-weight:600;font-size:12px;color:var(--text);margin-bottom:4px;">' + escHtml(role) + '</div>'
+              + '<div style="font-size:10px;color:var(--text3);margin-bottom:5px;">' + period + '</div>';
+            g.members.forEach(function(r) {
+              var ini = r.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
+              dhtml += '<div class="person-row" style="padding:4px 0;">'
+                + '<div class="av av-g" style="width:28px;height:28px;font-size:10px;">' + ini + '</div>'
+                + '<div style="flex:1;"><div class="p-name" style="font-size:12px;">' + escHtml(r.staff_name) + '</div></div>'
+                + '<span class="badge b-green">On duty</span></div>';
+            });
+            dhtml += '</div>';
           });
           dutyEl.innerHTML = dhtml;
         } else {
