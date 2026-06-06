@@ -53,9 +53,15 @@ function renderStaffCalendar() {
     var hasEvent = staffCalEvents[dateStr];
     var cls = 'cal-day';
     if (isToday)  cls += ' today';
-    if (hasEvent) cls += ' has-event';
+    if (hasEvent && !isToday) cls += ' has-event';
     cell.className = cls;
-    cell.innerHTML = '<span>' + d + '</span>' + (hasLeave ? '<div class="cal-underline leave"></div>' : '');
+    // When today also has an event, show a small purple dot below the number
+    var eventDot = (isToday && hasEvent)
+      ? '<div style="width:5px;height:5px;border-radius:50%;background:#534AB7;margin-top:1px;"></div>'
+      : '';
+    cell.innerHTML = '<span>' + d + '</span>'
+      + (hasLeave ? '<div class="cal-underline leave"></div>' : '')
+      + eventDot;
     if (hasLeave || hasEvent) {
       cell.style.cursor = 'pointer';
       (function(ds, hl, he){ cell.onclick = function(){ showStaffDayDetail(ds, hl, he); }; })(dateStr, hasLeave, hasEvent);
@@ -96,7 +102,9 @@ async function showStaffDayDetail(dateStr, hasLeave, hasEvent) {
       }
     }
     if (hasEvent) {
-      var events = await sbGet('events', 'event_date=eq.' + dateStr + '&order=event_time.asc');
+      var evUrl = SURL + '/rest/v1/events?event_date=eq.' + dateStr + '&order=event_time.asc&limit=50';
+      var evRes = await fetch(evUrl, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
+      var events = await evRes.json();
       if (events && events.length) {
         if (html) html += '<div style="height:1px;background:#E2E8E5;margin:8px 0;"></div>';
         html += '<div style="font-size:10px;font-weight:600;color:#6B7A73;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Events</div>';
