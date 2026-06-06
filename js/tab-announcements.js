@@ -55,13 +55,12 @@ function renderStaffCalendar() {
     if (isToday)  cls += ' today';
     if (hasEvent && !isToday) cls += ' has-event';
     cell.className = cls;
-    // When today also has an event, show a small purple dot below the number
-    var eventDot = (isToday && hasEvent)
-      ? '<div style="width:5px;height:5px;border-radius:50%;background:#534AB7;margin-top:1px;"></div>'
+    // When today also has an event, wrap the number in a purple ring
+    var spanStyle = (isToday && hasEvent)
+      ? ' style="outline:2.5px solid #534AB7;outline-offset:2px;"'
       : '';
-    cell.innerHTML = '<span>' + d + '</span>'
-      + (hasLeave ? '<div class="cal-underline leave"></div>' : '')
-      + eventDot;
+    cell.innerHTML = '<span' + spanStyle + '>' + d + '</span>'
+      + (hasLeave ? '<div class="cal-underline leave"></div>' : '');
     if (hasLeave || hasEvent) {
       cell.style.cursor = 'pointer';
       (function(ds, hl, he){ cell.onclick = function(){ showStaffDayDetail(ds, hl, he); }; })(dateStr, hasLeave, hasEvent);
