@@ -2323,7 +2323,9 @@ html, body {
       var hasLeave = leaveDates && leaveDates[dateStr];
       var hasEvent = eventDates && eventDates[dateStr];
       var spanStyle;
-      if (isToday) {
+      if (isToday && hasEvent) {
+        spanStyle = 'display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--green);color:#fff;font-weight:600;line-height:1;outline:2.5px solid #534AB7;outline-offset:2px;cursor:pointer;';
+      } else if (isToday) {
         spanStyle = 'display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--green);color:#fff;font-weight:600;line-height:1;';
       } else if (hasEvent) {
         spanStyle = 'display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:4px;background:#CECBF6;color:#3C3489;font-weight:500;line-height:1;cursor:pointer;';
