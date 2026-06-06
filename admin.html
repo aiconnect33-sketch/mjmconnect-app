@@ -2173,8 +2173,18 @@ html, body {
     if (!id) { confirmDeleteDuty(btn); return; }
     if (!confirm('Remove this duty assignment?')) return;
     await sbFetch('DELETE', '/rest/v1/duty_roster?id=eq.' + id, null, { 'Prefer': '' });
+    var card = row.closest('.card');
     row.style.transition = 'opacity 0.2s'; row.style.opacity = '0';
-    setTimeout(function(){ row.remove(); }, 220);
+    setTimeout(function(){
+      row.remove();
+      // If no duty slots remain in this card, remove the whole card
+      if (card && card.querySelectorAll('.duty-slot').length === 0) {
+        card.style.transition = 'opacity 0.2s'; card.style.opacity = '0';
+        setTimeout(function(){ card.remove(); loadAdminLeaveDuty(); }, 220);
+      } else {
+        loadAdminLeaveDuty();
+      }
+    }, 220);
   }
 
   async function editDutyDb(btn) {
