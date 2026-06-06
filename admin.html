@@ -1189,16 +1189,9 @@ html, body {
       </div>
 
       <div class="sec-hdr">
-        <div class="sec-title">Upcoming <span id="event-upcoming-count"></span></div>
+        <div class="sec-title">Today &amp; Upcoming <span id="event-upcoming-count"></span></div>
       </div>
       <div id="event-upcoming-list">
-        <div style="font-size:12px;color:var(--text3);text-align:center;padding:14px 0;">Loading...</div>
-      </div>
-
-      <div class="sec-hdr" style="margin-top:4px;">
-        <div class="sec-title">Past (last 30 days) <span id="event-past-count"></span></div>
-      </div>
-      <div id="event-past-list">
         <div style="font-size:12px;color:var(--text3);text-align:center;padding:14px 0;">Loading...</div>
       </div>
 
@@ -2506,35 +2499,28 @@ html, body {
 
   async function loadDbEvents() {
     var today = new Date().toISOString().split('T')[0];
-    var cut30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     var upEl  = document.getElementById('event-upcoming-list');
-    var pastEl= document.getElementById('event-past-list');
     var upCnt = document.getElementById('event-upcoming-count');
-    var paCnt = document.getElementById('event-past-count');
     if (!upEl) return;
     try {
-      var data = await sbFetch('GET', '/rest/v1/events?order=event_date.asc&limit=200');
+      var data = await sbFetch('GET', '/rest/v1/events?event_date=gte.' + today + '&order=event_date.asc&limit=200');
       if (!data) return;
-      var upcoming = data.filter(function(e){ return e.event_date >= today; });
-      var past     = data.filter(function(e){ return e.event_date >= cut30 && e.event_date < today; }).reverse();
-      if (upCnt) upCnt.textContent = upcoming.length ? '(' + upcoming.length + ')' : '';
-      if (paCnt) paCnt.textContent = past.length     ? '(' + past.length + ')' : '';
-      function renderEvList(items, el, canDelete) {
-        if (!items.length) { el.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:14px 0;">None.</div>'; return; }
-        el.innerHTML = items.map(function(ev) {
-          var d = fmtDateLong(ev.event_date);
-          var t = ev.event_time ? ' · ' + fmtEventTime(ev.event_time) : '';
-          return '<div class="ann-item card-event" data-event-id="' + ev.id + '">'
-            + '<div class="ann-meta"><span class="badge b-purple">Event</span><span class="ann-time">' + d + t + '</span></div>'
-            + '<div class="ann-title">' + escHtml(ev.title) + '</div>'
-            + (ev.description ? '<div class="ann-body">' + escHtml(ev.description) + '</div>' : '')
-            + '<div class="ann-actions"><div class="ann-author"><i class="ti ti-user"></i> ' + escHtml(ev.created_by || 'HR') + '</div>'
-            + (canDelete ? '<div class="btn-icon danger" onclick="deleteEventDb(this)"><i class="ti ti-trash"></i></div>' : '')
-            + '</div></div>';
-        }).join('');
+      if (upCnt) upCnt.textContent = data.length ? '(' + data.length + ')' : '';
+      if (!data.length) {
+        upEl.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:14px 0;">No upcoming events.</div>';
+        return;
       }
-      renderEvList(upcoming, upEl, true);
-      if (pastEl) renderEvList(past, pastEl, false);
+      upEl.innerHTML = data.map(function(ev) {
+        var d = fmtDateLong(ev.event_date);
+        var t = ev.event_time ? ' · ' + fmtEventTime(ev.event_time) : '';
+        return '<div class="ann-item card-event" data-event-id="' + ev.id + '">'
+          + '<div class="ann-meta"><span class="badge b-purple">Event</span><span class="ann-time">' + d + t + '</span></div>'
+          + '<div class="ann-title">' + escHtml(ev.title) + '</div>'
+          + (ev.description ? '<div class="ann-body">' + escHtml(ev.description) + '</div>' : '')
+          + '<div class="ann-actions"><div class="ann-author"><i class="ti ti-user"></i> ' + escHtml(ev.created_by || 'HR') + '</div>'
+          + '<div class="btn-icon danger" onclick="deleteEventDb(this)"><i class="ti ti-trash"></i></div>'
+          + '</div></div>';
+      }).join('');
     } catch(e) {
       upEl.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:14px 0;">Could not load events.</div>';
     }
