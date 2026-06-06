@@ -93,4 +93,6 @@ window.addEventListener('DOMContentLoaded', function() {
     loadLeave();
     loadDuty();
   }
+  // Always init calendar (handles file: protocol gracefully)
+  if (typeof initStaffCalendar === 'function') initStaffCalendar();
 });
