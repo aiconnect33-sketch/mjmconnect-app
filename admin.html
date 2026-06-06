@@ -1545,9 +1545,11 @@ html, body {
 
   // ── DUTY FORM ──
   var editingDutyId = null;
+  var editingDutyOriginalStaff = null;
 
   function showDutyForm() {
     editingDutyId = null;
+    editingDutyOriginalStaff = null;
     document.getElementById('duty-form-title').textContent = 'New Duty Assignment';
     document.getElementById('duty-form').classList.add('visible');
     document.getElementById('duty-form').scrollIntoView({ behavior:'smooth', block:'start' });
@@ -1555,6 +1557,7 @@ html, body {
   }
   function hideDutyForm() {
     editingDutyId = null;
+    editingDutyOriginalStaff = null;
     document.getElementById('duty-form').classList.remove('visible');
     document.getElementById('duty-role-input').value = '';
     document.getElementById('duty-date-from').value  = '';
@@ -1654,10 +1657,23 @@ html, body {
     setLoading('duty-save', true);
     try {
       if (editingDutyId) {
+        // PATCH the original record (role + dates + original staff name)
         await sbFetch('PATCH', '/rest/v1/duty_roster?id=eq.' + editingDutyId, {
           duty_role: role, date_from: dfrom, date_to: dto, period: dfrom + ' to ' + dto
         }, { 'Prefer': 'return=minimal' });
+        // POST new rows for any additional staff beyond the original
+        var newStaff = checked.filter(function(name){ return name !== editingDutyOriginalStaff; });
+        if (newStaff.length) {
+          await Promise.all(newStaff.map(function(name) {
+            return sbFetch('POST', '/rest/v1/duty_roster', {
+              staff_name: name, duty_role: role,
+              date_from: dfrom, date_to: dto,
+              period: dfrom + ' to ' + dto
+            });
+          }));
+        }
         editingDutyId = null;
+        editingDutyOriginalStaff = null;
       } else {
         await Promise.all(checked.map(function(name) {
           return sbFetch('POST', '/rest/v1/duty_roster', {
@@ -2189,6 +2205,7 @@ html, body {
       if (!data || !data.length) return;
       var r = data[0];
       editingDutyId = id;
+      editingDutyOriginalStaff = r.staff_name || null;
       document.getElementById('duty-form-title').textContent = 'Edit Duty Assignment';
       document.getElementById('duty-role-input').value       = r.duty_role  || '';
       document.getElementById('duty-date-from').value        = r.date_from  || '';
