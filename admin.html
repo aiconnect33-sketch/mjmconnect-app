@@ -1025,6 +1025,9 @@ html, body {
               <i class="ti ti-calendar input-icon"></i>
               <input class="form-input" type="date" id="duty-date-to">
             </div>
+            <div class="field-error" id="duty-date-to-error">
+              <i class="ti ti-alert-circle"></i> Date To cannot be earlier than Date From.
+            </div>
           </div>
         </div>
 
@@ -1571,9 +1574,11 @@ html, body {
     if (dd) dd.style.display = 'none';
     document.getElementById('duty-role-error').classList.remove('visible');
     document.getElementById('duty-date-error').classList.remove('visible');
+    document.getElementById('duty-date-to-error').classList.remove('visible');
     document.getElementById('duty-staff-error').classList.remove('visible');
     document.getElementById('duty-role-input').classList.remove('error');
     document.getElementById('duty-date-from').classList.remove('error');
+    document.getElementById('duty-date-to').classList.remove('error');
     clearFormErrors();
   }
 
@@ -1639,9 +1644,11 @@ html, body {
     clearFormErrors();
     document.getElementById('duty-role-error').classList.remove('visible');
     document.getElementById('duty-date-error').classList.remove('visible');
+    document.getElementById('duty-date-to-error').classList.remove('visible');
     document.getElementById('duty-staff-error').classList.remove('visible');
     document.getElementById('duty-role-input').classList.remove('error');
     document.getElementById('duty-date-from').classList.remove('error');
+    document.getElementById('duty-date-to').classList.remove('error');
 
     var role    = document.getElementById('duty-role-input').value.trim();
     var dfrom   = document.getElementById('duty-date-from').value;
@@ -1651,6 +1658,7 @@ html, body {
     var valid = true;
     if (!role)  { document.getElementById('duty-role-input').classList.add('error'); document.getElementById('duty-role-error').classList.add('visible'); valid = false; }
     if (!dfrom) { document.getElementById('duty-date-from').classList.add('error');  document.getElementById('duty-date-error').classList.add('visible'); valid = false; }
+    if (dto && dfrom && dto < dfrom) { document.getElementById('duty-date-to').classList.add('error'); document.getElementById('duty-date-to-error').classList.add('visible'); valid = false; }
     if (!editingDutyId && !checked.length) { document.getElementById('duty-staff-error').classList.add('visible'); valid = false; }
     if (!valid) return;
 
