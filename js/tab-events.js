@@ -10,7 +10,9 @@ async function loadStaffEvents() {
   var today = new Date().toISOString().split('T')[0];
   el.innerHTML = '<div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">Loading...</div>';
   try {
-    var data = await sbGet('events', 'event_date=gte.' + today + '&order=event_date.asc&limit=200');
+    var url = SURL + '/rest/v1/events?event_date=gte.' + today + '&order=event_date.asc,event_time.asc&limit=200';
+    var res  = await fetch(url, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
+    var data = await res.json();
     if (!data || !data.length) {
       el.innerHTML = '<div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">No upcoming events.</div>';
       return;
