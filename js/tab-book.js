@@ -12,6 +12,7 @@ function initBookTab() {
   if (window.location.protocol !== 'file:') {
     loadVehicleCalendar();
     loadRoomCalendar();
+    loadMyVehicleBookings();
   }
 }
 
@@ -38,8 +39,10 @@ function showVehicleForm() {
   vIsFullDay = true;
   document.getElementById('vehicle-form').style.display = 'block';
   var today = new Date().toISOString().split('T')[0];
-  document.getElementById('v-date').min   = today;
-  document.getElementById('v-date').value = '';
+  document.getElementById('v-date').min    = today;
+  document.getElementById('v-date').value  = '';
+  document.getElementById('v-date-to').min = today;
+  document.getElementById('v-date-to').value = '';
   document.getElementById('v-time-from').value = '';
   document.getElementById('v-time-to').value   = '';
   document.getElementById('v-purpose').value   = '';
@@ -52,6 +55,7 @@ function showVehicleForm() {
 
 function hideVehicleForm() {
   document.getElementById('vehicle-form').style.display = 'none';
+  document.getElementById('v-date-to').value = '';
   document.getElementById('v-clash-alert').style.display = 'none';
   clearBookErrors(['v-date','v-time-from','v-time-to']);
 }
@@ -64,20 +68,28 @@ function toggleVehicleFullDay() {
   checkVehicleClash();
 }
 
-function onVehicleDateChange() { checkVehicleClash(); }
+function onVehicleDateChange() {
+  var df = document.getElementById('v-date').value;
+  var dt = document.getElementById('v-date-to');
+  if (df) dt.min = df;
+  checkVehicleClash();
+}
 
 var vehicleBookingsCache = [];
 async function checkVehicleClash() {
-  var date  = document.getElementById('v-date').value;
-  var tfrom = document.getElementById('v-time-from').value;
-  var tto   = document.getElementById('v-time-to').value;
+  var dateFrom = document.getElementById('v-date').value;
+  var dateTo   = document.getElementById('v-date-to').value || dateFrom;
   document.getElementById('v-clash-alert').style.display = 'none';
-  if (!date) return;
+  if (!dateFrom) return;
   try {
-    var data = await sbGet('vehicle_bookings', 'booking_date=eq.' + date + '&select=*');
-    vehicleBookingsCache = data || [];
+    // Check if any existing booking overlaps the selected date range
+    var url = SURL + '/rest/v1/vehicle_bookings?booking_date=gte.' + dateFrom + '&booking_date=lte.' + dateTo + '&select=*';
+    var res  = await fetch(url, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
+    vehicleBookingsCache = await res.json() || [];
   } catch(e) { vehicleBookingsCache = []; return; }
   if (!vehicleBookingsCache.length) return;
+  var tfrom = document.getElementById('v-time-from').value;
+  var tto   = document.getElementById('v-time-to').value;
   var clash = null;
   if (vIsFullDay) {
     clash = vehicleBookingsCache[0];
@@ -90,20 +102,21 @@ async function checkVehicleClash() {
   }
   if (clash) {
     var msg = 'Already booked by ' + clash.booked_by;
-    msg += clash.is_full_day ? ' (Full day).' : ' (' + fmtTime(clash.time_from) + '–' + fmtTime(clash.time_to) + ').';
+    msg += clash.is_full_day ? ' on ' + fmtDate(clash.booking_date) + '.' : ' (' + fmtTime(clash.time_from) + '–' + fmtTime(clash.time_to) + ').';
     document.getElementById('v-clash-msg').textContent = msg;
     document.getElementById('v-clash-alert').style.display = 'flex';
   }
 }
 
 async function submitVehicleBooking() {
-  var date    = document.getElementById('v-date').value;
-  var tfrom   = document.getElementById('v-time-from').value;
-  var tto     = document.getElementById('v-time-to').value;
-  var purpose = document.getElementById('v-purpose').value.trim();
-  var valid   = true;
+  var dateFrom = document.getElementById('v-date').value;
+  var dateTo   = document.getElementById('v-date-to').value || dateFrom;
+  var tfrom    = document.getElementById('v-time-from').value;
+  var tto      = document.getElementById('v-time-to').value;
+  var purpose  = document.getElementById('v-purpose').value.trim();
+  var valid    = true;
   clearBookErrors(['v-date','v-time-from','v-time-to']);
-  if (!date) { showBookError('v-date'); valid = false; }
+  if (!dateFrom) { showBookError('v-date'); valid = false; }
   if (!vIsFullDay) {
     if (!tfrom) { showBookError('v-time-from'); valid = false; }
     if (!tto)   { showBookError('v-time-to');   valid = false; }
@@ -113,24 +126,36 @@ async function submitVehicleBooking() {
   if (document.getElementById('v-clash-alert').style.display !== 'none') return;
   setBookLoading('v-submit-btn','v-submit-label','v-spinner', true);
   try {
-    var payload = {
-      booked_by:    getCurrentUserName(),
-      booking_date: date,
-      is_full_day:  vIsFullDay,
-      time_from:    vIsFullDay ? null : tfrom,
-      time_to:      vIsFullDay ? null : tto,
-      purpose:      purpose || null
-    };
-    var res = await fetch(SURL + '/rest/v1/vehicle_bookings', {
-      method: 'POST',
-      headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY,
-                 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-      body: JSON.stringify(payload)
+    // Generate one row per day in the range
+    var dates = [];
+    var cur = new Date(dateFrom + 'T00:00:00');
+    var end = new Date(dateTo   + 'T00:00:00');
+    while (cur <= end) {
+      dates.push(cur.toISOString().split('T')[0]);
+      cur.setDate(cur.getDate() + 1);
+    }
+    var posts = dates.map(function(d) {
+      return fetch(SURL + '/rest/v1/vehicle_bookings', {
+        method: 'POST',
+        headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY,
+                   'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({
+          booked_by:    getCurrentUserName(),
+          booking_date: d,
+          is_full_day:  vIsFullDay,
+          time_from:    vIsFullDay ? null : tfrom,
+          time_to:      vIsFullDay ? null : tto,
+          purpose:      purpose || null
+        })
+      });
     });
+    var results = await Promise.all(posts);
     setBookLoading('v-submit-btn','v-submit-label','v-spinner', false);
-    if (res.ok || res.status === 201) {
+    var allOk = results.every(function(r){ return r.ok || r.status === 201; });
+    if (allOk) {
       hideVehicleForm(); showBookAlert('v-success');
       bookTabInited = false; initBookTab();
+      loadMyVehicleBookings();
     } else {
       document.getElementById('v-error-msg').textContent = 'Could not save booking. Please try again.';
       showBookAlert('v-error');
@@ -160,7 +185,7 @@ function renderVehicleCalendar(bookedDates) {
   var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   label.textContent = MONTHS[vCalMonth] + ' ' + vCalYear;
   while (grid.children.length > 7) grid.removeChild(grid.lastChild);
-  var firstDay   = new Date(vCalYear, vCalMonth, 1).getDay();
+  var firstDay    = new Date(vCalYear, vCalMonth, 1).getDay();
   var daysInMonth = new Date(vCalYear, vCalMonth + 1, 0).getDate();
   var today = new Date();
   for (var i = 0; i < firstDay; i++) { grid.appendChild(document.createElement('div')); }
@@ -170,13 +195,15 @@ function renderVehicleCalendar(bookedDates) {
     var dateStr  = vCalYear + '-' + String(vCalMonth+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
     var isToday  = (d === today.getDate() && vCalMonth === today.getMonth() && vCalYear === today.getFullYear());
     var isBooked = bookedDates && bookedDates[dateStr];
-    if (isToday)  cell.classList.add('today');
+    if (isToday) cell.classList.add('today');
+    if (isBooked && !isToday) cell.classList.add('booked');
+    // Today + booked: show green circle with red ring
+    var spanStyle = (isToday && isBooked) ? ' style="outline:2.5px solid #E24B4A;outline-offset:2px;"' : '';
+    cell.innerHTML = '<span' + spanStyle + '>' + d + '</span>';
     if (isBooked) {
-      cell.classList.add('booked');
       cell.style.cursor = 'pointer';
       (function(ds){ cell.onclick = function(){ showDayDetail('vehicle', ds); }; })(dateStr);
     }
-    cell.innerHTML = '<span>' + d + '</span>';
     grid.appendChild(cell);
   }
 }
@@ -192,6 +219,52 @@ async function cancelVehicleBookingFromModal(id) {
       headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY }
     });
     if (res.ok) { closeDayModal(); bookTabInited = false; initBookTab(); }
+  } catch(e) {}
+}
+
+async function loadMyVehicleBookings() {
+  var el = document.getElementById('v-my-bookings');
+  if (!el) return;
+  var me = getCurrentUserName();
+  var now = new Date();
+  var monthStart = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-01';
+  var monthEnd   = new Date(now.getFullYear(), now.getMonth()+1, 0).toISOString().split('T')[0];
+  var today      = now.toISOString().split('T')[0];
+  try {
+    var url  = SURL + '/rest/v1/vehicle_bookings?booked_by=eq.' + encodeURIComponent(me)
+             + '&booking_date=gte.' + monthStart + '&booking_date=lte.' + monthEnd
+             + '&booking_date=gte.' + today
+             + '&order=booking_date.asc&limit=50';
+    var res  = await fetch(url, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
+    var data = await res.json();
+    if (!data || !data.length) {
+      el.innerHTML = '<div class="book-empty">No bookings this month.</div>';
+      return;
+    }
+    el.innerHTML = data.map(function(b) {
+      var d       = fmtDate(b.booking_date);
+      var timeStr = b.is_full_day ? 'Full Day' : fmtTime(b.time_from) + ' – ' + fmtTime(b.time_to);
+      return '<div class="book-item">'
+        + '<div class="book-item-header">'
+        + '<div class="book-item-name">' + d + '</div>'
+        + '<span class="badge badge-info">Mine</span></div>'
+        + '<div class="book-item-date"><i class="ti ti-clock" style="font-size:11px;"></i> ' + timeStr + '</div>'
+        + (b.purpose ? '<div class="book-item-purpose">' + escHtml(b.purpose) + '</div>' : '')
+        + '<button class="book-cancel-btn" onclick="cancelMyVehicleBooking(\'' + b.id + '\')">'
+        + '<i class="ti ti-trash"></i> Cancel this booking</button>'
+        + '</div>';
+    }).join('');
+  } catch(e) { el.innerHTML = '<div class="book-empty">Could not load bookings.</div>'; }
+}
+
+async function cancelMyVehicleBooking(id) {
+  if (!confirm('Cancel this vehicle booking?')) return;
+  try {
+    await fetch(SURL + '/rest/v1/vehicle_bookings?id=eq.' + id, {
+      method: 'DELETE',
+      headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY }
+    });
+    bookTabInited = false; initBookTab();
   } catch(e) {}
 }
 

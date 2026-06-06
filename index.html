@@ -639,10 +639,16 @@
             <span><i class="ti ti-car"></i> &nbsp;Book Vehicle</span>
             <button class="book-close-btn" onclick="hideVehicleForm()">&times;</button>
           </div>
-          <div class="book-form-group">
-            <label class="book-form-label">Date</label>
-            <input class="book-form-input" type="date" id="v-date" onchange="onVehicleDateChange()">
-            <div class="book-field-error" id="v-date-error"><i class="ti ti-alert-circle"></i> Required.</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <div class="book-form-group">
+              <label class="book-form-label">Date From</label>
+              <input class="book-form-input" type="date" id="v-date" onchange="onVehicleDateChange()">
+              <div class="book-field-error" id="v-date-error"><i class="ti ti-alert-circle"></i> Required.</div>
+            </div>
+            <div class="book-form-group">
+              <label class="book-form-label">Date To</label>
+              <input class="book-form-input" type="date" id="v-date-to" onchange="onVehicleDateChange()">
+            </div>
           </div>
           <!-- Full day toggle -->
           <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:0.5px solid #C2E6D8;border-bottom:0.5px solid #C2E6D8;margin-bottom:10px;">
@@ -707,6 +713,10 @@
             </div>
           </div>
         </div>
+
+        <!-- My vehicle bookings this month -->
+        <div class="section-row"><div class="section-title">My Bookings This Month</div></div>
+        <div id="v-my-bookings"><div class="book-empty">Loading...</div></div>
 
       </div><!-- /vehicle panel -->
 
