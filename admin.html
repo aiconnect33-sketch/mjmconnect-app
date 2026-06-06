@@ -1145,7 +1145,7 @@ html, body {
 
       <div class="inline-form" id="event-form">
         <div class="inline-form-title">
-          <span><i class="ti ti-calendar-event"></i> &nbsp;New Event</span>
+          <span><i class="ti ti-calendar-event"></i> &nbsp;<span id="event-form-title">New Event</span></span>
           <button class="close-btn" onclick="hideEventForm()">&times;</button>
         </div>
         <div class="form-group">
@@ -2449,8 +2449,11 @@ html, body {
   }
 
   // ── EVENT FORM ──
+  var editingEventId = null;
+
   function showEventForm() {
     document.getElementById('event-form').classList.add('visible');
+    document.getElementById('event-form-title').textContent = 'New Event';
     document.getElementById('event-form').scrollIntoView({ behavior:'smooth', block:'start' });
   }
   function hideEventForm() {
@@ -2463,6 +2466,7 @@ html, body {
     document.getElementById('event-date-error').classList.remove('visible');
     document.getElementById('event-title').classList.remove('error');
     document.getElementById('event-date').classList.remove('error');
+    editingEventId = null;
   }
 
   async function saveEvent() {
@@ -2483,11 +2487,19 @@ html, body {
     lbl.style.display = 'none'; spn.style.display = 'block';
     var user = JSON.parse(sessionStorage.getItem('mjm_user') || '{}');
     try {
-      await sbFetch('POST', '/rest/v1/events', {
-        title: title, event_date: date,
-        event_time: time || null, description: desc || null,
-        created_by: user.name || 'HR Admin'
-      });
+      if (editingEventId) {
+        await sbFetch('PATCH', '/rest/v1/events?id=eq.' + editingEventId, {
+          title: title, event_date: date,
+          event_time: time || null, description: desc || null
+        }, { 'Prefer': '' });
+      } else {
+        await sbFetch('POST', '/rest/v1/events', {
+          title: title, event_date: date,
+          event_time: time || null, description: desc || null,
+          created_by: user.name || 'HR Admin'
+        });
+      }
+      editingEventId = null;
       lbl.style.display = 'inline'; spn.style.display = 'none';
       hideEventForm();
       document.getElementById('event-success').classList.add('visible');
@@ -2518,6 +2530,7 @@ html, body {
           + '<div class="ann-title">' + escHtml(ev.title) + '</div>'
           + (ev.description ? '<div class="ann-body">' + escHtml(ev.description) + '</div>' : '')
           + '<div class="ann-actions"><div class="ann-author"><i class="ti ti-user"></i> ' + escHtml(ev.created_by || 'HR') + '</div>'
+          + '<div class="btn-icon" onclick="editEventDb(this)" title="Edit"><i class="ti ti-pencil"></i></div>'
           + '<div class="btn-icon danger" onclick="deleteEventDb(this)"><i class="ti ti-trash"></i></div>'
           + '</div></div>';
       }).join('');
@@ -2533,6 +2546,29 @@ html, body {
     if (id) await sbFetch('DELETE', '/rest/v1/events?id=eq.' + id, null, { 'Prefer': '' });
     item.style.transition = 'opacity 0.2s'; item.style.opacity = '0';
     setTimeout(function(){ item.remove(); loadAdminCalendar(); }, 220);
+  }
+
+  function editEventDb(btn) {
+    var item  = btn.closest('.ann-item');
+    var id    = item ? item.getAttribute('data-event-id') : null;
+    if (!id) return;
+    var title = item.querySelector('.ann-title') ? item.querySelector('.ann-title').textContent : '';
+    var meta  = item.querySelector('.ann-time')  ? item.querySelector('.ann-time').textContent  : '';
+    var desc  = item.querySelector('.ann-body')  ? item.querySelector('.ann-body').textContent  : '';
+    // Parse date and time from meta string (e.g. "6 Jun 2026 · 2:00 PM")
+    // Re-fetch the raw values from Supabase for accuracy
+    editingEventId = id;
+    sbFetch('GET', '/rest/v1/events?id=eq.' + id + '&select=*').then(function(data) {
+      if (!data || !data.length) return;
+      var ev = data[0];
+      document.getElementById('event-title').value = ev.title || '';
+      document.getElementById('event-date').value  = ev.event_date || '';
+      document.getElementById('event-time').value  = ev.event_time ? ev.event_time.substring(0,5) : '';
+      document.getElementById('event-desc').value  = ev.description || '';
+      document.getElementById('event-form-title').textContent = 'Edit Event';
+      document.getElementById('event-form').classList.add('visible');
+      document.getElementById('event-form').scrollIntoView({ behavior:'smooth', block:'start' });
+    });
   }
 
   // ── CALENDAR DAY DETAIL MODAL ──
