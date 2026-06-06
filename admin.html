@@ -673,7 +673,7 @@ html, body {
           </div>
         </div>
 
-        <div class="form-group">
+        <div class="form-group" style="display:none;">
           <label class="form-label">Badge Type</label>
           <div class="badge-picker">
             <div class="badge-opt badge-opt-urgent selected" onclick="selectBadge(this,'urgent')">Urgent</div>
@@ -2035,7 +2035,7 @@ html, body {
         var t = new Date(ann.created_at).toLocaleTimeString('en-MY',{hour:'numeric',minute:'2-digit',hour12:true});
         var dt = d + ' · ' + t;
         var html = '<div class="ann-item ' + b.cls + '" data-id="' + ann.id + '">'
-          + '<div class="ann-meta"><span class="badge ' + b.bCls + '">' + b.lbl + '</span><span class="ann-time">' + dt + '</span></div>'
+          + '<div class="ann-meta"><span class="ann-time">' + dt + '</span></div>'
           + '<div class="ann-title">' + escHtml(ann.title) + '</div>'
           + '<div class="ann-body">' + escHtml(ann.body) + '</div>'
           + '<div class="ann-actions"><div class="ann-author"><i class="ti ti-user"></i> ' + escHtml(ann.posted_by || 'HR') + '</div>'
