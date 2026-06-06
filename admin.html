@@ -993,38 +993,51 @@ html, body {
           <span><i class="ti ti-users"></i> &nbsp;New Duty Assignment</span>
           <button class="close-btn" onclick="hideDutyForm()">&times;</button>
         </div>
-        <div class="form-group">
-          <label class="form-label">Staff Name</label>
-          <div class="input-wrap">
-            <i class="ti ti-user input-icon"></i>
-            <input class="form-input" type="text" id="duty-name" placeholder="Full name">
-          </div>
-          <div class="field-error" id="duty-name-error">
-            <i class="ti ti-alert-circle"></i> Name is required.
-          </div>
-        </div>
+
+        <!-- Duty Role: free text input -->
         <div class="form-group">
           <label class="form-label">Duty Role</label>
           <div class="input-wrap">
             <i class="ti ti-briefcase input-icon"></i>
-            <select class="form-select" id="duty-role">
-              <option value="">Select role…</option>
-              <option>Reception / Front Desk</option>
-              <option>Maintenance</option>
-              <option>IT Helpdesk On-Call</option>
-              <option>Building Emergency Warden</option>
-              <option>Driver / Transport</option>
-            </select>
+            <input class="form-input" type="text" id="duty-role-input" placeholder="e.g. Reception, Maintenance…">
+          </div>
+          <div class="field-error" id="duty-role-error">
+            <i class="ti ti-alert-circle"></i> Duty role is required.
           </div>
         </div>
+
+        <!-- Date range -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div class="form-group">
+            <label class="form-label">Date From</label>
+            <div class="input-wrap">
+              <i class="ti ti-calendar input-icon"></i>
+              <input class="form-input" type="date" id="duty-date-from">
+            </div>
+            <div class="field-error" id="duty-date-error">
+              <i class="ti ti-alert-circle"></i> Required.
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Date To</label>
+            <div class="input-wrap">
+              <i class="ti ti-calendar input-icon"></i>
+              <input class="form-input" type="date" id="duty-date-to">
+            </div>
+          </div>
+        </div>
+
+        <!-- Staff dropdown — multiple selection -->
         <div class="form-group">
-          <label class="form-label">Week / Period</label>
-          <div class="input-wrap">
-            <i class="ti ti-calendar input-icon"></i>
-            <input class="form-input" type="text" id="duty-period"
-              placeholder="e.g. Week 22 · 26 May – 1 Jun">
+          <label class="form-label">Staff on Duty</label>
+          <div class="field-error" id="duty-staff-error" style="margin-bottom:6px;">
+            <i class="ti ti-alert-circle"></i> Select at least one staff.
+          </div>
+          <div id="duty-staff-checkboxes" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:8px;max-height:160px;overflow-y:auto;">
+            <div style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0;">Loading staff...</div>
           </div>
         </div>
+
         <button class="btn-primary" onclick="saveDuty()">
           <span id="duty-save-label">Save Assignment</span>
           <div class="spinner" id="duty-spinner"></div>
@@ -1034,97 +1047,10 @@ html, body {
 
       <!-- Duty list -->
       <div class="sec-hdr">
-        <div class="sec-title">Current Roster — Week 22</div>
+        <div class="sec-title">Upcoming &amp; Active Duty <span id="duty-count"></span></div>
       </div>
-
-      <div class="card">
-        <div class="card-label">Reception / Front Desk</div>
-        <div class="duty-slot">
-          <div class="duty-person">
-            <div class="av av-a">NZ</div>
-            <div>
-              <div class="p-name">Nurul Zahra</div>
-              <div class="p-sub">AM shift · 8:00–13:00</div>
-            </div>
-          </div>
-          <div class="duty-right">
-            <span class="badge b-green">On duty</span>
-            <div class="btn-icon danger" onclick="confirmDeleteDuty(this)"><i class="ti ti-trash"></i></div>
-          </div>
-        </div>
-        <div class="duty-slot">
-          <div class="duty-person">
-            <div class="av av-c">DL</div>
-            <div>
-              <div class="p-name">Daniel Loh</div>
-              <div class="p-sub">PM shift · 13:00–18:00</div>
-            </div>
-          </div>
-          <div class="duty-right">
-            <span class="badge b-amber">Upcoming</span>
-            <div class="btn-icon danger" onclick="confirmDeleteDuty(this)"><i class="ti ti-trash"></i></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-label">Maintenance Team</div>
-        <div class="duty-slot">
-          <div class="duty-person">
-            <div class="av av-g">AH</div>
-            <div>
-              <div class="p-name">Ahmad Hafiz</div>
-              <div class="p-sub">Lead — Floor 3 &amp; 4</div>
-            </div>
-          </div>
-          <div class="duty-right">
-            <span class="badge b-green">On duty</span>
-            <div class="btn-icon danger" onclick="confirmDeleteDuty(this)"><i class="ti ti-trash"></i></div>
-          </div>
-        </div>
-        <div class="duty-slot">
-          <div class="duty-person">
-            <div class="av av-b">JS</div>
-            <div>
-              <div class="p-name">James Soh</div>
-              <div class="p-sub">Support — Floor 1 &amp; 2</div>
-            </div>
-          </div>
-          <div class="duty-right">
-            <span class="badge b-green">On duty</span>
-            <div class="btn-icon danger" onclick="confirmDeleteDuty(this)"><i class="ti ti-trash"></i></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-label">IT Helpdesk On-Call</div>
-        <div class="duty-slot">
-          <div class="duty-person">
-            <div class="av av-p">KL</div>
-            <div>
-              <div class="p-name">Kevin Lim</div>
-              <div class="p-sub">Mon–Wed · Primary on-call</div>
-            </div>
-          </div>
-          <div class="duty-right">
-            <span class="badge b-green">On duty</span>
-            <div class="btn-icon danger" onclick="confirmDeleteDuty(this)"><i class="ti ti-trash"></i></div>
-          </div>
-        </div>
-        <div class="duty-slot">
-          <div class="duty-person">
-            <div class="av av-r">RA</div>
-            <div>
-              <div class="p-name">Rajan Appu</div>
-              <div class="p-sub">Thu–Fri · Primary on-call</div>
-            </div>
-          </div>
-          <div class="duty-right">
-            <span class="badge b-amber">Thu–Fri</span>
-            <div class="btn-icon danger" onclick="confirmDeleteDuty(this)"><i class="ti ti-trash"></i></div>
-          </div>
-        </div>
+      <div id="duty-db-list">
+        <div style="font-size:12px;color:var(--text3);text-align:center;padding:14px 0;">Loading...</div>
       </div>
 
     </div><!-- /duty -->
@@ -1613,53 +1539,69 @@ html, body {
   function showDutyForm() {
     document.getElementById('duty-form').classList.add('visible');
     document.getElementById('duty-form').scrollIntoView({ behavior:'smooth', block:'start' });
+    loadDutyStaffDropdown();
   }
   function hideDutyForm() {
     document.getElementById('duty-form').classList.remove('visible');
-    document.getElementById('duty-name').value   = '';
-    document.getElementById('duty-role').value   = '';
-    document.getElementById('duty-period').value = '';
+    document.getElementById('duty-role-input').value = '';
+    document.getElementById('duty-date-from').value  = '';
+    document.getElementById('duty-date-to').value    = '';
+    document.getElementById('duty-role-error').classList.remove('visible');
+    document.getElementById('duty-date-error').classList.remove('visible');
+    document.getElementById('duty-staff-error').classList.remove('visible');
+    document.getElementById('duty-role-input').classList.remove('error');
+    document.getElementById('duty-date-from').classList.remove('error');
     clearFormErrors();
   }
+
+  async function loadDutyStaffDropdown() {
+    var box = document.getElementById('duty-staff-checkboxes');
+    if (!box) return;
+    try {
+      var data = await sbFetch('GET', '/rest/v1/profiles?role=neq.pending&order=full_name.asc&select=id,full_name,role&limit=200');
+      if (!data || !data.length) { box.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0;">No staff found.</div>'; return; }
+      box.innerHTML = data.map(function(s) {
+        return '<label style="display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:0.5px solid var(--border);cursor:pointer;font-size:13px;color:var(--text);">'
+          + '<input type="checkbox" value="' + escHtml(s.full_name) + '" style="width:16px;height:16px;accent-color:var(--green-dark);">'
+          + escHtml(s.full_name) + '</label>';
+      }).join('');
+    } catch(e) { box.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0;">Could not load staff.</div>'; }
+  }
+
   function saveDuty() {
     clearFormErrors();
-    var name = document.getElementById('duty-name').value.trim();
-    var role = document.getElementById('duty-role').value;
-    if (!name) {
-      document.getElementById('duty-name').classList.add('error');
-      document.getElementById('duty-name-error').classList.add('visible');
-      return;
-    }
+    document.getElementById('duty-role-error').classList.remove('visible');
+    document.getElementById('duty-date-error').classList.remove('visible');
+    document.getElementById('duty-staff-error').classList.remove('visible');
+    document.getElementById('duty-role-input').classList.remove('error');
+    document.getElementById('duty-date-from').classList.remove('error');
+
+    var role    = document.getElementById('duty-role-input').value.trim();
+    var dfrom   = document.getElementById('duty-date-from').value;
+    var dto     = document.getElementById('duty-date-to').value || dfrom;
+    var checked = Array.from(document.querySelectorAll('#duty-staff-checkboxes input[type=checkbox]:checked')).map(function(c){ return c.value; });
+
+    var valid = true;
+    if (!role)            { document.getElementById('duty-role-input').classList.add('error'); document.getElementById('duty-role-error').classList.add('visible'); valid = false; }
+    if (!dfrom)           { document.getElementById('duty-date-from').classList.add('error');  document.getElementById('duty-date-error').classList.add('visible'); valid = false; }
+    if (!checked.length)  { document.getElementById('duty-staff-error').classList.add('visible'); valid = false; }
+    if (!valid) return;
+
     setLoading('duty-save', true);
-    var dutyRole = document.getElementById('duty-role').value;
-    sbFetch('POST', '/rest/v1/duty_roster', { staff_name: name, duty_role: dutyRole || 'General Duty', period: document.getElementById('duty-period').value.trim() }).then(function() {
-      loadDbDuty();
-    }).catch(function(){});
-    setTimeout(() => {
+    var posts = checked.map(function(name) {
+      return sbFetch('POST', '/rest/v1/duty_roster', {
+        staff_name: name, duty_role: role,
+        date_from: dfrom, date_to: dto,
+        period: dfrom + ' to ' + dto
+      });
+    });
+    Promise.all(posts).then(function() {
       setLoading('duty-save', false);
-      var period   = document.getElementById('duty-period').value.trim() || 'This week';
-      var initials = name.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();
-      var roleLabel = role || 'General Duty';
-      var html = `
-        <div class="duty-slot">
-          <div class="duty-person">
-            <div class="av av-g">${initials}</div>
-            <div>
-              <div class="p-name">${escHtml(name)}</div>
-              <div class="p-sub">${escHtml(period)}</div>
-            </div>
-          </div>
-          <div class="duty-right">
-            <span class="badge b-green">On duty</span>
-            <div class="btn-icon danger" onclick="confirmDeleteDuty(this)"><i class="ti ti-trash"></i></div>
-          </div>
-        </div>`;
-      // Add to first card
-      document.querySelector('#screen-duty .card').insertAdjacentHTML('beforeend', html);
       hideDutyForm();
       document.getElementById('duty-success').classList.add('visible');
-      setTimeout(() => document.getElementById('duty-success').classList.remove('visible'), 3500);
-    }, 1200);
+      setTimeout(function(){ document.getElementById('duty-success').classList.remove('visible'); }, 3500);
+      loadDbDuty();
+    }).catch(function(){ setLoading('duty-save', false); });
   }
 
   // ── DELETE MODAL ──
@@ -2098,24 +2040,51 @@ html, body {
 
   // ── LOAD DUTY FROM SUPABASE ──
   async function loadDbDuty() {
+    var el = document.getElementById('duty-db-list');
+    if (!el) return;
+    var today = new Date().toISOString().split('T')[0];
     try {
-      var data = await sbFetch('GET', '/rest/v1/duty_roster?order=created_at.desc&limit=50');
-      if (!data || data.length === 0) return;
-      var section = document.getElementById('screen-duty');
-      if (!section) return;
-      var existing = section.querySelector('.card');
-      var html = '<div class="card" id="db-duty-card"><div class="card-label">Live Duty Assignments</div>' +
-        data.map(function(r) {
-          var ini = r.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
-          return '<div class="duty-slot" data-duty-id="' + r.id + '">'
-            + '<div class="duty-person"><div class="av av-g">' + ini + '</div><div><div class="p-name">' + escHtml(r.staff_name) + '</div><div class="p-sub">' + escHtml(r.duty_role) + (r.period ? ' · ' + r.period : '') + '</div></div></div>'
-            + '<div class="duty-right"><span class="badge b-green">On duty</span>'
-            + '<div class="btn-icon danger" onclick="deleteDutyDb(this)"><i class="ti ti-trash"></i></div></div>'
-            + '</div>';
-        }).join('') + '</div>';
-      if (existing) existing.insertAdjacentHTML('beforebegin', html);
-      else section.insertAdjacentHTML('afterbegin', html);
-    } catch(e) { /* Supabase not reachable */ }
+      var data = await sbFetch('GET', '/rest/v1/duty_roster?date_to=gte.' + today + '&order=date_from.asc,duty_role.asc&limit=200');
+      if (!data) return;
+      var cntEl = document.getElementById('duty-count');
+      if (cntEl) cntEl.textContent = data.length ? '(' + data.length + ')' : '';
+      if (!data.length) {
+        el.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:14px 0;">No upcoming duty assignments.</div>';
+        return;
+      }
+      // Group by role + date range
+      var groups = {};
+      data.forEach(function(r) {
+        var key = escHtml(r.duty_role) + '||' + (r.date_from || '') + '||' + (r.date_to || '');
+        if (!groups[key]) groups[key] = { role: r.duty_role, date_from: r.date_from, date_to: r.date_to, members: [] };
+        groups[key].members.push(r);
+      });
+      var avColors = ['av-g','av-a','av-b','av-c','av-p','av-r'];
+      el.innerHTML = Object.keys(groups).map(function(key, gi) {
+        var g = groups[key];
+        var from = g.date_from ? new Date(g.date_from + 'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'}) : '';
+        var to   = g.date_to   ? new Date(g.date_to   + 'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'}) : '';
+        var dateLabel = from === to ? from : from + ' – ' + to;
+        var isActive = g.date_from <= today && today <= (g.date_to || g.date_from);
+        return '<div class="card" style="margin-bottom:10px;">'
+          + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
+          + '<div class="card-label" style="margin:0;">' + escHtml(g.role) + '</div>'
+          + '<span class="badge ' + (isActive ? 'b-green' : 'b-blue') + '">' + (isActive ? 'Active' : 'Upcoming') + '</span></div>'
+          + '<div style="font-size:11px;color:var(--text3);margin-bottom:8px;"><i class="ti ti-calendar" style="font-size:11px;"></i> ' + dateLabel + '</div>'
+          + g.members.map(function(r, mi) {
+            var ini = r.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
+            var avCls = avColors[(gi + mi) % avColors.length];
+            return '<div class="duty-slot" data-duty-id="' + r.id + '">'
+              + '<div class="duty-person"><div class="av ' + avCls + '">' + ini + '</div>'
+              + '<div><div class="p-name">' + escHtml(r.staff_name) + '</div></div></div>'
+              + '<div class="duty-right"><div class="btn-icon danger" onclick="deleteDutyDb(this)"><i class="ti ti-trash"></i></div></div>'
+              + '</div>';
+          }).join('')
+          + '</div>';
+      }).join('');
+    } catch(e) {
+      el.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:14px 0;">Could not load duty roster.</div>';
+    }
   }
 
   async function deleteDutyDb(btn) {
@@ -2420,7 +2389,7 @@ html, body {
     try {
       var dutyEl = document.getElementById('admin-duty-today');
       if (dutyEl && window.location.protocol !== 'file:') {
-        var duties = await sbFetch('GET', '/rest/v1/duty_roster?order=created_at.desc&limit=6');
+        var duties = await sbFetch('GET', '/rest/v1/duty_roster?date_to=gte.' + today + '&order=date_from.asc&limit=6');
         if (duties && duties.length) {
           var dhtml = '';
           duties.forEach(function(r) {
