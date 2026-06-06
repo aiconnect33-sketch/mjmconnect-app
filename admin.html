@@ -1632,7 +1632,7 @@ html, body {
     el.closest('div').remove();
   }
 
-  function saveDuty() {
+  async function saveDuty() {
     clearFormErrors();
     document.getElementById('duty-role-error').classList.remove('visible');
     document.getElementById('duty-date-error').classList.remove('visible');
@@ -1654,18 +1654,17 @@ html, body {
     setLoading('duty-save', true);
 
     if (editingDutyId) {
-      // PATCH single record — only role and dates, not staff name
-      sbFetch('PATCH', '/rest/v1/duty_roster?id=eq.' + editingDutyId, {
+      // PATCH single record
+      var patchRes = await sbFetch('PATCH', '/rest/v1/duty_roster?id=eq.' + editingDutyId, {
         duty_role: role, date_from: dfrom, date_to: dto, period: dfrom + ' to ' + dto
-      }, { 'Prefer': '' }).then(function() {
-        editingDutyId = null;
-        setLoading('duty-save', false);
-        hideDutyForm();
-        document.getElementById('duty-success').classList.add('visible');
-        setTimeout(function(){ document.getElementById('duty-success').classList.remove('visible'); }, 3500);
-        loadDbDuty();
-        loadAdminLeaveDuty();
-      }).catch(function(){ setLoading('duty-save', false); });
+      }, { 'Prefer': 'return=minimal' });
+      editingDutyId = null;
+      setLoading('duty-save', false);
+      hideDutyForm();
+      document.getElementById('duty-success').classList.add('visible');
+      setTimeout(function(){ document.getElementById('duty-success').classList.remove('visible'); }, 3500);
+      loadDbDuty();
+      loadAdminLeaveDuty();
     } else {
       var posts = checked.map(function(name) {
         return sbFetch('POST', '/rest/v1/duty_roster', {
