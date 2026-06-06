@@ -990,7 +990,7 @@ html, body {
       <!-- Add duty inline form -->
       <div class="inline-form" id="duty-form">
         <div class="inline-form-title">
-          <span><i class="ti ti-users"></i> &nbsp;New Duty Assignment</span>
+          <span><i class="ti ti-users"></i> &nbsp;<span id="duty-form-title">New Duty Assignment</span></span>
           <button class="close-btn" onclick="hideDutyForm()">&times;</button>
         </div>
 
@@ -1543,12 +1543,17 @@ html, body {
   }
 
   // ── DUTY FORM ──
+  var editingDutyId = null;
+
   function showDutyForm() {
+    editingDutyId = null;
+    document.getElementById('duty-form-title').textContent = 'New Duty Assignment';
     document.getElementById('duty-form').classList.add('visible');
     document.getElementById('duty-form').scrollIntoView({ behavior:'smooth', block:'start' });
     loadDutyStaffDropdown();
   }
   function hideDutyForm() {
+    editingDutyId = null;
     document.getElementById('duty-form').classList.remove('visible');
     document.getElementById('duty-role-input').value = '';
     document.getElementById('duty-date-from').value  = '';
@@ -1629,26 +1634,43 @@ html, body {
     var checked = dutyStaffSelected.slice();
 
     var valid = true;
-    if (!role)            { document.getElementById('duty-role-input').classList.add('error'); document.getElementById('duty-role-error').classList.add('visible'); valid = false; }
-    if (!dfrom)           { document.getElementById('duty-date-from').classList.add('error');  document.getElementById('duty-date-error').classList.add('visible'); valid = false; }
-    if (!checked.length)  { document.getElementById('duty-staff-error').classList.add('visible'); valid = false; }
+    if (!role)  { document.getElementById('duty-role-input').classList.add('error'); document.getElementById('duty-role-error').classList.add('visible'); valid = false; }
+    if (!dfrom) { document.getElementById('duty-date-from').classList.add('error');  document.getElementById('duty-date-error').classList.add('visible'); valid = false; }
+    if (!editingDutyId && !checked.length) { document.getElementById('duty-staff-error').classList.add('visible'); valid = false; }
     if (!valid) return;
 
     setLoading('duty-save', true);
-    var posts = checked.map(function(name) {
-      return sbFetch('POST', '/rest/v1/duty_roster', {
-        staff_name: name, duty_role: role,
-        date_from: dfrom, date_to: dto,
-        period: dfrom + ' to ' + dto
+
+    if (editingDutyId) {
+      // PATCH single record — only role and dates, not staff name
+      sbFetch('PATCH', '/rest/v1/duty_roster?id=eq.' + editingDutyId, {
+        duty_role: role, date_from: dfrom, date_to: dto, period: dfrom + ' to ' + dto
+      }, { 'Prefer': '' }).then(function() {
+        editingDutyId = null;
+        setLoading('duty-save', false);
+        hideDutyForm();
+        document.getElementById('duty-success').classList.add('visible');
+        setTimeout(function(){ document.getElementById('duty-success').classList.remove('visible'); }, 3500);
+        loadDbDuty();
+        loadAdminLeaveDuty();
+      }).catch(function(){ setLoading('duty-save', false); });
+    } else {
+      var posts = checked.map(function(name) {
+        return sbFetch('POST', '/rest/v1/duty_roster', {
+          staff_name: name, duty_role: role,
+          date_from: dfrom, date_to: dto,
+          period: dfrom + ' to ' + dto
+        });
       });
-    });
-    Promise.all(posts).then(function() {
-      setLoading('duty-save', false);
-      hideDutyForm();
-      document.getElementById('duty-success').classList.add('visible');
-      setTimeout(function(){ document.getElementById('duty-success').classList.remove('visible'); }, 3500);
-      loadDbDuty();
-    }).catch(function(){ setLoading('duty-save', false); });
+      Promise.all(posts).then(function() {
+        setLoading('duty-save', false);
+        hideDutyForm();
+        document.getElementById('duty-success').classList.add('visible');
+        setTimeout(function(){ document.getElementById('duty-success').classList.remove('visible'); }, 3500);
+        loadDbDuty();
+        loadAdminLeaveDuty();
+      }).catch(function(){ setLoading('duty-save', false); });
+    }
   }
 
   // ── DELETE MODAL ──
@@ -2124,7 +2146,7 @@ html, body {
             return '<div class="duty-slot" data-duty-id="' + r.id + '">'
               + '<div class="duty-person"><div class="av ' + avCls + '">' + ini + '</div>'
               + '<div><div class="p-name">' + escHtml(r.staff_name) + '</div></div></div>'
-              + '<div class="duty-right"><div class="btn-icon danger" onclick="deleteDutyDb(this)"><i class="ti ti-trash"></i></div></div>'
+              + '<div class="duty-right"><div class="btn-icon" onclick="editDutyDb(this)" title="Edit"><i class="ti ti-pencil"></i></div><div class="btn-icon danger" onclick="deleteDutyDb(this)"><i class="ti ti-trash"></i></div></div>'
               + '</div>';
           }).join('')
           + '</div>';
@@ -2141,6 +2163,31 @@ html, body {
     await sbFetch('DELETE', '/rest/v1/duty_roster?id=eq.' + id, null, { 'Prefer': '' });
     row.style.transition = 'opacity 0.2s'; row.style.opacity = '0';
     setTimeout(function(){ row.remove(); }, 220);
+  }
+
+  async function editDutyDb(btn) {
+    var row = btn.closest('.duty-slot');
+    var id  = row ? row.getAttribute('data-duty-id') : null;
+    if (!id) return;
+    try {
+      var data = await sbFetch('GET', '/rest/v1/duty_roster?id=eq.' + id + '&select=*');
+      if (!data || !data.length) return;
+      var r = data[0];
+      editingDutyId = id;
+      document.getElementById('duty-form-title').textContent  = 'Edit Duty Assignment';
+      document.getElementById('duty-role-input').value        = r.duty_role  || '';
+      document.getElementById('duty-date-from').value         = r.date_from  || '';
+      document.getElementById('duty-date-to').value           = r.date_to    || '';
+      // Pre-fill staff name as a tag (single staff per record)
+      dutyStaffSelected = [];
+      var tags = document.getElementById('duty-staff-tags');
+      if (tags) tags.innerHTML = '';
+      if (r.staff_name) selectDutyStaff(r.staff_name);
+      document.getElementById('duty-form').classList.add('visible');
+      document.getElementById('duty-form').scrollIntoView({ behavior:'smooth', block:'start' });
+      // Load staff list for dropdown
+      if (!dutyStaffAll.length) loadDutyStaffDropdown();
+    } catch(e) {}
   }
 
   // ── LOAD STAFF PROFILES FROM SUPABASE ──
