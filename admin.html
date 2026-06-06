@@ -1027,16 +1027,22 @@ html, body {
           </div>
         </div>
 
-        <!-- Staff dropdown — select multiple -->
+        <!-- Staff picker — searchable autocomplete -->
         <div class="form-group">
           <label class="form-label">Staff on Duty</label>
           <div class="field-error" id="duty-staff-error" style="margin-bottom:6px;">
             <i class="ti ti-alert-circle"></i> Select at least one staff.
           </div>
-          <select class="form-select" id="duty-staff-select" multiple style="height:130px;padding:4px;">
-            <option disabled>Loading staff...</option>
-          </select>
-          <div style="font-size:10px;color:var(--text3);margin-top:4px;">Hold Ctrl / Cmd to select multiple staff</div>
+          <!-- Selected staff tags -->
+          <div id="duty-staff-tags" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px;min-height:0;"></div>
+          <!-- Search input -->
+          <div class="input-wrap" style="position:relative;">
+            <i class="ti ti-search input-icon"></i>
+            <input class="form-input" type="text" id="duty-staff-search" placeholder="Type name to search…" oninput="filterDutyStaff()" autocomplete="off">
+          </div>
+          <!-- Dropdown results -->
+          <div id="duty-staff-dropdown" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);max-height:150px;overflow-y:auto;margin-top:2px;"></div>
+          <div style="font-size:10px;color:var(--text3);margin-top:4px;">Search and select multiple staff</div>
         </div>
 
         <button class="btn-primary" onclick="saveDuty()">
@@ -1547,8 +1553,13 @@ html, body {
     document.getElementById('duty-role-input').value = '';
     document.getElementById('duty-date-from').value  = '';
     document.getElementById('duty-date-to').value    = '';
-    var sel = document.getElementById('duty-staff-select');
-    if (sel) { Array.from(sel.options).forEach(function(o){ o.selected = false; }); }
+    var sel = document.getElementById('duty-staff-search');
+    if (sel) sel.value = '';
+    dutyStaffSelected = [];
+    var tags = document.getElementById('duty-staff-tags');
+    if (tags) tags.innerHTML = '';
+    var dd = document.getElementById('duty-staff-dropdown');
+    if (dd) dd.style.display = 'none';
     document.getElementById('duty-role-error').classList.remove('visible');
     document.getElementById('duty-date-error').classList.remove('visible');
     document.getElementById('duty-staff-error').classList.remove('visible');
@@ -1557,17 +1568,51 @@ html, body {
     clearFormErrors();
   }
 
+  var dutyStaffAll = [];
+  var dutyStaffSelected = [];
+
   async function loadDutyStaffDropdown() {
-    var sel = document.getElementById('duty-staff-select');
-    if (!sel) return;
-    sel.innerHTML = '<option disabled>Loading staff...</option>';
+    dutyStaffAll = []; dutyStaffSelected = [];
+    document.getElementById('duty-staff-tags').innerHTML = '';
+    document.getElementById('duty-staff-search').value = '';
+    document.getElementById('duty-staff-dropdown').style.display = 'none';
     try {
-      var data = await sbFetch('GET', '/rest/v1/profiles?role=neq.pending&order=full_name.asc&select=id,full_name,role&limit=200');
-      if (!data || !data.length) { sel.innerHTML = '<option disabled>No staff found.</option>'; return; }
-      sel.innerHTML = data.map(function(s) {
-        return '<option value="' + escHtml(s.full_name) + '">' + escHtml(s.full_name) + '</option>';
-      }).join('');
-    } catch(e) { sel.innerHTML = '<option disabled>Could not load staff.</option>'; }
+      var data = await sbFetch('GET', '/rest/v1/profiles?role=neq.pending&order=full_name.asc&select=id,full_name&limit=200');
+      if (data && data.length) {
+        dutyStaffAll = data.map(function(s){ return s.full_name; });
+      }
+    } catch(e) {}
+  }
+
+  function filterDutyStaff() {
+    var q   = document.getElementById('duty-staff-search').value.trim().toLowerCase();
+    var dd  = document.getElementById('duty-staff-dropdown');
+    if (!q) { dd.style.display = 'none'; return; }
+    var matches = dutyStaffAll.filter(function(n){
+      return n.toLowerCase().indexOf(q) !== -1 && dutyStaffSelected.indexOf(n) === -1;
+    });
+    if (!matches.length) { dd.style.display = 'none'; return; }
+    dd.innerHTML = matches.map(function(n){
+      return '<div onclick="selectDutyStaff(\'' + n.replace(/'/g,"\\'") + '\')" style="padding:9px 12px;font-size:13px;color:var(--text);cursor:pointer;border-bottom:0.5px solid var(--border);" onmouseover="this.style.background=\'var(--green-bg)\'" onmouseout="this.style.background=\'\'">'+escHtml(n)+'</div>';
+    }).join('');
+    dd.style.display = 'block';
+  }
+
+  function selectDutyStaff(name) {
+    if (dutyStaffSelected.indexOf(name) !== -1) return;
+    dutyStaffSelected.push(name);
+    var tags = document.getElementById('duty-staff-tags');
+    var tag  = document.createElement('div');
+    tag.style.cssText = 'display:flex;align-items:center;gap:5px;background:var(--green-bg);border:0.5px solid var(--green-dark);border-radius:20px;padding:3px 10px;font-size:12px;color:var(--green-text);';
+    tag.innerHTML = escHtml(name) + '<span onclick="removeDutyStaff(\'' + name.replace(/'/g,"\\'") + '\',this)" style="cursor:pointer;font-size:15px;line-height:1;color:var(--green-dark);">&times;</span>';
+    tags.appendChild(tag);
+    document.getElementById('duty-staff-search').value = '';
+    document.getElementById('duty-staff-dropdown').style.display = 'none';
+  }
+
+  function removeDutyStaff(name, el) {
+    dutyStaffSelected = dutyStaffSelected.filter(function(n){ return n !== name; });
+    el.closest('div').remove();
   }
 
   function saveDuty() {
@@ -1581,7 +1626,7 @@ html, body {
     var role    = document.getElementById('duty-role-input').value.trim();
     var dfrom   = document.getElementById('duty-date-from').value;
     var dto     = document.getElementById('duty-date-to').value || dfrom;
-    var checked = Array.from(document.querySelectorAll('#duty-staff-select option:checked')).map(function(o){ return o.value; });
+    var checked = dutyStaffSelected.slice();
 
     var valid = true;
     if (!role)            { document.getElementById('duty-role-input').classList.add('error'); document.getElementById('duty-role-error').classList.add('visible'); valid = false; }
