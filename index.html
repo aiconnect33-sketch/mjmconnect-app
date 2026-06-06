@@ -460,13 +460,8 @@
     <!-- ── HOME ── -->
     <div class="screen-section active" id="screen-home">
 
-      <!-- Urgent announcement banner -->
-      <div class="alert-banner">
-        <i class="ti ti-alert-circle"></i>
-        <div class="alert-text">
-          <strong>Office Closure:</strong> The office will be closed this Friday 30 May for public holiday. Please plan accordingly.
-        </div>
-      </div>
+      <!-- Announcement banner (populated by tab-announcements.js) -->
+      <div id="home-ann-banner" style="display:none;"></div>
 
       <!-- Calendar -->
       <div class="cal-card">
@@ -577,48 +572,9 @@
 
     <!-- ── ANNOUNCEMENTS ── -->
     <div class="screen-section" id="screen-announce">
-
-      <div class="card card-urgent">
-        <div class="card-meta">
-          <span class="badge badge-urgent">Urgent</span>
-          <span class="card-time">Today, 8:30 AM</span>
-        </div>
-        <div class="card-title">Office Closure — Friday 30 May</div>
-        <div class="card-body">The office will be closed this Friday for public holiday. Please plan accordingly.</div>
+      <div id="ann-tab-list">
+        <div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">Loading...</div>
       </div>
-      <div class="card card-info">
-        <div class="card-meta">
-          <span class="badge badge-info">General</span>
-          <span class="card-time">Yesterday</span>
-        </div>
-        <div class="card-title">New Flexi-Work Policy — June 2026</div>
-        <div class="card-body">Staff may opt for a 4-day compressed workweek. Applications open via HR Portal from 1 June.</div>
-      </div>
-      <div class="card card-info">
-        <div class="card-meta">
-          <span class="badge badge-blue">HR</span>
-          <span class="card-time">2 days ago</span>
-        </div>
-        <div class="card-title">Annual Leave Applications — Q3 2026</div>
-        <div class="card-body">Q3 leave applications are now open. Submit via HR Portal by 15 June. Max 2 weeks per application.</div>
-      </div>
-      <div class="card card-info">
-        <div class="card-meta">
-          <span class="badge badge-amber">Facilities</span>
-          <span class="card-time">3 days ago</span>
-        </div>
-        <div class="card-title">Lift Maintenance — Block B</div>
-        <div class="card-body">Block B lift will be under maintenance on 5–6 June. Please use stairwell or Block A lift.</div>
-      </div>
-      <div class="card card-info">
-        <div class="card-meta">
-          <span class="badge badge-info">General</span>
-          <span class="card-time">5 days ago</span>
-        </div>
-        <div class="card-title">New Visitor Management System</div>
-        <div class="card-body">All visitors must be pre-registered via the VisitorPass app before arriving at HQ.</div>
-      </div>
-
     </div><!-- /announce -->
 
     <!-- ── LEAVE ── -->
