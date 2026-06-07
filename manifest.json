@@ -2,7 +2,7 @@
   "name": "MJMConnect",
   "short_name": "MJMConnect",
   "description": "Internal Office Info Board — Announcements, Leave, Duty & Events",
-  "start_url": "/login.html",
+  "start_url": "/mjmconnect-app/login.html",
   "display": "standalone",
   "background_color": "#0F6E56",
   "theme_color": "#0F6E56",
