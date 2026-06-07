@@ -7,8 +7,9 @@ function initBookTab() {
   if (bookTabInited) return;
   bookTabInited = true;
   var now = new Date();
-  vCalYear = now.getFullYear(); vCalMonth = now.getMonth();
-  rCalYear = now.getFullYear(); rCalMonth = now.getMonth();
+  // Only set calendar month on very first load (vCalYear undefined)
+  if (vCalYear === undefined) { vCalYear = now.getFullYear(); vCalMonth = now.getMonth(); }
+  if (rCalYear === undefined) { rCalYear = now.getFullYear(); rCalMonth = now.getMonth(); }
   if (window.location.protocol !== 'file:') {
     loadVehicleCalendar();
     loadRoomCalendar();
@@ -171,8 +172,7 @@ async function submitVehicleBooking() {
     var allOk = results.every(function(r){ return r.ok || r.status === 201; });
     if (allOk) {
       hideVehicleForm(); showBookAlert('v-success');
-      bookTabInited = false; initBookTab();
-      loadMyVehicleBookings();
+      loadVehicleCalendar(); loadMyVehicleBookings();
     } else {
       document.getElementById('v-error-msg').textContent = 'Could not save booking. Please try again.';
       showBookAlert('v-error');
@@ -235,11 +235,7 @@ async function cancelVehicleBookingFromModal(id) {
       method: 'DELETE',
       headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY }
     });
-    if (res.ok) { closeDayModal(); bookTabInited = false; initBookTab(); }
-  } catch(e) {}
-}
-
-async function loadMyVehicleBookings() {
+    if (res.ok) { closeDayModal(); loadVehicleCalendar(); loadMyVehicleBookings(); } {
   var el = document.getElementById('v-my-bookings');
   if (!el) return;
   var raw = sessionStorage.getItem('mjm_user');
@@ -283,11 +279,7 @@ async function cancelMyVehicleBooking(id) {
       method: 'DELETE',
       headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY }
     });
-    bookTabInited = false; initBookTab();
-  } catch(e) {}
-}
-
-async function loadMyRoomBookings() {
+    loadVehicleCalendar(); loadMyVehicleBookings(); {
   var el = document.getElementById('r-my-bookings');
   if (!el) return;
   var raw = sessionStorage.getItem('mjm_user');
@@ -331,12 +323,7 @@ async function cancelMyRoomBooking(id) {
       method: 'DELETE',
       headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY }
     });
-    bookTabInited = false; initBookTab();
-  } catch(e) {}
-}
-
-// ════════════════════════════
-//  CONFERENCE ROOM
+    loadRoomCalendar(); loadMyRoomBookings();
 // ════════════════════════════
 
 var rSelectedDates = [];
@@ -453,8 +440,7 @@ async function submitRoomBooking() {
     var allOk = results.every(function(r){ return r.ok || r.status === 201; });
     if (allOk) {
       hideRoomForm(); showBookAlert('r-success');
-      bookTabInited = false; initBookTab();
-      loadMyRoomBookings();
+      loadRoomCalendar(); loadMyRoomBookings();
     } else {
       document.getElementById('r-error-msg').textContent = 'Could not save booking. Please try again.';
       showBookAlert('r-error');
@@ -515,7 +501,7 @@ async function cancelRoomBooking(id) {
       method: 'DELETE',
       headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY }
     });
-    if (res.ok) { closeDayModal(); bookTabInited = false; initBookTab(); }
+    if (res.ok) { closeDayModal(); loadRoomCalendar(); loadMyRoomBookings(); }
   } catch(e) {}
 }
 
