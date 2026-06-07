@@ -93,6 +93,12 @@ window.addEventListener('DOMContentLoaded', function() {
     loadLeave();
     loadDuty();
   }
-  // Always init calendar (handles file: protocol gracefully)
+  // Always init calendar
   if (typeof initStaffCalendar === 'function') initStaffCalendar();
+  // Auto-switch to tab based on URL hash
+  if (window.location.hash === '#book') {
+    var bookBtn = document.querySelector('.tab-btn[onclick*="book"]');
+    if (bookBtn) { bookBtn.click(); }
+    window.location.hash = '';
+  }
 });
