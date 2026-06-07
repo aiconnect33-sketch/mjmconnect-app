@@ -1430,10 +1430,62 @@ html, body {
   // ── DUTY FORM ──
   var editingDutyId = null;
   var editingDutyOriginalStaff = null;
+  var editingDutyGroupIds = []; // all IDs in the group being edited
+
+  async function editDutyGroup(btn) {
+    var card = btn.closest('.card');
+    if (!card) return;
+    var allIds = card.getAttribute('data-group-ids');
+    if (!allIds) return;
+    var ids = allIds.split(',').filter(Boolean);
+    if (!ids.length) return;
+    try {
+      // Fetch first record for role/dates
+      var data = await sbFetch('GET', '/rest/v1/duty_roster?id=eq.' + ids[0] + '&select=*');
+      if (!data || !data.length) return;
+      var r = data[0];
+      editingDutyId = ids[0];
+      editingDutyGroupIds = ids;
+      editingDutyOriginalStaff = null;
+      document.getElementById('duty-form-title').textContent = 'Edit Duty Assignment';
+      document.getElementById('duty-role-input').value       = r.duty_role  || '';
+      document.getElementById('duty-date-from').value        = r.date_from  || '';
+      document.getElementById('duty-date-to').value          = r.date_to    || '';
+      // Load all staff in group as tags
+      dutyStaffSelected = [];
+      var tags = document.getElementById('duty-staff-tags');
+      if (tags) tags.innerHTML = '';
+      await loadDutyStaffDropdown();
+      // Fetch all member names in group
+      var allData = await sbFetch('GET', '/rest/v1/duty_roster?id=in.(' + ids.join(',') + ')&select=staff_name');
+      if (allData) {
+        allData.forEach(function(m){ if (m.staff_name) selectDutyStaff(m.staff_name); });
+      }
+      document.getElementById('duty-form').classList.add('visible');
+      document.getElementById('duty-form').scrollIntoView({ behavior:'smooth', block:'start' });
+    } catch(e) {}
+  }
+
+  async function deleteDutyGroup(btn) {
+    var card = btn.closest('.card');
+    if (!card) return;
+    var allIds = card.getAttribute('data-group-ids');
+    if (!allIds) return;
+    var ids = allIds.split(',').filter(Boolean);
+    if (!confirm('Delete this entire duty team?')) return;
+    try {
+      await Promise.all(ids.map(function(id) {
+        return sbFetch('DELETE', '/rest/v1/duty_roster?id=eq.' + id, null, { 'Prefer': '' });
+      }));
+      card.style.transition = 'opacity 0.2s'; card.style.opacity = '0';
+      setTimeout(function(){ card.remove(); loadAdminLeaveDuty(); }, 220);
+    } catch(e) {}
+  }
 
   function showDutyForm() {
     editingDutyId = null;
     editingDutyOriginalStaff = null;
+    editingDutyGroupIds = [];
     document.getElementById('duty-form-title').textContent = 'New Duty Assignment';
     document.getElementById('duty-form').classList.add('visible');
     document.getElementById('duty-form').scrollIntoView({ behavior:'smooth', block:'start' });
@@ -1442,6 +1494,7 @@ html, body {
   function hideDutyForm() {
     editingDutyId = null;
     editingDutyOriginalStaff = null;
+    editingDutyGroupIds = [];
     document.getElementById('duty-form').classList.remove('visible');
     document.getElementById('duty-role-input').value = '';
     document.getElementById('duty-date-from').value  = '';
@@ -1546,23 +1599,35 @@ html, body {
     setLoading('duty-save', true);
     try {
       if (editingDutyId) {
-        // PATCH the original record (role + dates + original staff name)
-        await sbFetch('PATCH', '/rest/v1/duty_roster?id=eq.' + editingDutyId, {
-          duty_role: role, date_from: dfrom, date_to: dto, period: dfrom + ' to ' + dto
-        }, { 'Prefer': 'return=minimal' });
-        // POST new rows for any additional staff beyond the original
-        var newStaff = checked.filter(function(name){ return name !== editingDutyOriginalStaff; });
+        // PATCH all existing records in the group with new role + dates
+        await Promise.all(editingDutyGroupIds.map(function(id) {
+          return sbFetch('PATCH', '/rest/v1/duty_roster?id=eq.' + id, {
+            duty_role: role, date_from: dfrom, date_to: dto, period: dfrom + ' to ' + dto
+          }, { 'Prefer': 'return=minimal' });
+        }));
+        // DELETE records for staff removed from group
+        var existingNames = [];
+        var existingData = await sbFetch('GET', '/rest/v1/duty_roster?id=in.(' + editingDutyGroupIds.join(',') + ')&select=id,staff_name');
+        if (existingData) existingData.forEach(function(r){ existingNames.push(r.staff_name); });
+        var toRemove = existingData ? existingData.filter(function(r){ return checked.indexOf(r.staff_name) === -1; }) : [];
+        if (toRemove.length) {
+          await Promise.all(toRemove.map(function(r){
+            return sbFetch('DELETE', '/rest/v1/duty_roster?id=eq.' + r.id, null, { 'Prefer': '' });
+          }));
+        }
+        // POST new rows for newly added staff
+        var newStaff = checked.filter(function(n){ return existingNames.indexOf(n) === -1; });
         if (newStaff.length) {
           await Promise.all(newStaff.map(function(name) {
             return sbFetch('POST', '/rest/v1/duty_roster', {
               staff_name: name, duty_role: role,
-              date_from: dfrom, date_to: dto,
-              period: dfrom + ' to ' + dto
+              date_from: dfrom, date_to: dto, period: dfrom + ' to ' + dto
             });
           }));
         }
         editingDutyId = null;
         editingDutyOriginalStaff = null;
+        editingDutyGroupIds = [];
       } else {
         await Promise.all(checked.map(function(name) {
           return sbFetch('POST', '/rest/v1/duty_roster', {
@@ -2045,10 +2110,15 @@ html, body {
         var to   = g.date_to   ? new Date(g.date_to   + 'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'}) : '';
         var dateLabel = from === to ? from : from + ' – ' + to;
         var isActive = g.date_from <= today && today <= (g.date_to || g.date_from);
-        return '<div class="card" style="margin-bottom:10px;">'
+        var allIds = g.members.map(function(r){ return r.id; }).join(',');
+        return '<div class="card" style="margin-bottom:10px;" data-group-ids="' + allIds + '">'
           + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
           + '<div class="card-label" style="margin:0;">' + escHtml(g.role) + '</div>'
-          + '<span class="badge ' + (isActive ? 'b-green' : 'b-blue') + '">' + (isActive ? 'Active' : 'Upcoming') + '</span></div>'
+          + '<div style="display:flex;align-items:center;gap:6px;">'
+          + '<span class="badge ' + (isActive ? 'b-green' : 'b-blue') + '">' + (isActive ? 'Active' : 'Upcoming') + '</span>'
+          + '<div class="btn-icon" onclick="editDutyGroup(this)" title="Edit"><i class="ti ti-pencil"></i></div>'
+          + '<div class="btn-icon danger" onclick="deleteDutyGroup(this)" title="Delete"><i class="ti ti-trash"></i></div>'
+          + '</div></div>'
           + '<div style="font-size:11px;color:var(--text3);margin-bottom:8px;"><i class="ti ti-calendar" style="font-size:11px;"></i> ' + dateLabel + '</div>'
           + g.members.map(function(r, mi) {
             var ini = r.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
@@ -2056,7 +2126,6 @@ html, body {
             return '<div class="duty-slot" data-duty-id="' + r.id + '">'
               + '<div class="duty-person"><div class="av ' + avCls + '">' + ini + '</div>'
               + '<div><div class="p-name">' + escHtml(r.staff_name) + '</div></div></div>'
-              + '<div class="duty-right"><div class="btn-icon" onclick="editDutyDb(this)" title="Edit"><i class="ti ti-pencil"></i></div><div class="btn-icon danger" onclick="deleteDutyDb(this)"><i class="ti ti-trash"></i></div></div>'
               + '</div>';
           }).join('')
           + '</div>';
