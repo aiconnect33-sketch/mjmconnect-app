@@ -1,13 +1,5 @@
 // ── tab-book.js — Book tab (Vehicle + Conference Room) ──
 
-// Always use email as booked_by so profile name changes don't break matching
-function getCurrentUserEmail() {
-  var raw = sessionStorage.getItem('mjm_user');
-  if (!raw) return getCurrentUserName();
-  var u = JSON.parse(raw);
-  return u.email || u.name || 'Unknown';
-}
-
 var bookTabInited = false;
 var vCalYear, vCalMonth, rCalYear, rCalMonth;
 
@@ -130,7 +122,7 @@ async function checkVehicleClash() {
         if (!tfrom || !tto) continue;
         clash = data.find(function(b) {
           if (b.is_full_day) return true;
-          return tfrom < b.time_to && tto > b.time_from;
+          return to24h(tfrom) < b.time_to && to24h(tto) > b.time_from;
         });
       }
       if (clash) {
@@ -166,10 +158,10 @@ async function submitVehicleBooking() {
         headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY,
                    'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
         body: JSON.stringify({
-          booked_by: getCurrentUserEmail(), booking_date: d,
+          booked_by: getCurrentUserName(), booking_date: d,
           is_full_day: vIsFullDay,
-          time_from: vIsFullDay ? null : tfrom,
-          time_to:   vIsFullDay ? null : tto,
+          time_from: vIsFullDay ? null : to24h(tfrom),
+          time_to:   vIsFullDay ? null : to24h(tto),
           purpose:   purpose || null
         })
       });
@@ -265,9 +257,10 @@ async function loadMyVehicleBookings() {
     var mine = data.filter(function(b) {
       if (!b.booked_by) return false;
       var by = b.booked_by.toLowerCase();
-      var em = u.email ? u.email.toLowerCase() : '';
       var nm = u.name  ? u.name.toLowerCase()  : '';
-      return (em && by === em) || (nm && (by === nm || by.indexOf(nm) === 0));
+      var em = u.email ? u.email.toLowerCase() : '';
+      return (nm && (by === nm || by.indexOf(nm) === 0)) ||
+             (em && (by === em || by.indexOf(em) === 0));
     });
     if (!mine.length) { el.innerHTML = '<div class="book-empty">No bookings this month.</div>'; return; }
     el.innerHTML = mine.map(function(b) {
@@ -314,9 +307,10 @@ async function loadMyRoomBookings() {
     var mine = data.filter(function(b) {
       if (!b.booked_by) return false;
       var by = b.booked_by.toLowerCase();
-      var em = u.email ? u.email.toLowerCase() : '';
       var nm = u.name  ? u.name.toLowerCase()  : '';
-      return (em && by === em) || (nm && (by === nm || by.indexOf(nm) === 0));
+      var em = u.email ? u.email.toLowerCase() : '';
+      return (nm && (by === nm || by.indexOf(nm) === 0)) ||
+             (em && (by === em || by.indexOf(em) === 0));
     });
     if (!mine.length) { el.innerHTML = '<div class="book-empty">No room bookings this month.</div>'; return; }
     el.innerHTML = mine.map(function(b) {
@@ -424,7 +418,7 @@ function checkRoomClash() {
   document.getElementById('r-clash-alert').style.display = 'none';
   if (!from || !to || !roomBookingsCache.length) return;
   var clash = roomBookingsCache.find(function(b) {
-    return from < b.time_to && to > b.time_from;
+    return to24h(from) < b.time_to && to24h(to) > b.time_from;
   });
   if (clash) {
     document.getElementById('r-clash-msg').textContent =
@@ -453,7 +447,8 @@ async function submitRoomBooking() {
         headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY,
                    'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
         body: JSON.stringify({
-          booked_by: getCurrentUserEmail(), booking_date: d,
+          booked_by: getCurrentUserName(), booking_date: d,
+          time_from: to24h(tfrom), time_to: to24h(tto), purpose: purpose || null
         })
       });
     });
@@ -552,10 +547,10 @@ async function showDayDetail(type, dateStr) {
     }
     body.innerHTML = data.map(function(b) {
       var byLow  = (b.booked_by || '').toLowerCase();
-      var emLow  = u2.email ? u2.email.toLowerCase() : '';
       var nmLow  = u2.name  ? u2.name.toLowerCase()  : '';
-      var isMine = (emLow && byLow === emLow) ||
-                   (nmLow && (byLow === nmLow || byLow.indexOf(nmLow) === 0));
+      var emLow  = u2.email ? u2.email.toLowerCase() : '';
+      var isMine = (nmLow && (byLow === nmLow || byLow.indexOf(nmLow) === 0)) ||
+                   (emLow && (byLow === emLow || byLow.indexOf(emLow) === 0));
       var timeStr  = type === 'vehicle'
         ? (b.is_full_day ? 'Full Day' : fmtTime(b.time_from) + ' – ' + fmtTime(b.time_to))
         : fmtTime(b.time_from) + ' – ' + fmtTime(b.time_to);
@@ -580,6 +575,21 @@ function closeDayModal() {
 // ════════════════════════════
 //  HELPERS
 // ════════════════════════════
+
+// Normalize time input to HH:MM 24-hour format for Supabase
+// Handles both "09:31" and "09:31 AM" / "01:30 PM"
+function to24h(str) {
+  if (!str) return null;
+  str = str.trim();
+  var ampm = str.match(/([AP]M)$/i);
+  if (!ampm) return str.substring(0, 5); // already HH:MM
+  var parts = str.replace(/\s*[AP]M$/i, '').split(':');
+  var h = parseInt(parts[0]);
+  var m = parts[1] ? parts[1].substring(0, 2) : '00';
+  if (ampm[1].toUpperCase() === 'PM' && h !== 12) h += 12;
+  if (ampm[1].toUpperCase() === 'AM' && h === 12) h = 0;
+  return String(h).padStart(2, '0') + ':' + m;
+}
 
 function fmtDate(str) {
   if (!str) return '';
