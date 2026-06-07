@@ -1861,6 +1861,9 @@ html, body {
           var promoteBtn = canPromote
             ? '<div class="btn-icon" onclick="promoteToAdmin(\'' + u.email.replace(/'/g,"\\'") + '\')" title="Make HR Admin" style="color:var(--green);border-color:var(--green-bg);background:var(--green-bg);"><i class="ti ti-shield-up"></i></div>'
             : '';
+          var safeId   = String(u.id).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+          var safeName = String(u.name).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+          var deleteBtn = '<div class="btn-icon" onclick="deleteStaff(\'' + safeId + '\',\'' + safeName + '\')" title="Remove staff" style="color:#c0392b;border-color:#fde8e8;background:#fde8e8;"><i class="ti ti-trash"></i></div>';
           return '<div class="person-row">'
             + '<div class="av ' + avCls + '">' + ini + '</div>'
             + '<div style="flex:1;">'
@@ -1870,10 +1873,28 @@ html, body {
             + '<div style="display:flex;align-items:center;gap:6px;">'
             + '<span class="badge b-green">Staff</span>'
             + promoteBtn
+            + deleteBtn
             + '</div>'
             + '</div>';
         }).join('');
       }
+    }
+  }
+
+  async function deleteStaff(id, name) {
+    if (!confirm('Remove ' + name + ' from MJMConnect? This cannot be undone.')) return;
+    try {
+      var res = await fetch(SURL + '/rest/v1/profiles?id=eq.' + id, {
+        method: 'DELETE',
+        headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY }
+      });
+      if (res.ok) {
+        loadSettings();
+      } else {
+        alert('Could not remove staff. Please try again.');
+      }
+    } catch(e) {
+      alert('Connection error. Please try again.');
     }
   }
 
