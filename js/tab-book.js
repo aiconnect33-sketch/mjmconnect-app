@@ -7,7 +7,6 @@ function initBookTab() {
   if (bookTabInited) return;
   bookTabInited = true;
   var now = new Date();
-  // Only set calendar month on very first load (vCalYear undefined)
   if (vCalYear === undefined) { vCalYear = now.getFullYear(); vCalMonth = now.getMonth(); }
   if (rCalYear === undefined) { rCalYear = now.getFullYear(); rCalMonth = now.getMonth(); }
   if (window.location.protocol !== 'file:') {
@@ -69,9 +68,9 @@ function hideVehicleForm() {
 function addVehicleDate() {
   var d = document.getElementById('v-date').value;
   if (!d) return;
-  vSelectedDates = [d]; // only one date allowed
+  vSelectedDates = [d];
   renderVehicleDateTags();
-  document.getElementById('v-date').style.display = 'none'; // hide picker after selection
+  document.getElementById('v-date').style.display = 'none';
   document.getElementById('v-clash-alert').style.display = 'none';
   checkVehicleClash();
 }
@@ -80,7 +79,7 @@ function removeVehicleDate(d) {
   vSelectedDates = [];
   document.getElementById('v-date-tags').innerHTML = '';
   document.getElementById('v-date').value = '';
-  document.getElementById('v-date').style.display = 'block'; // show picker again
+  document.getElementById('v-date').style.display = 'block';
   checkVehicleClash();
 }
 
@@ -153,13 +152,16 @@ async function submitVehicleBooking() {
   if (document.getElementById('v-clash-alert').style.display !== 'none') return;
   setBookLoading('v-submit-btn','v-submit-label','v-spinner', true);
   try {
+    var raw = sessionStorage.getItem('mjm_user');
+    var u   = raw ? JSON.parse(raw) : {};
+    var bookedBy = u.email || u.name || 'Unknown';
     var posts = vSelectedDates.map(function(d) {
       return fetch(SURL + '/rest/v1/vehicle_bookings', {
         method: 'POST',
         headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY,
                    'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
         body: JSON.stringify({
-          booked_by: (function(){ var r=sessionStorage.getItem('mjm_user'); var u=r?JSON.parse(r):{}; return u.email||u.name||'Unknown'; })(), booking_date: d,
+          booked_by: bookedBy, booking_date: d,
           is_full_day: vIsFullDay,
           time_from: vIsFullDay ? null : to24h(tfrom),
           time_to:   vIsFullDay ? null : to24h(tto),
@@ -214,7 +216,6 @@ function renderVehicleCalendar(bookedDates) {
     var isBooked = bookedDates && bookedDates[dateStr];
     if (isToday) cell.classList.add('today');
     if (isBooked && !isToday) cell.classList.add('booked');
-    // Today + booked: show green circle with red ring
     var spanStyle = (isToday && isBooked) ? ' style="outline:2.5px solid #E24B4A;outline-offset:2px;"' : '';
     cell.innerHTML = '<span' + spanStyle + '>' + d + '</span>';
     if (isBooked) {
@@ -235,7 +236,11 @@ async function cancelVehicleBookingFromModal(id) {
       method: 'DELETE',
       headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY }
     });
-    if (res.ok) { closeDayModal(); loadVehicleCalendar(); loadMyVehicleBookings(); } {
+    if (res.ok) { closeDayModal(); loadVehicleCalendar(); loadMyVehicleBookings(); }
+  } catch(e) {}
+}
+
+async function loadMyVehicleBookings() {
   var el = document.getElementById('v-my-bookings');
   if (!el) return;
   var raw = sessionStorage.getItem('mjm_user');
@@ -279,51 +284,12 @@ async function cancelMyVehicleBooking(id) {
       method: 'DELETE',
       headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY }
     });
-    loadVehicleCalendar(); loadMyVehicleBookings(); {
-  var el = document.getElementById('r-my-bookings');
-  if (!el) return;
-  var raw = sessionStorage.getItem('mjm_user');
-  var u   = raw ? JSON.parse(raw) : {};
-  var monthStart = rCalYear + '-' + String(rCalMonth+1).padStart(2,'0') + '-01';
-  var monthEnd   = new Date(rCalYear, rCalMonth+1, 0).toISOString().split('T')[0];
-  try {
-    var url  = SURL + '/rest/v1/room_bookings?booking_date=gte.' + monthStart
-             + '&booking_date=lte.' + monthEnd
-             + '&order=booking_date.asc,time_from.asc&limit=200';
-    var res  = await fetch(url, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
-    var data = await res.json();
-    if (!data || !data.length) { el.innerHTML = '<div class="book-empty">No room bookings this month.</div>'; return; }
-    var mine = data.filter(function(b) {
-      if (!b.booked_by) return false;
-      var by = b.booked_by.toLowerCase();
-      var em = u.email ? u.email.toLowerCase() : '';
-      var nm = u.name  ? u.name.toLowerCase()  : '';
-      return (em && by === em) || (nm && (by === nm || by.indexOf(nm) === 0));
-    });
-    if (!mine.length) { el.innerHTML = '<div class="book-empty">No room bookings this month.</div>'; return; }
-    el.innerHTML = mine.map(function(b) {
-      var d = fmtDate(b.booking_date);
-      return '<div class="book-item">'
-        + '<div class="book-item-header"><div class="book-item-name">' + d + '</div>'
-        + '<span class="badge badge-info">Mine</span></div>'
-        + '<div class="book-item-date"><i class="ti ti-clock" style="font-size:11px;"></i> '
-        + fmtTime(b.time_from) + ' – ' + fmtTime(b.time_to) + '</div>'
-        + (b.purpose ? '<div class="book-item-purpose">' + escHtml(b.purpose) + '</div>' : '')
-        + '<button class="book-cancel-btn" onclick="cancelMyRoomBooking(\'' + b.id + '\')">'
-        + '<i class="ti ti-trash"></i> Cancel this booking</button>'
-        + '</div>';
-    }).join('');
-  } catch(e) { el.innerHTML = '<div class="book-empty">Could not load bookings.</div>'; }
+    loadVehicleCalendar(); loadMyVehicleBookings();
+  } catch(e) {}
 }
 
-async function cancelMyRoomBooking(id) {
-  if (!confirm('Cancel this room booking?')) return;
-  try {
-    await fetch(SURL + '/rest/v1/room_bookings?id=eq.' + id, {
-      method: 'DELETE',
-      headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY }
-    });
-    loadRoomCalendar(); loadMyRoomBookings();
+// ════════════════════════════
+//  CONFERENCE ROOM
 // ════════════════════════════
 
 var rSelectedDates = [];
@@ -359,9 +325,9 @@ function hideRoomForm() {
 function addRoomDate() {
   var d = document.getElementById('r-date').value;
   if (!d) return;
-  rSelectedDates = [d]; // only one date allowed
+  rSelectedDates = [d];
   renderRoomDateTags();
-  document.getElementById('r-date').style.display = 'none'; // hide picker after selection
+  document.getElementById('r-date').style.display = 'none';
   document.getElementById('r-clash-alert').style.display = 'none';
 }
 
@@ -369,7 +335,7 @@ function removeRoomDate(d) {
   rSelectedDates = [];
   document.getElementById('r-date-tags').innerHTML = '';
   document.getElementById('r-date').value = '';
-  document.getElementById('r-date').style.display = 'block'; // show picker again
+  document.getElementById('r-date').style.display = 'block';
   document.getElementById('r-clash-alert').style.display = 'none';
 }
 
@@ -424,13 +390,16 @@ async function submitRoomBooking() {
   if (document.getElementById('r-clash-alert').style.display !== 'none') return;
   setBookLoading('r-submit-btn','r-submit-label','r-spinner', true);
   try {
+    var raw = sessionStorage.getItem('mjm_user');
+    var u   = raw ? JSON.parse(raw) : {};
+    var bookedBy = u.email || u.name || 'Unknown';
     var posts = rSelectedDates.map(function(d) {
       return fetch(SURL + '/rest/v1/room_bookings', {
         method: 'POST',
         headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY,
                    'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
         body: JSON.stringify({
-          booked_by: (function(){ var r=sessionStorage.getItem('mjm_user'); var u=r?JSON.parse(r):{}; return u.email||u.name||'Unknown'; })(), booking_date: d,
+          booked_by: bookedBy, booking_date: d,
           time_from: to24h(tfrom), time_to: to24h(tto), purpose: purpose || null
         })
       });
@@ -505,6 +474,54 @@ async function cancelRoomBooking(id) {
   } catch(e) {}
 }
 
+async function loadMyRoomBookings() {
+  var el = document.getElementById('r-my-bookings');
+  if (!el) return;
+  var raw = sessionStorage.getItem('mjm_user');
+  var u   = raw ? JSON.parse(raw) : {};
+  var monthStart = rCalYear + '-' + String(rCalMonth+1).padStart(2,'0') + '-01';
+  var monthEnd   = new Date(rCalYear, rCalMonth+1, 0).toISOString().split('T')[0];
+  try {
+    var url  = SURL + '/rest/v1/room_bookings?booking_date=gte.' + monthStart
+             + '&booking_date=lte.' + monthEnd
+             + '&order=booking_date.asc,time_from.asc&limit=200';
+    var res  = await fetch(url, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
+    var data = await res.json();
+    if (!data || !data.length) { el.innerHTML = '<div class="book-empty">No room bookings this month.</div>'; return; }
+    var mine = data.filter(function(b) {
+      if (!b.booked_by) return false;
+      var by = b.booked_by.toLowerCase();
+      var em = u.email ? u.email.toLowerCase() : '';
+      var nm = u.name  ? u.name.toLowerCase()  : '';
+      return (em && by === em) || (nm && (by === nm || by.indexOf(nm) === 0));
+    });
+    if (!mine.length) { el.innerHTML = '<div class="book-empty">No room bookings this month.</div>'; return; }
+    el.innerHTML = mine.map(function(b) {
+      var d = fmtDate(b.booking_date);
+      return '<div class="book-item">'
+        + '<div class="book-item-header"><div class="book-item-name">' + d + '</div>'
+        + '<span class="badge badge-info">Mine</span></div>'
+        + '<div class="book-item-date"><i class="ti ti-clock" style="font-size:11px;"></i> '
+        + fmtTime(b.time_from) + ' – ' + fmtTime(b.time_to) + '</div>'
+        + (b.purpose ? '<div class="book-item-purpose">' + escHtml(b.purpose) + '</div>' : '')
+        + '<button class="book-cancel-btn" onclick="cancelMyRoomBooking(\'' + b.id + '\')">'
+        + '<i class="ti ti-trash"></i> Cancel this booking</button>'
+        + '</div>';
+    }).join('');
+  } catch(e) { el.innerHTML = '<div class="book-empty">Could not load bookings.</div>'; }
+}
+
+async function cancelMyRoomBooking(id) {
+  if (!confirm('Cancel this room booking?')) return;
+  try {
+    await fetch(SURL + '/rest/v1/room_bookings?id=eq.' + id, {
+      method: 'DELETE',
+      headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY }
+    });
+    loadRoomCalendar(); loadMyRoomBookings();
+  } catch(e) {}
+}
+
 // ════════════════════════════
 //  DAY DETAIL MODAL
 // ════════════════════════════
@@ -520,7 +537,6 @@ async function showDayDetail(type, dateStr) {
   try {
     var raw2 = sessionStorage.getItem('mjm_user');
     var u2   = raw2 ? JSON.parse(raw2) : {};
-    var me   = getCurrentUserName();
     var data = type === 'vehicle'
       ? await sbGet('vehicle_bookings', 'booking_date=eq.' + dateStr + '&order=time_from.asc')
       : await sbGet('room_bookings',    'booking_date=eq.' + dateStr + '&order=time_from.asc');
@@ -529,10 +545,10 @@ async function showDayDetail(type, dateStr) {
     }
     body.innerHTML = data.map(function(b) {
       var byLow  = (b.booked_by || '').toLowerCase();
-      var nmLow  = u2.name  ? u2.name.toLowerCase()  : '';
       var emLow  = u2.email ? u2.email.toLowerCase() : '';
-      var isMine = (nmLow && (byLow === nmLow || byLow.indexOf(nmLow) === 0)) ||
-                   (emLow && (byLow === emLow || byLow.indexOf(emLow) === 0));
+      var nmLow  = u2.name  ? u2.name.toLowerCase()  : '';
+      var isMine = (emLow && byLow === emLow) ||
+                   (nmLow && (byLow === nmLow || byLow.indexOf(nmLow) === 0));
       var timeStr  = type === 'vehicle'
         ? (b.is_full_day ? 'Full Day' : fmtTime(b.time_from) + ' – ' + fmtTime(b.time_to))
         : fmtTime(b.time_from) + ' – ' + fmtTime(b.time_to);
@@ -558,13 +574,11 @@ function closeDayModal() {
 //  HELPERS
 // ════════════════════════════
 
-// Normalize time input to HH:MM 24-hour format for Supabase
-// Handles both "09:31" and "09:31 AM" / "01:30 PM"
 function to24h(str) {
   if (!str) return null;
   str = str.trim();
   var ampm = str.match(/([AP]M)$/i);
-  if (!ampm) return str.substring(0, 5); // already HH:MM
+  if (!ampm) return str.substring(0, 5);
   var parts = str.replace(/\s*[AP]M$/i, '').split(':');
   var h = parseInt(parts[0]);
   var m = parts[1] ? parts[1].substring(0, 2) : '00';
