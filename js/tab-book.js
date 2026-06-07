@@ -13,6 +13,7 @@ function initBookTab() {
     loadVehicleCalendar();
     loadRoomCalendar();
     loadMyVehicleBookings();
+    loadMyRoomBookings();
   }
 }
 
@@ -284,6 +285,52 @@ async function cancelMyVehicleBooking(id) {
   } catch(e) {}
 }
 
+async function loadMyRoomBookings() {
+  var el = document.getElementById('r-my-bookings');
+  if (!el) return;
+  var me    = getCurrentUserName();
+  var now   = new Date();
+  var today = now.toISOString().split('T')[0];
+  var monthStart = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-01';
+  var monthEnd   = new Date(now.getFullYear(), now.getMonth()+1, 0).toISOString().split('T')[0];
+  try {
+    var url  = SURL + '/rest/v1/room_bookings?booked_by=eq.' + encodeURIComponent(me)
+             + '&booking_date=gte.' + today
+             + '&booking_date=lte.' + monthEnd
+             + '&order=booking_date.asc,time_from.asc&limit=50';
+    var res  = await fetch(url, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
+    var data = await res.json();
+    if (!data || !data.length) {
+      el.innerHTML = '<div class="book-empty">No room bookings this month.</div>';
+      return;
+    }
+    el.innerHTML = data.map(function(b) {
+      var d = fmtDate(b.booking_date);
+      return '<div class="book-item">'
+        + '<div class="book-item-header">'
+        + '<div class="book-item-name">' + d + '</div>'
+        + '<span class="badge badge-info">Mine</span></div>'
+        + '<div class="book-item-date"><i class="ti ti-clock" style="font-size:11px;"></i> '
+        + fmtTime(b.time_from) + ' – ' + fmtTime(b.time_to) + '</div>'
+        + (b.purpose ? '<div class="book-item-purpose">' + escHtml(b.purpose) + '</div>' : '')
+        + '<button class="book-cancel-btn" onclick="cancelMyRoomBooking(\'' + b.id + '\')">'
+        + '<i class="ti ti-trash"></i> Cancel this booking</button>'
+        + '</div>';
+    }).join('');
+  } catch(e) { el.innerHTML = '<div class="book-empty">Could not load bookings.</div>'; }
+}
+
+async function cancelMyRoomBooking(id) {
+  if (!confirm('Cancel this room booking?')) return;
+  try {
+    await fetch(SURL + '/rest/v1/room_bookings?id=eq.' + id, {
+      method: 'DELETE',
+      headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY }
+    });
+    bookTabInited = false; initBookTab();
+  } catch(e) {}
+}
+
 // ════════════════════════════
 //  CONFERENCE ROOM
 // ════════════════════════════
@@ -403,6 +450,7 @@ async function submitRoomBooking() {
     if (allOk) {
       hideRoomForm(); showBookAlert('r-success');
       bookTabInited = false; initBookTab();
+      loadMyRoomBookings();
     } else {
       document.getElementById('r-error-msg').textContent = 'Could not save booking. Please try again.';
       showBookAlert('r-error');
