@@ -1,5 +1,13 @@
 // ── tab-book.js — Book tab (Vehicle + Conference Room) ──
 
+// Always use email as booked_by so profile name changes don't break matching
+function getCurrentUserEmail() {
+  var raw = sessionStorage.getItem('mjm_user');
+  if (!raw) return getCurrentUserName();
+  var u = JSON.parse(raw);
+  return u.email || u.name || 'Unknown';
+}
+
 var bookTabInited = false;
 var vCalYear, vCalMonth, rCalYear, rCalMonth;
 
@@ -158,7 +166,7 @@ async function submitVehicleBooking() {
         headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY,
                    'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
         body: JSON.stringify({
-          booked_by: getCurrentUserName(), booking_date: d,
+          booked_by: getCurrentUserEmail(), booking_date: d,
           is_full_day: vIsFullDay,
           time_from: vIsFullDay ? null : tfrom,
           time_to:   vIsFullDay ? null : tto,
@@ -257,10 +265,9 @@ async function loadMyVehicleBookings() {
     var mine = data.filter(function(b) {
       if (!b.booked_by) return false;
       var by = b.booked_by.toLowerCase();
-      var nm = u.name  ? u.name.toLowerCase()  : '';
       var em = u.email ? u.email.toLowerCase() : '';
-      return (nm && (by === nm || by.indexOf(nm) === 0)) ||
-             (em && (by === em || by.indexOf(em) === 0));
+      var nm = u.name  ? u.name.toLowerCase()  : '';
+      return (em && by === em) || (nm && (by === nm || by.indexOf(nm) === 0));
     });
     if (!mine.length) { el.innerHTML = '<div class="book-empty">No bookings this month.</div>'; return; }
     el.innerHTML = mine.map(function(b) {
@@ -307,10 +314,9 @@ async function loadMyRoomBookings() {
     var mine = data.filter(function(b) {
       if (!b.booked_by) return false;
       var by = b.booked_by.toLowerCase();
-      var nm = u.name  ? u.name.toLowerCase()  : '';
       var em = u.email ? u.email.toLowerCase() : '';
-      return (nm && (by === nm || by.indexOf(nm) === 0)) ||
-             (em && (by === em || by.indexOf(em) === 0));
+      var nm = u.name  ? u.name.toLowerCase()  : '';
+      return (em && by === em) || (nm && (by === nm || by.indexOf(nm) === 0));
     });
     if (!mine.length) { el.innerHTML = '<div class="book-empty">No room bookings this month.</div>'; return; }
     el.innerHTML = mine.map(function(b) {
@@ -447,8 +453,7 @@ async function submitRoomBooking() {
         headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY,
                    'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
         body: JSON.stringify({
-          booked_by: getCurrentUserName(), booking_date: d,
-          time_from: tfrom, time_to: tto, purpose: purpose || null
+          booked_by: getCurrentUserEmail(), booking_date: d,
         })
       });
     });
@@ -547,10 +552,10 @@ async function showDayDetail(type, dateStr) {
     }
     body.innerHTML = data.map(function(b) {
       var byLow  = (b.booked_by || '').toLowerCase();
-      var nmLow  = u2.name  ? u2.name.toLowerCase()  : '';
       var emLow  = u2.email ? u2.email.toLowerCase() : '';
-      var isMine = (nmLow && (byLow === nmLow || byLow.indexOf(nmLow) === 0)) ||
-                   (emLow && (byLow === emLow || byLow.indexOf(emLow) === 0));
+      var nmLow  = u2.name  ? u2.name.toLowerCase()  : '';
+      var isMine = (emLow && byLow === emLow) ||
+                   (nmLow && (byLow === nmLow || byLow.indexOf(nmLow) === 0));
       var timeStr  = type === 'vehicle'
         ? (b.is_full_day ? 'Full Day' : fmtTime(b.time_from) + ' – ' + fmtTime(b.time_to))
         : fmtTime(b.time_from) + ' – ' + fmtTime(b.time_to);
