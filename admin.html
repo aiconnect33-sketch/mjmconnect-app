@@ -695,67 +695,10 @@ html, body {
 
       <!-- ── ANNOUNCEMENT LIST ── -->
       <div class="sec-hdr">
-        <div class="sec-title">Published <span id="ann-count">(4)</span></div>
+        <div class="sec-title">Published <span id="ann-count">(0)</span></div>
       </div>
 
       <div id="ann-list">
-
-        <div class="ann-item card-urgent">
-          <div class="ann-meta">
-            <span class="badge b-red">Urgent</span>
-            <span class="ann-time">Today, 8:30 AM</span>
-          </div>
-          <div class="ann-title">Office Closure — Friday 30 May</div>
-          <div class="ann-body">The office will be closed this Friday for public holiday. Please plan accordingly.</div>
-          <div class="ann-actions">
-            <div class="ann-author"><i class="ti ti-user"></i> Posted by HR</div>
-            <div class="btn-icon" onclick="editAnn(this)" title="Edit"><i class="ti ti-pencil"></i></div>
-            <div class="btn-icon danger" onclick="confirmDelete(this)" title="Delete"><i class="ti ti-trash"></i></div>
-          </div>
-        </div>
-
-        <div class="ann-item card-general">
-          <div class="ann-meta">
-            <span class="badge b-green">General</span>
-            <span class="ann-time">Yesterday</span>
-          </div>
-          <div class="ann-title">New Flexi-Work Policy — June 2026</div>
-          <div class="ann-body">Staff may opt for a 4-day compressed workweek. Applications open via HR Portal from 1 June.</div>
-          <div class="ann-actions">
-            <div class="ann-author"><i class="ti ti-user"></i> Posted by HR</div>
-            <div class="btn-icon" onclick="editAnn(this)" title="Edit"><i class="ti ti-pencil"></i></div>
-            <div class="btn-icon danger" onclick="confirmDelete(this)" title="Delete"><i class="ti ti-trash"></i></div>
-          </div>
-        </div>
-
-        <div class="ann-item card-hr">
-          <div class="ann-meta">
-            <span class="badge b-blue">HR</span>
-            <span class="ann-time">25 May</span>
-          </div>
-          <div class="ann-title">Q2 Performance Review Deadline</div>
-          <div class="ann-body">All supervisors must submit appraisal forms by 15 June 2026 via the HR system.</div>
-          <div class="ann-actions">
-            <div class="ann-author"><i class="ti ti-user"></i> Posted by HR</div>
-            <div class="btn-icon" onclick="editAnn(this)" title="Edit"><i class="ti ti-pencil"></i></div>
-            <div class="btn-icon danger" onclick="confirmDelete(this)" title="Delete"><i class="ti ti-trash"></i></div>
-          </div>
-        </div>
-
-        <div class="ann-item card-facility">
-          <div class="ann-meta">
-            <span class="badge b-amber">Facilities</span>
-            <span class="ann-time">22 May</span>
-          </div>
-          <div class="ann-title">New Visitor Management System</div>
-          <div class="ann-body">All visitors must be pre-registered via the VisitorPass app before arriving at HQ.</div>
-          <div class="ann-actions">
-            <div class="ann-author"><i class="ti ti-user"></i> Posted by HR</div>
-            <div class="btn-icon" onclick="editAnn(this)" title="Edit"><i class="ti ti-pencil"></i></div>
-            <div class="btn-icon danger" onclick="confirmDelete(this)" title="Delete"><i class="ti ti-trash"></i></div>
-          </div>
-        </div>
-
       </div><!-- /ann-list -->
     </div><!-- /announce -->
 
@@ -907,68 +850,6 @@ html, body {
       </div>
 
       <div id="leave-list">
-        <div class="card">
-          <div class="card-label">On Leave Now</div>
-          <div class="person-row">
-            <div class="av av-c">RL</div>
-            <div style="flex:1;">
-              <div class="p-name">Rachel Lim</div>
-              <div class="p-sub">Annual Leave · 25–30 May · Back Thu</div>
-            </div>
-            <div style="display:flex;gap:6px;">
-              <span class="badge b-amber">AL</span>
-              <div class="btn-icon danger" onclick="confirmDeleteLeave(this)"><i class="ti ti-trash"></i></div>
-            </div>
-          </div>
-          <div class="person-row">
-            <div class="av av-p">KT</div>
-            <div style="flex:1;">
-              <div class="p-name">Kevin Tan</div>
-              <div class="p-sub">Medical Leave · today only</div>
-            </div>
-            <div style="display:flex;gap:6px;">
-              <span class="badge b-red">MC</span>
-              <div class="btn-icon danger" onclick="confirmDeleteLeave(this)"><i class="ti ti-trash"></i></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-label">Upcoming Leave — June 2026</div>
-          <div class="person-row">
-            <div class="av av-b">HF</div>
-            <div style="flex:1;">
-              <div class="p-name">Hafizuddin Razali</div>
-              <div class="p-sub">Annual Leave · 3–6 Jun</div>
-            </div>
-            <div style="display:flex;gap:6px;">
-              <span class="badge b-amber">AL</span>
-              <div class="btn-icon danger" onclick="confirmDeleteLeave(this)"><i class="ti ti-trash"></i></div>
-            </div>
-          </div>
-          <div class="person-row">
-            <div class="av av-g">MF</div>
-            <div style="flex:1;">
-              <div class="p-name">Mohd Firdaus Ismail</div>
-              <div class="p-sub">Paternity Leave · 2–9 Jun</div>
-            </div>
-            <div style="display:flex;gap:6px;">
-              <span class="badge b-blue">PL</span>
-              <div class="btn-icon danger" onclick="confirmDeleteLeave(this)"><i class="ti ti-trash"></i></div>
-            </div>
-          </div>
-          <div class="person-row">
-            <div class="av av-a">RK</div>
-            <div style="flex:1;">
-              <div class="p-name">Rosnah Abd. Karim</div>
-              <div class="p-sub">Annual Leave · 16–20 Jun</div>
-            </div>
-            <div style="display:flex;gap:6px;">
-              <span class="badge b-amber">AL</span>
-              <div class="btn-icon danger" onclick="confirmDeleteLeave(this)"><i class="ti ti-trash"></i></div>
-            </div>
-          </div>
-        </div>
       </div>
 
     </div><!-- /leave -->
