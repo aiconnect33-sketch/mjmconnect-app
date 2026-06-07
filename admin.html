@@ -1447,16 +1447,17 @@ html, body {
       editingDutyId = ids[0];
       editingDutyGroupIds = ids;
       editingDutyOriginalStaff = null;
-      document.getElementById('duty-form-title').textContent = 'Edit Duty Assignment';
-      document.getElementById('duty-role-input').value       = r.duty_role  || '';
-      document.getElementById('duty-date-from').value        = r.date_from  || '';
-      document.getElementById('duty-date-to').value          = r.date_to    || '';
-      // Load all staff in group as tags
+      // Load staff dropdown first (resets tags/selected internally)
       dutyStaffSelected = [];
       var tags = document.getElementById('duty-staff-tags');
       if (tags) tags.innerHTML = '';
       await loadDutyStaffDropdown();
-      // Fetch all member names in group
+      // Set form fields AFTER dropdown load so nothing overwrites them
+      document.getElementById('duty-form-title').textContent = 'Edit Duty Assignment';
+      document.getElementById('duty-role-input').value       = r.duty_role  || '';
+      document.getElementById('duty-date-from').value        = r.date_from  || '';
+      document.getElementById('duty-date-to').value          = r.date_to    || '';
+      // Fetch all member names in group and add as tags
       var allData = await sbFetch('GET', '/rest/v1/duty_roster?id=in.(' + ids.join(',') + ')&select=staff_name');
       if (allData) {
         allData.forEach(function(m){ if (m.staff_name) selectDutyStaff(m.staff_name); });
@@ -1520,8 +1521,7 @@ html, body {
   var dutyStaffSelected = [];
 
   async function loadDutyStaffDropdown() {
-    dutyStaffAll = []; dutyStaffSelected = [];
-    document.getElementById('duty-staff-tags').innerHTML = '';
+    dutyStaffAll = [];
     document.getElementById('duty-staff-search').value = '';
     document.getElementById('duty-staff-dropdown').style.display = 'none';
     try {
