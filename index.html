@@ -490,23 +490,8 @@
         <div class="section-title">Today on Leave</div>
         <div class="see-all" onclick="switchTabByName('leave')">See all</div>
       </div>
-      <div class="card">
-        <div class="person-row">
-          <div class="avatar av-coral">RL</div>
-          <div style="flex:1;">
-            <div class="person-name">Rachel Lim</div>
-            <div class="person-sub">Annual leave · returns Thursday</div>
-          </div>
-          <span class="badge badge-amber">AL</span>
-        </div>
-        <div class="person-row">
-          <div class="avatar av-purple">KT</div>
-          <div style="flex:1;">
-            <div class="person-name">Kevin Tan</div>
-            <div class="person-sub">Medical leave · 1 day</div>
-          </div>
-          <span class="badge badge-urgent">MC</span>
-        </div>
+      <div id="home-leave-today">
+        <div class="card"><div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:8px 0;">Loading...</div></div>
       </div>
 
       <!-- This week's duty -->
@@ -538,59 +523,9 @@
 
     <!-- ── LEAVE ── -->
     <div class="screen-section" id="screen-leave">
-
-      <div class="section-row">
-        <div class="section-title">Currently on Leave</div>
+      <div id="leave-tab-list">
+        <div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">Loading...</div>
       </div>
-      <div class="card">
-        <div class="person-row">
-          <div class="avatar av-coral">RL</div>
-          <div style="flex:1;">
-            <div class="person-name">Rachel Lim</div>
-            <div class="person-sub">Annual Leave · 28 May – 5 Jun</div>
-          </div>
-          <span class="badge badge-amber">AL</span>
-        </div>
-        <div class="person-row">
-          <div class="avatar av-purple">KT</div>
-          <div style="flex:1;">
-            <div class="person-name">Kevin Tan</div>
-            <div class="person-sub">Medical Leave · 29 May</div>
-          </div>
-          <span class="badge badge-urgent">MC</span>
-        </div>
-      </div>
-
-      <div class="section-row">
-        <div class="section-title">Upcoming Leave</div>
-      </div>
-      <div class="card">
-        <div class="person-row">
-          <div class="avatar av-green">AH</div>
-          <div style="flex:1;">
-            <div class="person-name">Ahmad Hafiz</div>
-            <div class="person-sub">Annual Leave · 13–15 Jun</div>
-          </div>
-          <span class="badge badge-amber">AL</span>
-        </div>
-        <div class="person-row">
-          <div class="avatar av-blue">HF</div>
-          <div style="flex:1;">
-            <div class="person-name">Hafizuddin Fadzil</div>
-            <div class="person-sub">Annual Leave · 19–21 Jun</div>
-          </div>
-          <span class="badge badge-amber">AL</span>
-        </div>
-        <div class="person-row">
-          <div class="avatar av-amber">NZ</div>
-          <div style="flex:1;">
-            <div class="person-name">Nurul Zahra</div>
-            <div class="person-sub">Annual Leave · 28 Jun – 2 Jul</div>
-          </div>
-          <span class="badge badge-amber">AL</span>
-        </div>
-      </div>
-
     </div><!-- /leave -->
 
     <!-- ── DUTY ── -->
