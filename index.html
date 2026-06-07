@@ -639,16 +639,14 @@
             <span><i class="ti ti-car"></i> &nbsp;Book Vehicle</span>
             <button class="book-close-btn" onclick="hideVehicleForm()">&times;</button>
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-            <div class="book-form-group">
-              <label class="book-form-label">Date From</label>
-              <input class="book-form-input" type="date" id="v-date" onchange="onVehicleDateChange()">
-              <div class="book-field-error" id="v-date-error"><i class="ti ti-alert-circle"></i> Required.</div>
+          <div class="book-form-group">
+            <label class="book-form-label">Select Date(s)</label>
+            <div style="display:flex;gap:6px;">
+              <input class="book-form-input" type="date" id="v-date" style="flex:1;">
+              <button onclick="addVehicleDate()" style="background:var(--green-dark);color:#fff;border:none;border-radius:var(--radius-md);padding:9px 12px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">+ Add</button>
             </div>
-            <div class="book-form-group">
-              <label class="book-form-label">Date To</label>
-              <input class="book-form-input" type="date" id="v-date-to" onchange="onVehicleDateChange()">
-            </div>
+            <div class="book-field-error" id="v-date-error"><i class="ti ti-alert-circle"></i> Add at least one date.</div>
+            <div id="v-date-tags" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;"></div>
           </div>
           <!-- Full day toggle -->
           <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:0.5px solid #C2E6D8;border-bottom:0.5px solid #C2E6D8;margin-bottom:10px;">
@@ -745,9 +743,13 @@
             <button class="book-close-btn" onclick="hideRoomForm()">&times;</button>
           </div>
           <div class="book-form-group">
-            <label class="book-form-label">Date</label>
-            <input class="book-form-input" type="date" id="r-date" onchange="loadRoomSlots()">
-            <div class="book-field-error" id="r-date-error"><i class="ti ti-alert-circle"></i> Required.</div>
+            <label class="book-form-label">Select Date(s)</label>
+            <div style="display:flex;gap:6px;">
+              <input class="book-form-input" type="date" id="r-date" style="flex:1;">
+              <button onclick="addRoomDate()" style="background:var(--green-dark);color:#fff;border:none;border-radius:var(--radius-md);padding:9px 12px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">+ Add</button>
+            </div>
+            <div class="book-field-error" id="r-date-error"><i class="ti ti-alert-circle"></i> Add at least one date.</div>
+            <div id="r-date-tags" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;"></div>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
             <div class="book-form-group">
