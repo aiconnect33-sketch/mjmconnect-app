@@ -242,28 +242,30 @@ async function cancelVehicleBookingFromModal(id) {
 async function loadMyVehicleBookings() {
   var el = document.getElementById('v-my-bookings');
   if (!el) return;
-  var me = getCurrentUserName();
-  var now = new Date();
-  var monthStart = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-01';
-  var monthEnd   = new Date(now.getFullYear(), now.getMonth()+1, 0).toISOString().split('T')[0];
-  var today      = now.toISOString().split('T')[0];
+  var raw = sessionStorage.getItem('mjm_user');
+  var u   = raw ? JSON.parse(raw) : {};
+  var now      = new Date();
+  var today    = now.toISOString().split('T')[0];
+  var monthEnd = new Date(now.getFullYear(), now.getMonth()+1, 0).toISOString().split('T')[0];
   try {
-    var url  = SURL + '/rest/v1/vehicle_bookings?booked_by=eq.' + encodeURIComponent(me)
-             + '&booking_date=gte.' + today
+    var url  = SURL + '/rest/v1/vehicle_bookings?booking_date=gte.' + today
              + '&booking_date=lte.' + monthEnd
-             + '&order=booking_date.asc&limit=50';
+             + '&order=booking_date.asc&limit=200';
     var res  = await fetch(url, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
     var data = await res.json();
-    if (!data || !data.length) {
-      el.innerHTML = '<div class="book-empty">No bookings this month.</div>';
-      return;
-    }
-    el.innerHTML = data.map(function(b) {
+    if (!data || !data.length) { el.innerHTML = '<div class="book-empty">No bookings this month.</div>'; return; }
+    var mine = data.filter(function(b) {
+      if (!b.booked_by) return false;
+      var by = b.booked_by.toLowerCase();
+      return (u.name  && by === u.name.toLowerCase())  ||
+             (u.email && by === u.email.toLowerCase());
+    });
+    if (!mine.length) { el.innerHTML = '<div class="book-empty">No bookings this month.</div>'; return; }
+    el.innerHTML = mine.map(function(b) {
       var d       = fmtDate(b.booking_date);
       var timeStr = b.is_full_day ? 'Full Day' : fmtTime(b.time_from) + ' – ' + fmtTime(b.time_to);
       return '<div class="book-item">'
-        + '<div class="book-item-header">'
-        + '<div class="book-item-name">' + d + '</div>'
+        + '<div class="book-item-header"><div class="book-item-name">' + d + '</div>'
         + '<span class="badge badge-info">Mine</span></div>'
         + '<div class="book-item-date"><i class="ti ti-clock" style="font-size:11px;"></i> ' + timeStr + '</div>'
         + (b.purpose ? '<div class="book-item-purpose">' + escHtml(b.purpose) + '</div>' : '')
@@ -288,27 +290,29 @@ async function cancelMyVehicleBooking(id) {
 async function loadMyRoomBookings() {
   var el = document.getElementById('r-my-bookings');
   if (!el) return;
-  var me    = getCurrentUserName();
-  var now   = new Date();
-  var today = now.toISOString().split('T')[0];
-  var monthStart = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-01';
-  var monthEnd   = new Date(now.getFullYear(), now.getMonth()+1, 0).toISOString().split('T')[0];
+  var raw = sessionStorage.getItem('mjm_user');
+  var u   = raw ? JSON.parse(raw) : {};
+  var now      = new Date();
+  var today    = now.toISOString().split('T')[0];
+  var monthEnd = new Date(now.getFullYear(), now.getMonth()+1, 0).toISOString().split('T')[0];
   try {
-    var url  = SURL + '/rest/v1/room_bookings?booked_by=eq.' + encodeURIComponent(me)
-             + '&booking_date=gte.' + today
+    var url  = SURL + '/rest/v1/room_bookings?booking_date=gte.' + today
              + '&booking_date=lte.' + monthEnd
-             + '&order=booking_date.asc,time_from.asc&limit=50';
+             + '&order=booking_date.asc,time_from.asc&limit=200';
     var res  = await fetch(url, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
     var data = await res.json();
-    if (!data || !data.length) {
-      el.innerHTML = '<div class="book-empty">No room bookings this month.</div>';
-      return;
-    }
-    el.innerHTML = data.map(function(b) {
+    if (!data || !data.length) { el.innerHTML = '<div class="book-empty">No room bookings this month.</div>'; return; }
+    var mine = data.filter(function(b) {
+      if (!b.booked_by) return false;
+      var by = b.booked_by.toLowerCase();
+      return (u.name  && by === u.name.toLowerCase())  ||
+             (u.email && by === u.email.toLowerCase());
+    });
+    if (!mine.length) { el.innerHTML = '<div class="book-empty">No room bookings this month.</div>'; return; }
+    el.innerHTML = mine.map(function(b) {
       var d = fmtDate(b.booking_date);
       return '<div class="book-item">'
-        + '<div class="book-item-header">'
-        + '<div class="book-item-name">' + d + '</div>'
+        + '<div class="book-item-header"><div class="book-item-name">' + d + '</div>'
         + '<span class="badge badge-info">Mine</span></div>'
         + '<div class="book-item-date"><i class="ti ti-clock" style="font-size:11px;"></i> '
         + fmtTime(b.time_from) + ' – ' + fmtTime(b.time_to) + '</div>'
