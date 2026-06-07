@@ -92,6 +92,7 @@ window.addEventListener('DOMContentLoaded', function() {
     loadAnnouncements();
     loadLeave();
     loadDuty();
+    loadStaffEvents();
   }
   // Always init calendar
   if (typeof initStaffCalendar === 'function') initStaffCalendar();
