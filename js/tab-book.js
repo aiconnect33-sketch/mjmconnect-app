@@ -158,7 +158,7 @@ async function submitVehicleBooking() {
         headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY,
                    'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
         body: JSON.stringify({
-          booked_by: getCurrentUserName(), booking_date: d,
+          booked_by: (function(){ var r=sessionStorage.getItem('mjm_user'); var u=r?JSON.parse(r):{}; return u.email||u.name||'Unknown'; })(), booking_date: d,
           is_full_day: vIsFullDay,
           time_from: vIsFullDay ? null : to24h(tfrom),
           time_to:   vIsFullDay ? null : to24h(tto),
@@ -225,8 +225,8 @@ function renderVehicleCalendar(bookedDates) {
   }
 }
 
-function vCalPrev() { vCalMonth--; if (vCalMonth < 0)  { vCalMonth = 11; vCalYear--; } loadVehicleCalendar(); }
-function vCalNext() { vCalMonth++; if (vCalMonth > 11) { vCalMonth = 0;  vCalYear++; } loadVehicleCalendar(); }
+function vCalPrev() { vCalMonth--; if (vCalMonth < 0)  { vCalMonth = 11; vCalYear--; } loadVehicleCalendar(); loadMyVehicleBookings(); }
+function vCalNext() { vCalMonth++; if (vCalMonth > 11) { vCalMonth = 0;  vCalYear++; } loadVehicleCalendar(); loadMyVehicleBookings(); }
 
 async function cancelVehicleBookingFromModal(id) {
   if (!confirm('Cancel your vehicle booking?')) return;
@@ -244,11 +244,10 @@ async function loadMyVehicleBookings() {
   if (!el) return;
   var raw = sessionStorage.getItem('mjm_user');
   var u   = raw ? JSON.parse(raw) : {};
-  var now      = new Date();
-  var today    = now.toISOString().split('T')[0];
-  var monthEnd = new Date(now.getFullYear(), now.getMonth()+1, 0).toISOString().split('T')[0];
+  var monthStart = vCalYear + '-' + String(vCalMonth+1).padStart(2,'0') + '-01';
+  var monthEnd   = new Date(vCalYear, vCalMonth+1, 0).toISOString().split('T')[0];
   try {
-    var url  = SURL + '/rest/v1/vehicle_bookings?booking_date=gte.' + today
+    var url  = SURL + '/rest/v1/vehicle_bookings?booking_date=gte.' + monthStart
              + '&booking_date=lte.' + monthEnd
              + '&order=booking_date.asc&limit=200';
     var res  = await fetch(url, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
@@ -257,10 +256,9 @@ async function loadMyVehicleBookings() {
     var mine = data.filter(function(b) {
       if (!b.booked_by) return false;
       var by = b.booked_by.toLowerCase();
-      var nm = u.name  ? u.name.toLowerCase()  : '';
       var em = u.email ? u.email.toLowerCase() : '';
-      return (nm && (by === nm || by.indexOf(nm) === 0)) ||
-             (em && (by === em || by.indexOf(em) === 0));
+      var nm = u.name  ? u.name.toLowerCase()  : '';
+      return (em && by === em) || (nm && (by === nm || by.indexOf(nm) === 0));
     });
     if (!mine.length) { el.innerHTML = '<div class="book-empty">No bookings this month.</div>'; return; }
     el.innerHTML = mine.map(function(b) {
@@ -294,11 +292,10 @@ async function loadMyRoomBookings() {
   if (!el) return;
   var raw = sessionStorage.getItem('mjm_user');
   var u   = raw ? JSON.parse(raw) : {};
-  var now      = new Date();
-  var today    = now.toISOString().split('T')[0];
-  var monthEnd = new Date(now.getFullYear(), now.getMonth()+1, 0).toISOString().split('T')[0];
+  var monthStart = rCalYear + '-' + String(rCalMonth+1).padStart(2,'0') + '-01';
+  var monthEnd   = new Date(rCalYear, rCalMonth+1, 0).toISOString().split('T')[0];
   try {
-    var url  = SURL + '/rest/v1/room_bookings?booking_date=gte.' + today
+    var url  = SURL + '/rest/v1/room_bookings?booking_date=gte.' + monthStart
              + '&booking_date=lte.' + monthEnd
              + '&order=booking_date.asc,time_from.asc&limit=200';
     var res  = await fetch(url, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
@@ -307,10 +304,9 @@ async function loadMyRoomBookings() {
     var mine = data.filter(function(b) {
       if (!b.booked_by) return false;
       var by = b.booked_by.toLowerCase();
-      var nm = u.name  ? u.name.toLowerCase()  : '';
       var em = u.email ? u.email.toLowerCase() : '';
-      return (nm && (by === nm || by.indexOf(nm) === 0)) ||
-             (em && (by === em || by.indexOf(em) === 0));
+      var nm = u.name  ? u.name.toLowerCase()  : '';
+      return (em && by === em) || (nm && (by === nm || by.indexOf(nm) === 0));
     });
     if (!mine.length) { el.innerHTML = '<div class="book-empty">No room bookings this month.</div>'; return; }
     el.innerHTML = mine.map(function(b) {
@@ -447,7 +443,7 @@ async function submitRoomBooking() {
         headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY,
                    'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
         body: JSON.stringify({
-          booked_by: getCurrentUserName(), booking_date: d,
+          booked_by: (function(){ var r=sessionStorage.getItem('mjm_user'); var u=r?JSON.parse(r):{}; return u.email||u.name||'Unknown'; })(), booking_date: d,
           time_from: to24h(tfrom), time_to: to24h(tto), purpose: purpose || null
         })
       });
@@ -509,8 +505,8 @@ function renderRoomCalendar(bookedDates) {
   }
 }
 
-function rCalPrev() { rCalMonth--; if (rCalMonth < 0)  { rCalMonth = 11; rCalYear--; } loadRoomCalendar(); }
-function rCalNext() { rCalMonth++; if (rCalMonth > 11) { rCalMonth = 0;  rCalYear++; } loadRoomCalendar(); }
+function rCalPrev() { rCalMonth--; if (rCalMonth < 0)  { rCalMonth = 11; rCalYear--; } loadRoomCalendar(); loadMyRoomBookings(); }
+function rCalNext() { rCalMonth++; if (rCalMonth > 11) { rCalMonth = 0;  rCalYear++; } loadRoomCalendar(); loadMyRoomBookings(); }
 
 async function cancelRoomBooking(id) {
   if (!confirm('Cancel your room booking?')) return;
