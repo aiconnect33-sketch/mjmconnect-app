@@ -641,10 +641,7 @@
           </div>
           <div class="book-form-group">
             <label class="book-form-label">Select Date(s)</label>
-            <div style="display:flex;gap:6px;">
-              <input class="book-form-input" type="date" id="v-date" style="flex:1;">
-              <button onclick="addVehicleDate()" style="background:var(--green-dark);color:#fff;border:none;border-radius:var(--radius-md);padding:9px 12px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">+ Add</button>
-            </div>
+            <input class="book-form-input" type="date" id="v-date" onchange="addVehicleDate()">
             <div class="book-field-error" id="v-date-error"><i class="ti ti-alert-circle"></i> Add at least one date.</div>
             <div id="v-date-tags" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;"></div>
           </div>
@@ -744,10 +741,7 @@
           </div>
           <div class="book-form-group">
             <label class="book-form-label">Select Date(s)</label>
-            <div style="display:flex;gap:6px;">
-              <input class="book-form-input" type="date" id="r-date" style="flex:1;">
-              <button onclick="addRoomDate()" style="background:var(--green-dark);color:#fff;border:none;border-radius:var(--radius-md);padding:9px 12px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">+ Add</button>
-            </div>
+            <input class="book-form-input" type="date" id="r-date" onchange="addRoomDate()">
             <div class="book-field-error" id="r-date-error"><i class="ti ti-alert-circle"></i> Add at least one date.</div>
             <div id="r-date-tags" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;"></div>
           </div>
