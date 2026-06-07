@@ -43,6 +43,7 @@ function showVehicleForm() {
   var today = new Date().toISOString().split('T')[0];
   document.getElementById('v-date').min   = today;
   document.getElementById('v-date').value = '';
+  document.getElementById('v-date').style.display = 'block';
   document.getElementById('v-date-tags').innerHTML = '';
   document.getElementById('v-time-from').value = '';
   document.getElementById('v-time-to').value   = '';
@@ -58,6 +59,7 @@ function hideVehicleForm() {
   document.getElementById('vehicle-form').style.display = 'none';
   vSelectedDates = [];
   document.getElementById('v-date-tags').innerHTML = '';
+  document.getElementById('v-date').style.display = 'block';
   document.getElementById('v-clash-alert').style.display = 'none';
   clearBookErrors(['v-date','v-time-from','v-time-to']);
 }
@@ -65,18 +67,18 @@ function hideVehicleForm() {
 function addVehicleDate() {
   var d = document.getElementById('v-date').value;
   if (!d) return;
-  if (vSelectedDates.indexOf(d) !== -1) { document.getElementById('v-date').value = ''; return; }
-  vSelectedDates.push(d);
-  vSelectedDates.sort();
+  vSelectedDates = [d]; // only one date allowed
   renderVehicleDateTags();
-  document.getElementById('v-date').value = '';
+  document.getElementById('v-date').style.display = 'none'; // hide picker after selection
   document.getElementById('v-clash-alert').style.display = 'none';
   checkVehicleClash();
 }
 
 function removeVehicleDate(d) {
-  vSelectedDates = vSelectedDates.filter(function(x){ return x !== d; });
-  renderVehicleDateTags();
+  vSelectedDates = [];
+  document.getElementById('v-date-tags').innerHTML = '';
+  document.getElementById('v-date').value = '';
+  document.getElementById('v-date').style.display = 'block'; // show picker again
   checkVehicleClash();
 }
 
@@ -85,8 +87,9 @@ function renderVehicleDateTags() {
   if (!tags) return;
   tags.innerHTML = vSelectedDates.map(function(d) {
     var label = new Date(d + 'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'});
-    return '<div style="display:flex;align-items:center;gap:4px;background:var(--green-bg);border:0.5px solid var(--green-dark);border-radius:20px;padding:3px 10px;font-size:11px;color:var(--green-text);">'
-      + label + '<span onclick="removeVehicleDate(\'' + d + '\')" style="cursor:pointer;font-size:15px;line-height:1;margin-left:3px;color:var(--green-dark);">&times;</span></div>';
+    return '<div style="display:flex;align-items:center;gap:6px;background:var(--green-bg);border:0.5px solid var(--green-dark);border-radius:8px;padding:6px 12px;font-size:12px;color:var(--green-text);font-weight:500;">'
+      + '<i class="ti ti-calendar" style="font-size:13px;"></i>' + label
+      + '<span onclick="removeVehicleDate(\'' + d + '\')" style="cursor:pointer;font-size:15px;line-height:1;margin-left:4px;color:var(--green-dark);" title="Change date">&times;</span></div>';
   }).join('');
 }
 
@@ -293,6 +296,7 @@ function showRoomForm() {
   var today = new Date().toISOString().split('T')[0];
   document.getElementById('r-date').min   = today;
   document.getElementById('r-date').value = '';
+  document.getElementById('r-date').style.display = 'block';
   document.getElementById('r-date-tags').innerHTML = '';
   document.getElementById('r-time-from').value = '';
   document.getElementById('r-time-to').value   = '';
@@ -306,6 +310,7 @@ function hideRoomForm() {
   document.getElementById('room-form').style.display = 'none';
   rSelectedDates = [];
   document.getElementById('r-date-tags').innerHTML = '';
+  document.getElementById('r-date').style.display = 'block';
   document.getElementById('r-time-from').value = '';
   document.getElementById('r-time-to').value   = '';
   document.getElementById('r-purpose').value   = '';
@@ -316,17 +321,17 @@ function hideRoomForm() {
 function addRoomDate() {
   var d = document.getElementById('r-date').value;
   if (!d) return;
-  if (rSelectedDates.indexOf(d) !== -1) { document.getElementById('r-date').value = ''; return; }
-  rSelectedDates.push(d);
-  rSelectedDates.sort();
+  rSelectedDates = [d]; // only one date allowed
   renderRoomDateTags();
-  document.getElementById('r-date').value = '';
+  document.getElementById('r-date').style.display = 'none'; // hide picker after selection
   document.getElementById('r-clash-alert').style.display = 'none';
 }
 
 function removeRoomDate(d) {
-  rSelectedDates = rSelectedDates.filter(function(x){ return x !== d; });
-  renderRoomDateTags();
+  rSelectedDates = [];
+  document.getElementById('r-date-tags').innerHTML = '';
+  document.getElementById('r-date').value = '';
+  document.getElementById('r-date').style.display = 'block'; // show picker again
   document.getElementById('r-clash-alert').style.display = 'none';
 }
 
@@ -335,8 +340,9 @@ function renderRoomDateTags() {
   if (!tags) return;
   tags.innerHTML = rSelectedDates.map(function(d) {
     var label = new Date(d + 'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'});
-    return '<div style="display:flex;align-items:center;gap:4px;background:var(--green-bg);border:0.5px solid var(--green-dark);border-radius:20px;padding:3px 10px;font-size:11px;color:var(--green-text);">'
-      + label + '<span onclick="removeRoomDate(\'' + d + '\')" style="cursor:pointer;font-size:15px;line-height:1;margin-left:3px;color:var(--green-dark);">&times;</span></div>';
+    return '<div style="display:flex;align-items:center;gap:6px;background:var(--green-bg);border:0.5px solid var(--green-dark);border-radius:8px;padding:6px 12px;font-size:12px;color:var(--green-text);font-weight:500;">'
+      + '<i class="ti ti-calendar" style="font-size:13px;"></i>' + label
+      + '<span onclick="removeRoomDate(\'' + d + '\')" style="cursor:pointer;font-size:15px;line-height:1;margin-left:4px;color:var(--green-dark);" title="Change date">&times;</span></div>';
   }).join('');
 }
 
