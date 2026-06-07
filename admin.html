@@ -551,7 +551,7 @@ html, body {
     <div class="topbar-right">
       <i class="ti ti-bell"></i>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;">
-        <div class="top-av" onclick="window.location.href='profile.html'" title="My Profile" style="cursor:pointer;">SA</div>
+        <div class="top-av" id="top-av-initials" onclick="window.location.href='profile.html'" title="My Profile" style="cursor:pointer;">SA</div>
         <div id="role-badge" style="font-size:9px;color:rgba(225,245,238,0.8);font-weight:600;letter-spacing:0.04em;">Super Admin</div>
       </div>
     </div>
@@ -1979,6 +1979,15 @@ html, body {
   var MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
   document.addEventListener('DOMContentLoaded', function() {
+    // Set top avatar initials and role from session
+    var raw = sessionStorage.getItem('mjm_user');
+    if (raw) {
+      var u = JSON.parse(raw);
+      var nameParts = (u.name || u.email || '').split(/[@.\s]/).filter(Boolean);
+      var initials  = nameParts.slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('') || 'SA';
+      var topAv = document.getElementById('top-av-initials');
+      if (topAv) topAv.textContent = initials;
+    }
     renderSettingsPage();
     if (window.location.protocol !== 'file:') {
       loadDbAnnouncements();
