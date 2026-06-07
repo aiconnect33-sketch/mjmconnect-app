@@ -1601,9 +1601,18 @@ html, body {
       if (editingDutyId) {
         // PATCH all existing records in the group with new role + dates
         await Promise.all(editingDutyGroupIds.map(function(id) {
-          return sbFetch('PATCH', '/rest/v1/duty_roster?id=eq.' + id, {
-            duty_role: role, date_from: dfrom, date_to: dto, period: dfrom + ' to ' + dto
-          }, { 'Prefer': 'return=minimal' });
+          return fetch(SURL + '/rest/v1/duty_roster?id=eq.' + id, {
+            method: 'PATCH',
+            headers: {
+              'apikey': SKEY,
+              'Authorization': 'Bearer ' + SKEY,
+              'Content-Type': 'application/json',
+              'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify({
+              duty_role: role, date_from: dfrom, date_to: dto, period: dfrom + ' to ' + dto
+            })
+          });
         }));
         // DELETE records for staff removed from group
         var existingNames = [];
