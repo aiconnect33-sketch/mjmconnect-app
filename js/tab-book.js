@@ -249,8 +249,8 @@ async function loadMyVehicleBookings() {
   var today      = now.toISOString().split('T')[0];
   try {
     var url  = SURL + '/rest/v1/vehicle_bookings?booked_by=eq.' + encodeURIComponent(me)
-             + '&booking_date=gte.' + monthStart + '&booking_date=lte.' + monthEnd
              + '&booking_date=gte.' + today
+             + '&booking_date=lte.' + monthEnd
              + '&order=booking_date.asc&limit=50';
     var res  = await fetch(url, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
     var data = await res.json();
