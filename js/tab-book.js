@@ -257,8 +257,10 @@ async function loadMyVehicleBookings() {
     var mine = data.filter(function(b) {
       if (!b.booked_by) return false;
       var by = b.booked_by.toLowerCase();
-      return (u.name  && by === u.name.toLowerCase())  ||
-             (u.email && by === u.email.toLowerCase());
+      var nm = u.name  ? u.name.toLowerCase()  : '';
+      var em = u.email ? u.email.toLowerCase() : '';
+      return (nm && (by === nm || by.indexOf(nm) === 0)) ||
+             (em && (by === em || by.indexOf(em) === 0));
     });
     if (!mine.length) { el.innerHTML = '<div class="book-empty">No bookings this month.</div>'; return; }
     el.innerHTML = mine.map(function(b) {
@@ -305,8 +307,10 @@ async function loadMyRoomBookings() {
     var mine = data.filter(function(b) {
       if (!b.booked_by) return false;
       var by = b.booked_by.toLowerCase();
-      return (u.name  && by === u.name.toLowerCase())  ||
-             (u.email && by === u.email.toLowerCase());
+      var nm = u.name  ? u.name.toLowerCase()  : '';
+      var em = u.email ? u.email.toLowerCase() : '';
+      return (nm && (by === nm || by.indexOf(nm) === 0)) ||
+             (em && (by === em || by.indexOf(em) === 0));
     });
     if (!mine.length) { el.innerHTML = '<div class="book-empty">No room bookings this month.</div>'; return; }
     el.innerHTML = mine.map(function(b) {
@@ -532,6 +536,8 @@ async function showDayDetail(type, dateStr) {
   body.innerHTML = '<div class="book-empty">Loading...</div>';
   modal.style.display = 'block';
   try {
+    var raw2 = sessionStorage.getItem('mjm_user');
+    var u2   = raw2 ? JSON.parse(raw2) : {};
     var me   = getCurrentUserName();
     var data = type === 'vehicle'
       ? await sbGet('vehicle_bookings', 'booking_date=eq.' + dateStr + '&order=time_from.asc')
@@ -540,7 +546,11 @@ async function showDayDetail(type, dateStr) {
       body.innerHTML = '<div class="book-empty">No bookings found.</div>'; return;
     }
     body.innerHTML = data.map(function(b) {
-      var isMine   = b.booked_by === me;
+      var byLow  = (b.booked_by || '').toLowerCase();
+      var nmLow  = u2.name  ? u2.name.toLowerCase()  : '';
+      var emLow  = u2.email ? u2.email.toLowerCase() : '';
+      var isMine = (nmLow && (byLow === nmLow || byLow.indexOf(nmLow) === 0)) ||
+                   (emLow && (byLow === emLow || byLow.indexOf(emLow) === 0));
       var timeStr  = type === 'vehicle'
         ? (b.is_full_day ? 'Full Day' : fmtTime(b.time_from) + ' – ' + fmtTime(b.time_to))
         : fmtTime(b.time_from) + ' – ' + fmtTime(b.time_to);
