@@ -313,12 +313,35 @@
   }
   .nav-item i { font-size: 22px; }
   .nav-item.active { color: var(--green-dark); }
-  .nav-badge { position: relative; display: inline-block; }
-  .nav-badge::after {
-    content: ''; position: absolute; top: 0; right: -2px;
-    width: 7px; height: 7px; background: var(--red-dot);
-    border-radius: 50%; border: 1.5px solid var(--surface);
+  .nav-badge { position: relative; display: inline-block; cursor: pointer; }
+  .notif-count {
+    display: none; position: absolute; top: -6px; right: -8px;
+    background: #E84040; color: #fff; font-size: 9px; font-weight: 700;
+    min-width: 16px; height: 16px; border-radius: 8px; padding: 0 4px;
+    align-items: center; justify-content: center;
+    border: 1.5px solid var(--surface); line-height: 1;
   }
+  .notif-count.visible { display: flex; }
+  .notif-dropdown {
+    display: none; position: absolute; top: 36px; right: -8px;
+    width: 290px; background: var(--surface); border-radius: 12px;
+    border: 1px solid var(--border); box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    z-index: 999; overflow: hidden;
+  }
+  .notif-dropdown.open { display: block; }
+  .notif-header {
+    padding: 10px 14px; font-size: 11px; font-weight: 700;
+    color: var(--text-secondary); text-transform: uppercase;
+    letter-spacing: 0.05em; border-bottom: 1px solid var(--border);
+  }
+  .notif-item {
+    padding: 10px 14px; border-bottom: 0.5px solid var(--border);
+    cursor: pointer;
+  }
+  .notif-item:hover { background: var(--green-bg); }
+  .notif-item-title { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+  .notif-item-sub { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+  .notif-empty { padding: 16px 14px; font-size: 12px; color: var(--text-secondary); text-align: center; }
   .divider { height: 0.5px; background: var(--border); margin: 4px 0 10px; }
 
   /* ── BOOKING TAB ── */
@@ -477,7 +500,14 @@
       <div class="app-name">MJM<span>Connect</span></div>
     </div>
     <div class="top-bar-actions">
-      <div class="nav-badge"><i class="ti ti-bell"></i></div>
+      <div class="nav-badge" id="notif-bell" onclick="toggleNotifDropdown()">
+        <i class="ti ti-bell"></i>
+        <span class="notif-count" id="notif-count">0</span>
+        <div class="notif-dropdown" id="notif-dropdown">
+          <div class="notif-header">Notifications</div>
+          <div id="notif-list"><div class="notif-empty">No new notifications.</div></div>
+        </div>
+      </div>
       <div class="top-avatar" id="top-av-initials" onclick="window.location.href='profile.html'" title="My Profile">ST</div>
     </div>
   </div>

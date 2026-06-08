@@ -178,3 +178,93 @@ async function loadAnnouncements() {
     }
   } catch(e) {}
 }
+
+// ── NOTIFICATION BELL ──
+var NOTIF_KEY = 'mjm_notif_seen';
+
+function getLastSeen() {
+  var v = localStorage.getItem(NOTIF_KEY);
+  return v ? new Date(v) : new Date(0);
+}
+
+function markAllSeen() {
+  localStorage.setItem(NOTIF_KEY, new Date().toISOString());
+  var cnt = document.getElementById('notif-count');
+  if (cnt) { cnt.classList.remove('visible'); cnt.textContent = '0'; }
+}
+
+async function loadNotifications() {
+  if (window.location.protocol === 'file:') return;
+  var lastSeen = getLastSeen();
+  var now = Date.now();
+  var cut7 = new Date(now - 7 * 24 * 60 * 60 * 1000);
+  try {
+    var annData = await sbGet('announcements', 'limit=200');
+    var evData  = await sbGet('events', 'select=id,title,event_date,created_at&limit=200');
+    var items = [];
+    if (annData && annData.length) {
+      annData.filter(function(a){ return new Date(a.created_at) >= cut7; })
+        .forEach(function(a) {
+          items.push({ type:'ann', title: a.title, sub: a.body, created_at: a.created_at });
+        });
+    }
+    if (evData && evData.length) {
+      evData.filter(function(e){ return new Date(e.created_at) >= cut7; })
+        .forEach(function(e) {
+          var d = new Date(e.event_date+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'});
+          items.push({ type:'event', title: e.title, sub: 'Event on ' + d, created_at: e.created_at });
+        });
+    }
+    // Sort newest first
+    items.sort(function(a,b){ return new Date(b.created_at) - new Date(a.created_at); });
+    var unread = items.filter(function(i){ return new Date(i.created_at) > lastSeen; });
+    // Update badge
+    var cnt = document.getElementById('notif-count');
+    if (cnt) {
+      if (unread.length > 0) {
+        cnt.textContent = unread.length > 9 ? '9+' : String(unread.length);
+        cnt.classList.add('visible');
+      } else {
+        cnt.classList.remove('visible');
+      }
+    }
+    // Populate dropdown
+    var list = document.getElementById('notif-list');
+    if (list) {
+      if (!items.length) {
+        list.innerHTML = '<div class="notif-empty">No new notifications.</div>';
+      } else {
+        list.innerHTML = items.slice(0,10).map(function(item) {
+          var isUnread = new Date(item.created_at) > lastSeen;
+          var icon = item.type === 'ann' ? '📢' : '📅';
+          return '<div class="notif-item" style="' + (isUnread ? 'background:var(--green-bg);' : '') + '">'
+            + '<div class="notif-item-title">' + icon + ' ' + escHtml(item.title) + '</div>'
+            + '<div class="notif-item-sub">' + escHtml(item.sub) + '</div>'
+            + '</div>';
+        }).join('');
+      }
+    }
+  } catch(e) {}
+}
+
+function toggleNotifDropdown() {
+  var dd = document.getElementById('notif-dropdown');
+  if (!dd) return;
+  var isOpen = dd.classList.contains('open');
+  if (!isOpen) {
+    dd.classList.add('open');
+    markAllSeen();
+  } else {
+    dd.classList.remove('open');
+  }
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e) {
+  var bell = document.getElementById('notif-bell');
+  var dd   = document.getElementById('notif-dropdown');
+  if (dd && dd.classList.contains('open') && bell && !bell.contains(e.target)) {
+    dd.classList.remove('open');
+  }
+});
+

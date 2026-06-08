@@ -513,6 +513,31 @@ html, body {
 
 /* ── DIVIDER ── */
 .divider { height: 0.5px; background: var(--border); margin: 10px 0; }
+
+  /* ── Notification Bell ── */
+  .notif-wrap { position: relative; cursor: pointer; display: flex; align-items: center; }
+  .notif-count-badge {
+    display: none; position: absolute; top: -6px; right: -8px;
+    background: #E84040; color: #fff; font-size: 9px; font-weight: 700;
+    min-width: 16px; height: 16px; border-radius: 8px; padding: 0 4px;
+    align-items: center; justify-content: center;
+    border: 1.5px solid var(--green); line-height: 1;
+  }
+  .notif-count-badge.visible { display: flex; }
+  .notif-dropdown-admin {
+    display: none; position: absolute; top: 36px; right: -8px;
+    width: 290px; background: var(--surface); border-radius: 12px;
+    border: 1px solid var(--border); box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    z-index: 999; overflow: hidden;
+  }
+  .notif-dropdown-admin.open { display: block; }
+  .notif-hdr { padding: 10px 14px; font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border); }
+  .notif-row { padding: 10px 14px; border-bottom: 0.5px solid var(--border); cursor: pointer; }
+  .notif-row:hover { background: var(--green-bg); }
+  .notif-row-title { font-size: 12px; font-weight: 600; color: var(--text); }
+  .notif-row-sub { font-size: 11px; color: var(--text2); margin-top: 2px; }
+  .notif-empty-msg { padding: 16px 14px; font-size: 12px; color: var(--text3); text-align: center; }
+
 </style>
 </head>
 <body>
@@ -549,7 +574,14 @@ html, body {
       <div class="wm-badge">Admin</div>
     </div>
     <div class="topbar-right">
-      <i class="ti ti-bell"></i>
+      <div class="notif-wrap" id="admin-notif-bell" onclick="toggleAdminNotif()">
+        <i class="ti ti-bell" style="font-size:20px;color:#E1F5EE;"></i>
+        <span class="notif-count-badge" id="admin-notif-count">0</span>
+        <div class="notif-dropdown-admin" id="admin-notif-dropdown">
+          <div class="notif-hdr">Notifications</div>
+          <div id="admin-notif-list"><div class="notif-empty-msg">No new notifications.</div></div>
+        </div>
+      </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;">
         <div class="top-av" id="top-av-initials" onclick="window.location.href='profile.html'" title="My Profile" style="cursor:pointer;">SA</div>
         <div id="role-badge" style="font-size:9px;color:rgba(225,245,238,0.8);font-weight:600;letter-spacing:0.04em;">Super Admin</div>
@@ -2018,6 +2050,7 @@ html, body {
       loadDbLeave();
       loadDbDuty();
       loadAdminCalendar();
+    loadAdminNotifications();
       loadAdminLeaveDuty();
       loadDbProfiles();
       loadInviteLog();
@@ -2735,6 +2768,85 @@ html, body {
   function closeCalDayModal() {
     document.getElementById('cal-day-modal').style.display = 'none';
   }
+
+
+  // ── Notification Bell ──
+  var ADMIN_NOTIF_KEY = 'mjm_admin_notif_seen';
+
+  function getAdminLastSeen() {
+    var v = localStorage.getItem(ADMIN_NOTIF_KEY);
+    return v ? new Date(v) : new Date(0);
+  }
+
+  function markAdminAllSeen() {
+    localStorage.setItem(ADMIN_NOTIF_KEY, new Date().toISOString());
+    var cnt = document.getElementById('admin-notif-count');
+    if (cnt) { cnt.classList.remove('visible'); cnt.textContent = '0'; }
+  }
+
+  async function loadAdminNotifications() {
+    var lastSeen = getAdminLastSeen();
+    var cut7 = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    try {
+      var annData = await sbFetch('GET', '/rest/v1/announcements?limit=200');
+      var evRes   = await fetch(SURL + '/rest/v1/events?select=id,title,event_date,created_at&limit=200', { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
+      var evData  = await evRes.json();
+      var items = [];
+      if (annData && annData.length) {
+        annData.filter(function(a){ return new Date(a.created_at) >= cut7; })
+          .forEach(function(a){ items.push({ type:'ann', title: a.title, sub: a.body, created_at: a.created_at }); });
+      }
+      if (evData && evData.length) {
+        evData.filter(function(e){ return new Date(e.created_at) >= cut7; })
+          .forEach(function(e){
+            var d = new Date(e.event_date+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'});
+            items.push({ type:'event', title: e.title, sub: 'Event on ' + d, created_at: e.created_at });
+          });
+      }
+      items.sort(function(a,b){ return new Date(b.created_at) - new Date(a.created_at); });
+      var unread = items.filter(function(i){ return new Date(i.created_at) > lastSeen; });
+      var cnt = document.getElementById('admin-notif-count');
+      if (cnt) {
+        if (unread.length > 0) {
+          cnt.textContent = unread.length > 9 ? '9+' : String(unread.length);
+          cnt.classList.add('visible');
+        } else {
+          cnt.classList.remove('visible');
+        }
+      }
+      var list = document.getElementById('admin-notif-list');
+      if (list) {
+        if (!items.length) {
+          list.innerHTML = '<div class="notif-empty-msg">No new notifications.</div>';
+        } else {
+          list.innerHTML = items.slice(0,10).map(function(item) {
+            var isUnread = new Date(item.created_at) > lastSeen;
+            var icon = item.type === 'ann' ? '📢' : '📅';
+            return '<div class="notif-row" style="' + (isUnread ? 'background:var(--green-bg);' : '') + '">'
+              + '<div class="notif-row-title">' + icon + ' ' + escHtml(item.title) + '</div>'
+              + '<div class="notif-row-sub">' + escHtml(item.sub) + '</div>'
+              + '</div>';
+          }).join('');
+        }
+      }
+    } catch(e) {}
+  }
+
+  function toggleAdminNotif() {
+    var dd = document.getElementById('admin-notif-dropdown');
+    if (!dd) return;
+    var isOpen = dd.classList.contains('open');
+    if (!isOpen) { dd.classList.add('open'); markAdminAllSeen(); }
+    else { dd.classList.remove('open'); }
+  }
+
+  document.addEventListener('click', function(e) {
+    var bell = document.getElementById('admin-notif-bell');
+    var dd   = document.getElementById('admin-notif-dropdown');
+    if (dd && dd.classList.contains('open') && bell && !bell.contains(e.target)) {
+      dd.classList.remove('open');
+    }
+  });
 
 </script>
 </body>
