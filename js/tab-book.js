@@ -45,6 +45,7 @@ function showVehicleForm() {
   document.getElementById('v-date').min   = today;
   document.getElementById('v-date').value = '';
   document.getElementById('v-date').style.display = 'block';
+  var vb = document.getElementById('v-date-btn'); if (vb) vb.style.display = 'block';
   document.getElementById('v-date-tags').innerHTML = '';
   document.getElementById('v-time-from').value = '';
   document.getElementById('v-time-to').value   = '';
@@ -71,6 +72,7 @@ function addVehicleDate() {
   vSelectedDates = [d];
   renderVehicleDateTags();
   document.getElementById('v-date').style.display = 'none';
+  var vb = document.getElementById('v-date-btn'); if (vb) vb.style.display = 'none';
   document.getElementById('v-clash-alert').style.display = 'none';
   checkVehicleClash();
 }
@@ -80,6 +82,7 @@ function removeVehicleDate(d) {
   document.getElementById('v-date-tags').innerHTML = '';
   document.getElementById('v-date').value = '';
   document.getElementById('v-date').style.display = 'block';
+  var vb = document.getElementById('v-date-btn'); if (vb) vb.style.display = 'block';
   checkVehicleClash();
 }
 
@@ -301,6 +304,7 @@ function showRoomForm() {
   document.getElementById('r-date').min   = today;
   document.getElementById('r-date').value = '';
   document.getElementById('r-date').style.display = 'block';
+  var rb = document.getElementById('r-date-btn'); if (rb) rb.style.display = 'block';
   document.getElementById('r-date-tags').innerHTML = '';
   document.getElementById('r-time-from').value = '';
   document.getElementById('r-time-to').value   = '';
@@ -328,6 +332,7 @@ function addRoomDate() {
   rSelectedDates = [d];
   renderRoomDateTags();
   document.getElementById('r-date').style.display = 'none';
+  var rb = document.getElementById('r-date-btn'); if (rb) rb.style.display = 'none';
   document.getElementById('r-clash-alert').style.display = 'none';
 }
 
@@ -336,6 +341,7 @@ function removeRoomDate(d) {
   document.getElementById('r-date-tags').innerHTML = '';
   document.getElementById('r-date').value = '';
   document.getElementById('r-date').style.display = 'block';
+  var rb = document.getElementById('r-date-btn'); if (rb) rb.style.display = 'block';
   document.getElementById('r-clash-alert').style.display = 'none';
 }
 
