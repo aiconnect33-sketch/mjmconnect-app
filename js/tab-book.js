@@ -68,6 +68,7 @@ function hideVehicleForm() {
 function addVehicleDate() {
   var d = document.getElementById('v-date').value;
   if (!d) return;
+  if (vSelectedDates.length && vSelectedDates[0] === d) return; // already set
   vSelectedDates = [d];
   renderVehicleDateTags();
   document.getElementById('v-date').style.display = 'none';
@@ -325,6 +326,7 @@ function hideRoomForm() {
 function addRoomDate() {
   var d = document.getElementById('r-date').value;
   if (!d) return;
+  if (rSelectedDates.length && rSelectedDates[0] === d) return; // already set
   rSelectedDates = [d];
   renderRoomDateTags();
   document.getElementById('r-date').style.display = 'none';

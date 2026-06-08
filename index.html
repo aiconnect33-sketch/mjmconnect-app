@@ -67,16 +67,23 @@
   .phone-wrap {
     min-height: 100vh;
     display: flex; align-items: flex-start; justify-content: center;
-    padding: 24px 16px 40px;
   }
   .phone {
     width: 100%; max-width: 390px;
     background: var(--surface);
-    border-radius: 40px; overflow: hidden;
-    border: 8px solid #2a2a2a;
-    box-shadow: 0 32px 80px rgba(0,0,0,0.5), 0 0 0 1px #444;
     position: relative; display: flex; flex-direction: column;
-    min-height: 780px;
+    min-height: 100vh;
+  }
+  @media (min-width: 500px) {
+    .phone-wrap {
+      padding: 24px 16px 40px;
+    }
+    .phone {
+      border-radius: 40px; overflow: hidden;
+      border: 8px solid #2a2a2a;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.5), 0 0 0 1px #444;
+      min-height: 780px;
+    }
   }
   .status-bar {
     background: var(--green-dark); color: #E1F5EE;
@@ -576,7 +583,7 @@
           </div>
           <div class="book-form-group">
             <label class="book-form-label">Date</label>
-            <input class="book-form-input" type="date" id="v-date" onchange="addVehicleDate()">
+            <input class="book-form-input" type="date" id="v-date" onblur="addVehicleDate()" onchange="addVehicleDate()">
             <div class="book-field-error" id="v-date-error"><i class="ti ti-alert-circle"></i> Please select a date.</div>
             <div id="v-date-tags" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;"></div>
           </div>
@@ -676,7 +683,7 @@
           </div>
           <div class="book-form-group">
             <label class="book-form-label">Date</label>
-            <input class="book-form-input" type="date" id="r-date" onchange="addRoomDate()">
+            <input class="book-form-input" type="date" id="r-date" onblur="addRoomDate()" onchange="addRoomDate()">
             <div class="book-field-error" id="r-date-error"><i class="ti ti-alert-circle"></i> Please select a date.</div>
             <div id="r-date-tags" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;"></div>
           </div>
