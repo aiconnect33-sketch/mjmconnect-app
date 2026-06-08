@@ -581,10 +581,9 @@
           </div>
           <div class="book-form-group">
             <label class="book-form-label">Date</label>
-            <input class="book-form-input" type="date" id="v-date">
+            <input class="book-form-input" type="date" id="v-date" onchange="setTimeout(addVehicleDate,300)">
             <div class="book-field-error" id="v-date-error"><i class="ti ti-alert-circle"></i> Please select a date.</div>
             <div id="v-date-tags" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;"></div>
-            <button type="button" id="v-date-btn" onclick="addVehicleDate()" style="margin-top:8px;width:100%;padding:10px;background:var(--green-dark);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">✓ Confirm Date</button>
           </div>
           <!-- Full day toggle -->
           <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:0.5px solid #C2E6D8;border-bottom:0.5px solid #C2E6D8;margin-bottom:10px;">
@@ -682,10 +681,9 @@
           </div>
           <div class="book-form-group">
             <label class="book-form-label">Date</label>
-            <input class="book-form-input" type="date" id="r-date">
+            <input class="book-form-input" type="date" id="r-date" onchange="setTimeout(function(){addRoomDate();loadRoomSlots();},300)">
             <div class="book-field-error" id="r-date-error"><i class="ti ti-alert-circle"></i> Please select a date.</div>
             <div id="r-date-tags" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;"></div>
-            <button type="button" id="r-date-btn" onclick="addRoomDate()" style="margin-top:8px;width:100%;padding:10px;background:var(--green-dark);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">✓ Confirm Date</button>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
             <div class="book-form-group">
