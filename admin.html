@@ -1050,6 +1050,10 @@ html, body {
     <!-- ═══════════════════════════
          SETTINGS
     ═══════════════════════════ -->
+    <div class="screen-section" id="screen-booking">
+      <iframe id="booking-iframe" src="" style="width:100%;height:calc(100vh - 110px);border:none;display:block;" allow="same-origin"></iframe>
+    </div>
+
     <div class="screen-section" id="screen-settings">
 
       <!-- Current user info -->
@@ -1163,7 +1167,7 @@ html, body {
 
   <!-- BOTTOM NAV -->
   <div class="nav-bar">
-    <div class="nav-item active" id="nav-booking" onclick="window.open('index.html#book','_blank')">
+    <div class="nav-item active" id="nav-booking" onclick="switchNav('booking')">
       <i class="ti ti-calendar-event"></i><span>Booking</span>
     </div>
     <div class="nav-item" id="nav-timeoff" onclick="window.open('https://docs.google.com/forms/d/e/1FAIpQLScxTncnL4ekGi6qmxw6mEXsu4cS-n_c9Z6s5IDLUptJf0L09Q/viewform','_blank')">
@@ -1241,8 +1245,10 @@ html, body {
     if (name === 'settings') renderSettingsPage();
     if (name === 'invite')   loadInviteLog();
     if (name === 'event')    loadDbEvents();
-  }
-  function switchTabByName(name) {
+    if (name === 'booking') {
+      var iframe = document.getElementById('booking-iframe');
+      if (iframe && !iframe.src) iframe.src = 'index.html#book';
+    }
     var tabs = document.querySelectorAll('.tab-btn');
     var map  = { dashboard:0, announce:1, leave:2, event:3, duty:4 };
     tabs.forEach(function(t){ t.classList.remove('active'); });
