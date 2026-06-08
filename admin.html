@@ -65,12 +65,11 @@ html, body {
 .phone {
   width: 100%;
   max-width: 430px;
-  height: 100vh;
+  min-height: 100vh;
   background: var(--surface);
   display: flex;
   flex-direction: column;
   position: relative;
-  overflow: hidden;
 }
 
 /* ── STATUS BAR ── */
@@ -539,140 +538,6 @@ html, body {
   .notif-row-sub { font-size: 11px; color: var(--text2); margin-top: 2px; }
   .notif-empty-msg { padding: 16px 14px; font-size: 12px; color: var(--text3); text-align: center; }
 
-  /* ── BOOKING TAB ── */
-  .book-inline-form {
-    background: var(--green-bg); border: 1px solid #C2E6D8;
-    border-radius: var(--radius-lg); padding: 12px 14px; margin-bottom: 10px;
-  }
-  .book-form-title {
-    font-size: 12px; font-weight: 700; color: var(--green-text);
-    margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;
-  }
-  .book-close-btn { background: none; border: none; color: var(--green-text); cursor: pointer; font-size: 16px; padding: 0; line-height: 1; }
-  .book-form-group { margin-bottom: 10px; }
-  .book-form-label { display: block; font-size: 11px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px; }
-  .book-form-input {
-    width: 100%; border: 1px solid var(--border); border-radius: var(--radius-md);
-    padding: 9px 11px; font-size: 13px; color: var(--text-primary);
-    background: var(--surface); font-family: inherit; outline: none;
-    transition: border-color 0.15s; -webkit-appearance: none;
-  }
-  .book-form-input:focus { border-color: var(--green-dark); box-shadow: 0 0 0 3px rgba(15,110,86,0.1); }
-  .book-form-input.error { border-color: var(--red-text); }
-  .book-field-error { font-size: 11px; color: var(--red-text); margin-top: 4px; display: none; align-items: center; gap: 4px; }
-  .book-field-error.visible { display: flex; }
-  .book-clash-alert {
-    display: flex; align-items: flex-start; gap: 7px;
-    background: var(--red-bg); border: 0.5px solid #F09595;
-    border-radius: var(--radius-md); padding: 9px 11px; margin-bottom: 10px;
-    font-size: 12px; color: var(--red-text);
-  }
-  .book-clash-alert i { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
-  .book-btn-primary {
-    width: 100%; background: var(--green-dark); color: #fff; border: none;
-    border-radius: var(--radius-md); padding: 11px; font-size: 13px; font-weight: 600;
-    font-family: inherit; cursor: pointer; display: flex; align-items: center;
-    justify-content: center; gap: 6px; margin-bottom: 7px; transition: background 0.15s;
-  }
-  .book-btn-primary:hover { background: #0d5f49; }
-  .book-btn-primary:disabled { background: var(--text-light); cursor: not-allowed; }
-  .book-btn-ghost {
-    width: 100%; background: transparent; color: var(--green-dark);
-    border: 1px solid var(--green-dark); border-radius: var(--radius-md);
-    padding: 10px; font-size: 13px; font-weight: 500; font-family: inherit;
-    cursor: pointer; display: flex; align-items: center; justify-content: center;
-    transition: background 0.15s;
-  }
-  .book-btn-ghost:hover { background: var(--green-bg); }
-  .book-alert {
-    border-radius: var(--radius-md); padding: 10px 12px; font-size: 12px;
-    margin-bottom: 10px; display: none; align-items: center; gap: 8px;
-  }
-  .book-alert.visible { display: flex; }
-  .book-alert i { font-size: 15px; flex-shrink: 0; }
-  .book-alert-success { background: var(--green-bg); color: var(--green-text); }
-  .book-alert-error   { background: var(--red-bg);   color: var(--red-text); }
-  .book-spinner { width: 15px; height: 15px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; display: none; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  /* Toggle switch */
-  .book-toggle {
-    width: 44px; height: 26px; border-radius: 13px;
-    background: var(--border); position: relative;
-    cursor: pointer; transition: background 0.2s; flex-shrink: 0;
-  }
-  .book-toggle.on { background: var(--green-dark); }
-  .book-toggle-knob {
-    width: 20px; height: 20px; border-radius: 50%;
-    background: #fff; position: absolute; top: 3px; left: 3px;
-    transition: transform 0.2s; box-shadow: 0 1px 4px rgba(0,0,0,0.15);
-  }
-  .book-toggle.on .book-toggle-knob { transform: translateX(18px); }
-  .book-empty { text-align: center; padding: 14px 0; font-size: 12px; color: var(--text-light); }
-  .book-item {
-    background: var(--surface); border: 0.5px solid var(--border);
-    border-radius: var(--radius-lg); padding: 12px 14px; margin-bottom: 8px;
-  }
-  .book-item-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
-  .book-item-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
-  .book-item-date { font-size: 11px; color: var(--text-secondary); margin-bottom: 2px; }
-  .book-item-purpose { font-size: 11px; color: var(--text-light); }
-  .book-cancel-btn {
-    background: none; border: none; color: var(--red-text); font-size: 11px;
-    font-weight: 600; font-family: inherit; cursor: pointer; padding: 0;
-    display: flex; align-items: center; gap: 4px; margin-top: 8px;
-    padding-top: 8px; border-top: 0.5px solid var(--border); width: 100%;
-  }
-  .book-cancel-btn i { font-size: 13px; }
-  /* Timeline */
-  .timeline-slot {
-    display: flex; align-items: center; gap: 8px;
-    padding: 6px 0; border-bottom: 0.5px solid var(--border); font-size: 12px;
-  }
-  .timeline-slot:last-child { border-bottom: none; }
-  .timeline-time { font-size: 11px; color: var(--text-secondary); width: 80px; flex-shrink: 0; }
-  .timeline-bar { flex: 1; border-radius: 4px; padding: 4px 8px; font-size: 11px; font-weight: 500; }
-  .timeline-bar.booked { background: var(--red-bg); color: var(--red-text); }
-  .timeline-bar.free   { background: var(--green-bg); color: var(--green-text); }
-  /* Booked day highlight in calendar */
-  .cal-day.booked span {
-    background: #FCEBEB; color: var(--red-text); font-weight: 500;
-    border-radius: 5px; width: 22px; height: 22px;
-    display: flex; align-items: center; justify-content: center;
-  }
-
-
-  /* ── Custom Date Picker ── */
-  .date-picker-display {
-    width:100%; padding:10px 12px; border:1px solid var(--border);
-    border-radius:8px; font-size:13px; color:var(--text-primary);
-    background:var(--surface); cursor:pointer; text-align:left;
-    display:flex; align-items:center; gap:8px;
-  }
-  .date-picker-display.placeholder { color:var(--text-secondary); }
-  .date-picker-cal {
-    display:none; border:1px solid var(--border); border-radius:10px;
-    overflow:hidden; margin-top:6px; background:var(--surface);
-  }
-  .date-picker-cal.open { display:block; }
-  .dpc-header {
-    background:var(--green-dark); color:#fff; padding:8px 12px;
-    display:flex; align-items:center; justify-content:space-between;
-    font-size:13px; font-weight:600;
-  }
-  .dpc-nav { background:none; border:none; color:#fff; font-size:18px; cursor:pointer; padding:0 6px; }
-  .dpc-grid { display:grid; grid-template-columns:repeat(7,1fr); text-align:center; }
-  .dpc-dow { font-size:10px; font-weight:600; color:var(--text-secondary); padding:6px 0; }
-  .dpc-day {
-    font-size:12px; padding:7px 2px; cursor:pointer; border-radius:6px;
-    margin:1px; color:var(--text-primary);
-  }
-  .dpc-day:hover { background:var(--green-bg); }
-  .dpc-day.today { background:var(--green-dark); color:#fff; font-weight:700; }
-  .dpc-day.selected { background:var(--green-dark); color:#fff; font-weight:700; }
-  .dpc-day.past { color:var(--text-secondary); cursor:not-allowed; opacity:0.4; }
-  .dpc-day.empty { cursor:default; }
-
-  
 </style>
 </head>
 <body>
@@ -1185,247 +1050,6 @@ html, body {
     <!-- ═══════════════════════════
          SETTINGS
     ═══════════════════════════ -->
-    <div class="screen-section" id="screen-booking">
-
-      <!-- Pill toggle -->
-      <div style="display:flex;background:var(--surface);border-radius:var(--radius-lg);border:0.5px solid var(--border);padding:4px;gap:4px;margin-bottom:12px;">
-        <button id="book-pill-vehicle" onclick="switchBookPill('vehicle')"
-          style="flex:1;padding:7px;border-radius:var(--radius-md);border:none;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;background:var(--green-dark);color:#fff;transition:all 0.15s;">
-          <i class="ti ti-car"></i> Vehicle
-        </button>
-        <button id="book-pill-room" onclick="switchBookPill('room')"
-          style="flex:1;padding:7px;border-radius:var(--radius-md);border:none;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:var(--text-secondary);transition:all 0.15s;">
-          <i class="ti ti-door"></i> Conference Room
-        </button>
-      </div>
-
-      <!-- ── VEHICLE PANEL ── -->
-      <div id="book-panel-vehicle">
-
-        <div class="card" style="margin-bottom:10px;">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-            <div style="width:40px;height:40px;border-radius:var(--radius-md);background:var(--green-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-              <i class="ti ti-car" style="font-size:20px;color:var(--green-dark);"></i>
-            </div>
-            <div>
-              <div style="font-size:13px;font-weight:600;color:var(--text-primary);">Company Vehicle</div>
-              <div style="font-size:11px;color:var(--text-secondary);">Full day or time-slot · First-come, first-served</div>
-            </div>
-          </div>
-          <button class="book-btn-primary" onclick="showVehicleForm()">
-            <i class="ti ti-plus"></i> New Booking
-          </button>
-        </div>
-
-        <!-- Vehicle booking form -->
-        <div class="book-inline-form" id="vehicle-form" style="display:none;">
-          <div class="book-form-title">
-            <span><i class="ti ti-car"></i> &nbsp;Book Vehicle</span>
-            <button class="book-close-btn" onclick="hideVehicleForm()">&times;</button>
-          </div>
-          <div class="book-form-group">
-            <label class="book-form-label">Date</label>
-            <button type="button" class="date-picker-display placeholder" id="v-date-display" onclick="toggleDatePicker('v')">
-              <i class="ti ti-calendar"></i><span id="v-date-display-text">Tap to select date</span>
-            </button>
-            <input type="hidden" id="v-date">
-            <div class="book-field-error" id="v-date-error"><i class="ti ti-alert-circle"></i> Please select a date.</div>
-            <div class="date-picker-cal" id="v-date-cal"></div>
-            <div id="v-date-tags" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;"></div>
-          </div>
-          <!-- Full day toggle -->
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:0.5px solid #C2E6D8;border-bottom:0.5px solid #C2E6D8;margin-bottom:10px;">
-            <div>
-              <div style="font-size:13px;font-weight:500;color:var(--text-primary);">Full Day</div>
-              <div style="font-size:11px;color:var(--text-secondary);margin-top:1px;">Toggle off to pick a time slot</div>
-            </div>
-            <div id="v-fullday-toggle" class="book-toggle on" onclick="toggleVehicleFullDay()">
-              <div class="book-toggle-knob"></div>
-            </div>
-          </div>
-          <!-- Time slot (hidden when full day) -->
-          <div id="v-time-row" style="display:none;">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-              <div class="book-form-group">
-                <label class="book-form-label">From</label>
-                <input class="book-form-input" type="time" id="v-time-from" onchange="checkVehicleClash()">
-                <div class="book-field-error" id="v-time-from-error"><i class="ti ti-alert-circle"></i> Required.</div>
-              </div>
-              <div class="book-form-group">
-                <label class="book-form-label">To</label>
-                <input class="book-form-input" type="time" id="v-time-to" onchange="checkVehicleClash()">
-                <div class="book-field-error" id="v-time-to-error"><i class="ti ti-alert-circle"></i> Required.</div>
-              </div>
-            </div>
-          </div>
-          <div class="book-clash-alert" id="v-clash-alert" style="display:none;">
-            <i class="ti ti-alert-circle"></i>
-            <span id="v-clash-msg">Already booked on that slot.</span>
-          </div>
-          <div class="book-form-group">
-            <label class="book-form-label">Purpose <span style="font-size:10px;color:var(--text-light);font-weight:400;text-transform:none;">(optional)</span></label>
-            <input class="book-form-input" type="text" id="v-purpose" placeholder="e.g. Site visit to Klang">
-          </div>
-          <button class="book-btn-primary" id="v-submit-btn" onclick="submitVehicleBooking()">
-            <span id="v-submit-label">Confirm Booking</span>
-            <div class="book-spinner" id="v-spinner"></div>
-          </button>
-          <button class="book-btn-ghost" onclick="hideVehicleForm()">Cancel</button>
-        </div>
-
-        <!-- Success/error alerts -->
-        <div class="book-alert book-alert-success" id="v-success"><i class="ti ti-circle-check"></i><span>Vehicle booked successfully!</span></div>
-        <div class="book-alert book-alert-error" id="v-error"><i class="ti ti-alert-circle"></i><span id="v-error-msg">Could not save booking.</span></div>
-
-        <!-- Vehicle calendar -->
-        <div class="section-row"><div class="section-title">Availability</div></div>
-        <div class="cal-card" style="margin-bottom:10px;">
-          <div class="cal-header">
-            <button class="cal-nav-btn" onclick="vCalPrev()"><i class="ti ti-chevron-left"></i></button>
-            <div class="cal-month-label" id="v-cal-label">June 2026</div>
-            <button class="cal-nav-btn" onclick="vCalNext()"><i class="ti ti-chevron-right"></i></button>
-          </div>
-          <div class="cal-body">
-            <div class="cal-grid" id="v-cal-grid">
-              <div class="cal-dow">S</div><div class="cal-dow">M</div><div class="cal-dow">T</div>
-              <div class="cal-dow">W</div><div class="cal-dow">T</div><div class="cal-dow">F</div><div class="cal-dow">S</div>
-            </div>
-            <div style="display:flex;gap:12px;margin-top:10px;flex-wrap:wrap;border-top:0.5px solid var(--border);padding-top:10px;">
-              <div class="legend-item"><div style="width:14px;height:14px;border-radius:50%;background:var(--green-dark);"></div>Today</div>
-              <div class="legend-item"><div style="width:14px;height:14px;border-radius:4px;background:#FCEBEB;border:1px solid #F09595;"></div>Booked · tap to view</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- My vehicle bookings this month -->
-        <div class="section-row"><div class="section-title">My Bookings This Month</div></div>
-        <div id="v-my-bookings"><div class="book-empty">Loading...</div></div>
-
-      </div><!-- /vehicle panel -->
-
-      <!-- ── ROOM PANEL ── -->
-      <div id="book-panel-room" style="display:none;">
-
-        <div class="card" style="margin-bottom:10px;">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-            <div style="width:40px;height:40px;border-radius:var(--radius-md);background:var(--blue-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-              <i class="ti ti-door" style="font-size:20px;color:var(--blue-text);"></i>
-            </div>
-            <div>
-              <div style="font-size:13px;font-weight:600;color:var(--text-primary);">Conference Room</div>
-              <div style="font-size:11px;color:var(--text-secondary);">Time-slot booking · First-come, first-served</div>
-            </div>
-          </div>
-          <button class="book-btn-primary" onclick="showRoomForm()">
-            <i class="ti ti-plus"></i> New Booking
-          </button>
-        </div>
-
-        <!-- Room booking form -->
-        <div class="book-inline-form" id="room-form" style="display:none;">
-          <div class="book-form-title">
-            <span><i class="ti ti-door"></i> &nbsp;Book Conference Room</span>
-            <button class="book-close-btn" onclick="hideRoomForm()">&times;</button>
-          </div>
-          <div class="book-form-group">
-            <label class="book-form-label">Date</label>
-            <button type="button" class="date-picker-display placeholder" id="r-date-display" onclick="toggleDatePicker('r')">
-              <i class="ti ti-calendar"></i><span id="r-date-display-text">Tap to select date</span>
-            </button>
-            <input type="hidden" id="r-date">
-            <div class="book-field-error" id="r-date-error"><i class="ti ti-alert-circle"></i> Please select a date.</div>
-            <div class="date-picker-cal" id="r-date-cal"></div>
-            <div id="r-date-tags" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;"></div>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-            <div class="book-form-group">
-              <label class="book-form-label">From</label>
-              <input class="book-form-input" type="time" id="r-time-from" onchange="checkRoomClash()">
-              <div class="book-field-error" id="r-time-from-error"><i class="ti ti-alert-circle"></i> Required.</div>
-            </div>
-            <div class="book-form-group">
-              <label class="book-form-label">To</label>
-              <input class="book-form-input" type="time" id="r-time-to" onchange="checkRoomClash()">
-              <div class="book-field-error" id="r-time-to-error"><i class="ti ti-alert-circle"></i> Required.</div>
-            </div>
-          </div>
-          <div class="book-clash-alert" id="r-clash-alert" style="display:none;">
-            <i class="ti ti-alert-circle"></i>
-            <span id="r-clash-msg">Time slot already booked.</span>
-          </div>
-          <div class="book-form-group">
-            <label class="book-form-label">Purpose <span style="font-size:10px;color:var(--text-light);font-weight:400;text-transform:none;">(optional)</span></label>
-            <input class="book-form-input" type="text" id="r-purpose" placeholder="e.g. Monthly team review">
-          </div>
-          <button class="book-btn-primary" id="r-submit-btn" onclick="submitRoomBooking()">
-            <span id="r-submit-label">Confirm Booking</span>
-            <div class="book-spinner" id="r-spinner"></div>
-          </button>
-          <button class="book-btn-ghost" onclick="hideRoomForm()">Cancel</button>
-        </div>
-
-        <!-- Success/error alerts -->
-        <div class="book-alert book-alert-success" id="r-success"><i class="ti ti-circle-check"></i><span>Room booked successfully!</span></div>
-        <div class="book-alert book-alert-error" id="r-error"><i class="ti ti-alert-circle"></i><span id="r-error-msg">Could not save booking.</span></div>
-
-        <!-- Room calendar -->
-        <div class="section-row"><div class="section-title">Availability</div></div>
-        <div class="cal-card" style="margin-bottom:10px;">
-          <div class="cal-header">
-            <button class="cal-nav-btn" onclick="rCalPrev()"><i class="ti ti-chevron-left"></i></button>
-            <div class="cal-month-label" id="r-cal-label">June 2026</div>
-            <button class="cal-nav-btn" onclick="rCalNext()"><i class="ti ti-chevron-right"></i></button>
-          </div>
-          <div class="cal-body">
-            <div class="cal-grid" id="r-cal-grid">
-              <div class="cal-dow">S</div><div class="cal-dow">M</div><div class="cal-dow">T</div>
-              <div class="cal-dow">W</div><div class="cal-dow">T</div><div class="cal-dow">F</div><div class="cal-dow">S</div>
-            </div>
-            <div style="display:flex;gap:12px;margin-top:10px;flex-wrap:wrap;border-top:0.5px solid var(--border);padding-top:10px;">
-              <div class="legend-item"><div style="width:14px;height:14px;border-radius:50%;background:var(--green-dark);"></div>Today</div>
-              <div class="legend-item"><div style="width:14px;height:14px;border-radius:4px;background:#FCEBEB;border:1px solid #F09595;"></div>Booked · tap to view</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- My room bookings this month -->
-        <div class="section-row"><div class="section-title">My Bookings This Month</div></div>
-        <div id="r-my-bookings"><div class="book-empty">Loading...</div></div>
-
-      </div><!-- /room panel -->
-
-    </div><!-- /book -->
-
-  </div><!-- /screen-body -->
-
-  <!-- ── DAY DETAIL MODAL (shared) ── -->
-  <div id="book-day-modal" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,0.45);" onclick="closeDayModal()">
-    <div style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:var(--surface);border-radius:18px 18px 0 0;padding:20px 16px 32px;" onclick="event.stopPropagation()">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-        <div id="book-day-modal-title" style="font-size:14px;font-weight:700;color:var(--text-primary);"></div>
-        <button onclick="closeDayModal()" style="background:none;border:none;font-size:20px;color:var(--text-secondary);cursor:pointer;line-height:1;">&times;</button>
-      </div>
-      <div id="book-day-modal-body"></div>
-    </div>
-  </div>
-
-
-<script src="js/tab-duty.js"></script>
-<script src="js/tab-book.js"></script>
-
-<!-- Day detail modal -->
-<div id="staff-day-modal" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,0.45);" onclick="closeStaffDayModal()">
-  <div style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:#fff;border-radius:20px 20px 0 0;padding:20px 16px 32px;" onclick="event.stopPropagation()">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-      <div id="staff-day-modal-title" style="font-size:14px;font-weight:700;color:#111C18;"></div>
-      <button onclick="closeStaffDayModal()" style="background:none;border:none;font-size:20px;color:#6B7A73;cursor:pointer;line-height:1;">&times;</button>
-    </div>
-    <div id="staff-day-modal-body"></div>
-  </div>
-</div>
-</body>
-</html
-
     <div class="screen-section" id="screen-settings">
 
       <!-- Current user info -->
@@ -1539,7 +1163,7 @@ html, body {
 
   <!-- BOTTOM NAV -->
   <div class="nav-bar">
-    <div class="nav-item active" id="nav-booking" onclick="switchNav('booking')">
+    <div class="nav-item active" id="nav-booking" onclick="window.location.href='index.html#book'">
       <i class="ti ti-calendar-event"></i><span>Booking</span>
     </div>
     <div class="nav-item" id="nav-timeoff" onclick="window.open('https://docs.google.com/forms/d/e/1FAIpQLScxTncnL4ekGi6qmxw6mEXsu4cS-n_c9Z6s5IDLUptJf0L09Q/viewform','_blank')">
@@ -1547,6 +1171,9 @@ html, body {
     </div>
     <div class="nav-item" id="nav-invite" onclick="switchNav('invite')">
       <i class="ti ti-user-plus"></i><span>Invite</span>
+    </div>
+    <div class="nav-item" id="nav-profile" onclick="window.location.href='profile.html'">
+      <i class="ti ti-user-circle"></i><span>Profile</span>
     </div>
     <div class="nav-item" id="nav-settings" onclick="switchNav('settings')">
       <i class="ti ti-settings"></i><span>Settings</span>
@@ -1617,7 +1244,8 @@ html, body {
     if (name === 'settings') renderSettingsPage();
     if (name === 'invite')   loadInviteLog();
     if (name === 'event')    loadDbEvents();
-    if (name === 'booking') { initBookTab(); }
+  }
+  function switchTabByName(name) {
     var tabs = document.querySelectorAll('.tab-btn');
     var map  = { dashboard:0, announce:1, leave:2, event:3, duty:4 };
     tabs.forEach(function(t){ t.classList.remove('active'); });
