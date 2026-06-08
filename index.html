@@ -421,7 +421,39 @@
     border-radius: 5px; width: 22px; height: 22px;
     display: flex; align-items: center; justify-content: center;
   }
-</style>
+
+  /* ── Custom Date Picker ── */
+  .date-picker-display {
+    width:100%; padding:10px 12px; border:1px solid var(--border);
+    border-radius:8px; font-size:13px; color:var(--text-primary);
+    background:var(--surface); cursor:pointer; text-align:left;
+    display:flex; align-items:center; gap:8px;
+  }
+  .date-picker-display.placeholder { color:var(--text-secondary); }
+  .date-picker-cal {
+    display:none; border:1px solid var(--border); border-radius:10px;
+    overflow:hidden; margin-top:6px; background:var(--surface);
+  }
+  .date-picker-cal.open { display:block; }
+  .dpc-header {
+    background:var(--green-dark); color:#fff; padding:8px 12px;
+    display:flex; align-items:center; justify-content:space-between;
+    font-size:13px; font-weight:600;
+  }
+  .dpc-nav { background:none; border:none; color:#fff; font-size:18px; cursor:pointer; padding:0 6px; }
+  .dpc-grid { display:grid; grid-template-columns:repeat(7,1fr); text-align:center; }
+  .dpc-dow { font-size:10px; font-weight:600; color:var(--text-secondary); padding:6px 0; }
+  .dpc-day {
+    font-size:12px; padding:7px 2px; cursor:pointer; border-radius:6px;
+    margin:1px; color:var(--text-primary);
+  }
+  .dpc-day:hover { background:var(--green-bg); }
+  .dpc-day.today { background:var(--green-dark); color:#fff; font-weight:700; }
+  .dpc-day.selected { background:var(--green-dark); color:#fff; font-weight:700; }
+  .dpc-day.past { color:var(--text-secondary); cursor:not-allowed; opacity:0.4; }
+  .dpc-day.empty { cursor:default; }
+
+  </style>
 </head>
 <body>
 
@@ -581,8 +613,12 @@
           </div>
           <div class="book-form-group">
             <label class="book-form-label">Date</label>
-            <input class="book-form-input" type="date" id="v-date" onchange="setTimeout(addVehicleDate,300)">
+            <button type="button" class="date-picker-display placeholder" id="v-date-display" onclick="toggleDatePicker('v')">
+              <i class="ti ti-calendar"></i><span id="v-date-display-text">Tap to select date</span>
+            </button>
+            <input type="hidden" id="v-date">
             <div class="book-field-error" id="v-date-error"><i class="ti ti-alert-circle"></i> Please select a date.</div>
+            <div class="date-picker-cal" id="v-date-cal"></div>
             <div id="v-date-tags" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;"></div>
           </div>
           <!-- Full day toggle -->
@@ -681,8 +717,12 @@
           </div>
           <div class="book-form-group">
             <label class="book-form-label">Date</label>
-            <input class="book-form-input" type="date" id="r-date" onchange="setTimeout(function(){addRoomDate();loadRoomSlots();},300)">
+            <button type="button" class="date-picker-display placeholder" id="r-date-display" onclick="toggleDatePicker('r')">
+              <i class="ti ti-calendar"></i><span id="r-date-display-text">Tap to select date</span>
+            </button>
+            <input type="hidden" id="r-date">
             <div class="book-field-error" id="r-date-error"><i class="ti ti-alert-circle"></i> Please select a date.</div>
+            <div class="date-picker-cal" id="r-date-cal"></div>
             <div id="r-date-tags" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;"></div>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">

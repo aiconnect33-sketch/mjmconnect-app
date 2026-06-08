@@ -3,6 +3,88 @@
 var bookTabInited = false;
 var vCalYear, vCalMonth, rCalYear, rCalMonth;
 
+// ── Custom Date Picker (iOS-safe, no native input) ──
+var dpState = {}; // prefix -> { year, month }
+
+function toggleDatePicker(prefix) {
+  var cal = document.getElementById(prefix + '-date-cal');
+  if (!cal) return;
+  var isOpen = cal.classList.contains('open');
+  // Close all pickers first
+  document.querySelectorAll('.date-picker-cal').forEach(function(el){ el.classList.remove('open'); });
+  if (!isOpen) {
+    var now = new Date();
+    if (!dpState[prefix]) dpState[prefix] = { year: now.getFullYear(), month: now.getMonth() };
+    renderDatePickerCal(prefix);
+    cal.classList.add('open');
+  }
+}
+
+function renderDatePickerCal(prefix) {
+  var cal  = document.getElementById(prefix + '-date-cal');
+  var state = dpState[prefix];
+  var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var DAYS   = ['S','M','T','W','T','F','S'];
+  var today  = new Date(); today.setHours(0,0,0,0);
+  var selected = document.getElementById(prefix + '-date').value;
+
+  var html = '<div class="dpc-header">'
+    + '<button class="dpc-nav" onclick="dpNav('' + prefix + '',-1)">&#8249;</button>'
+    + '<span>' + MONTHS[state.month] + ' ' + state.year + '</span>'
+    + '<button class="dpc-nav" onclick="dpNav('' + prefix + '',1)">&#8250;</button>'
+    + '</div><div class="dpc-grid">';
+
+  DAYS.forEach(function(d){ html += '<div class="dpc-dow">' + d + '</div>'; });
+
+  var firstDay = new Date(state.year, state.month, 1).getDay();
+  var daysInMonth = new Date(state.year, state.month+1, 0).getDate();
+
+  for (var i = 0; i < firstDay; i++) html += '<div class="dpc-day empty"></div>';
+  for (var d = 1; d <= daysInMonth; d++) {
+    var dateStr = state.year + '-' + String(state.month+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    var cellDate = new Date(state.year, state.month, d);
+    var isPast = cellDate < today;
+    var isToday = cellDate.getTime() === today.getTime();
+    var isSel = dateStr === selected;
+    var cls = 'dpc-day';
+    if (isPast) cls += ' past';
+    else if (isSel) cls += ' selected';
+    else if (isToday) cls += ' today';
+    var click = isPast ? '' : 'onclick="selectPickerDate('' + prefix + '','' + dateStr + '')"';
+    html += '<div class="' + cls + '" ' + click + '>' + d + '</div>';
+  }
+  html += '</div>';
+  cal.innerHTML = html;
+}
+
+function dpNav(prefix, dir) {
+  dpState[prefix].month += dir;
+  if (dpState[prefix].month > 11) { dpState[prefix].month = 0; dpState[prefix].year++; }
+  if (dpState[prefix].month < 0)  { dpState[prefix].month = 11; dpState[prefix].year--; }
+  renderDatePickerCal(prefix);
+}
+
+function selectPickerDate(prefix, dateStr) {
+  // Set hidden input value
+  document.getElementById(prefix + '-date').value = dateStr;
+  // Update display button
+  var display = document.getElementById(prefix + '-date-display');
+  var displayText = document.getElementById(prefix + '-date-display-text');
+  if (display) display.classList.remove('placeholder');
+  if (displayText) displayText.textContent = fmtDate(dateStr);
+  // Close calendar
+  document.getElementById(prefix + '-date-cal').classList.remove('open');
+  // Trigger the booking logic
+  if (prefix === 'v') {
+    addVehicleDate();
+  } else {
+    addRoomDate();
+    loadRoomSlots();
+  }
+}
+
+
+
 function initBookTab() {
   if (bookTabInited) return;
   bookTabInited = true;
@@ -44,7 +126,9 @@ function showVehicleForm() {
   var today = new Date().toISOString().split('T')[0];
   document.getElementById('v-date').min   = today;
   document.getElementById('v-date').value = '';
-  document.getElementById('v-date').style.display = 'block';
+  document.getElementById('v-date').value = '';
+  var vdisp = document.getElementById('v-date-display'); if (vdisp) vdisp.classList.add('placeholder');
+  var vdispT = document.getElementById('v-date-display-text'); if (vdispT) vdispT.textContent = 'Tap to select date';
   document.getElementById('v-date-tags').innerHTML = '';
   document.getElementById('v-time-from').value = '';
   document.getElementById('v-time-to').value   = '';
@@ -79,7 +163,10 @@ function removeVehicleDate(d) {
   vSelectedDates = [];
   document.getElementById('v-date-tags').innerHTML = '';
   document.getElementById('v-date').value = '';
-  document.getElementById('v-date').style.display = 'block';
+  var disp = document.getElementById('v-date-display');
+  var dispT = document.getElementById('v-date-display-text');
+  if (disp) disp.classList.add('placeholder');
+  if (dispT) dispT.textContent = 'Tap to select date';
   checkVehicleClash();
 }
 
@@ -300,7 +387,9 @@ function showRoomForm() {
   var today = new Date().toISOString().split('T')[0];
   document.getElementById('r-date').min   = today;
   document.getElementById('r-date').value = '';
-  document.getElementById('r-date').style.display = 'block';
+  document.getElementById('r-date').value = '';
+  var rdisp = document.getElementById('r-date-display'); if (rdisp) rdisp.classList.add('placeholder');
+  var rdispT = document.getElementById('r-date-display-text'); if (rdispT) rdispT.textContent = 'Tap to select date';
   document.getElementById('r-date-tags').innerHTML = '';
   document.getElementById('r-time-from').value = '';
   document.getElementById('r-time-to').value   = '';
@@ -335,7 +424,10 @@ function removeRoomDate(d) {
   rSelectedDates = [];
   document.getElementById('r-date-tags').innerHTML = '';
   document.getElementById('r-date').value = '';
-  document.getElementById('r-date').style.display = 'block';
+  var disp = document.getElementById('r-date-display');
+  var dispT = document.getElementById('r-date-display-text');
+  if (disp) disp.classList.add('placeholder');
+  if (dispT) dispT.textContent = 'Tap to select date';
   document.getElementById('r-clash-alert').style.display = 'none';
 }
 
