@@ -21,40 +21,59 @@ function toggleDatePicker(prefix) {
 }
 
 function renderDatePickerCal(prefix) {
-  var cal  = document.getElementById(prefix + '-date-cal');
+  var cal   = document.getElementById(prefix + '-date-cal');
   var state = dpState[prefix];
   var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   var DAYS   = ['S','M','T','W','T','F','S'];
   var today  = new Date(); today.setHours(0,0,0,0);
   var selected = document.getElementById(prefix + '-date').value;
-
-  var html = '<div class="dpc-header">'
-    + '<button class="dpc-nav" onclick="dpNav('' + prefix + '',-1)">&#8249;</button>'
-    + '<span>' + MONTHS[state.month] + ' ' + state.year + '</span>'
-    + '<button class="dpc-nav" onclick="dpNav('' + prefix + '',1)">&#8250;</button>'
-    + '</div><div class="dpc-grid">';
-
-  DAYS.forEach(function(d){ html += '<div class="dpc-dow">' + d + '</div>'; });
-
-  var firstDay = new Date(state.year, state.month, 1).getDay();
+  var firstDay    = new Date(state.year, state.month, 1).getDay();
   var daysInMonth = new Date(state.year, state.month+1, 0).getDate();
 
+  var html = '<div class="dpc-header">'
+    + '<button class="dpc-nav" data-prefix="' + prefix + '" data-dir="-1">&#8249;</button>'
+    + '<span>' + MONTHS[state.month] + ' ' + state.year + '</span>'
+    + '<button class="dpc-nav" data-prefix="' + prefix + '" data-dir="1">&#8250;</button>'
+    + '</div><div class="dpc-grid">';
+  DAYS.forEach(function(d){ html += '<div class="dpc-dow">' + d + '</div>'; });
   for (var i = 0; i < firstDay; i++) html += '<div class="dpc-day empty"></div>';
   for (var d = 1; d <= daysInMonth; d++) {
-    var dateStr = state.year + '-' + String(state.month+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    var dateStr  = state.year + '-' + String(state.month+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
     var cellDate = new Date(state.year, state.month, d);
-    var isPast = cellDate < today;
-    var isToday = cellDate.getTime() === today.getTime();
-    var isSel = dateStr === selected;
+    var isPast   = cellDate < today;
+    var isToday  = cellDate.getTime() === today.getTime();
+    var isSel    = dateStr === selected;
     var cls = 'dpc-day';
-    if (isPast) cls += ' past';
-    else if (isSel) cls += ' selected';
+    if (isPast)       cls += ' past';
+    else if (isSel)   cls += ' selected';
     else if (isToday) cls += ' today';
-    var click = isPast ? '' : 'onclick="selectPickerDate('' + prefix + '','' + dateStr + '')"';
-    html += '<div class="' + cls + '" ' + click + '>' + d + '</div>';
+    if (!isPast) {
+      html += '<div class="' + cls + '" data-prefix="' + prefix + '" data-date="' + dateStr + '">' + d + '</div>';
+    } else {
+      html += '<div class="' + cls + '">' + d + '</div>';
+    }
   }
   html += '</div>';
   cal.innerHTML = html;
+
+  // Attach click handlers after innerHTML set (avoids all quoting issues)
+  cal.querySelectorAll('.dpc-nav').forEach(function(btn) {
+    btn.onclick = function() {
+      var p = this.getAttribute('data-prefix');
+      var dir = parseInt(this.getAttribute('data-dir'));
+      dpState[p].month += dir;
+      if (dpState[p].month > 11) { dpState[p].month = 0;  dpState[p].year++; }
+      if (dpState[p].month < 0)  { dpState[p].month = 11; dpState[p].year--; }
+      renderDatePickerCal(p);
+    };
+  });
+  cal.querySelectorAll('.dpc-day[data-date]').forEach(function(cell) {
+    cell.onclick = function() {
+      var p  = this.getAttribute('data-prefix');
+      var ds = this.getAttribute('data-date');
+      selectPickerDate(p, ds);
+    };
+  });
 }
 
 function dpNav(prefix, dir) {
