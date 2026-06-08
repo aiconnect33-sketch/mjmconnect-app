@@ -44,7 +44,7 @@ function showVehicleForm() {
   var today = new Date().toISOString().split('T')[0];
   document.getElementById('v-date').min   = today;
   document.getElementById('v-date').value = '';
-  document.getElementById('v-date').style.display = 'block';
+  
   document.getElementById('v-date-tags').innerHTML = '';
   document.getElementById('v-time-from').value = '';
   document.getElementById('v-time-to').value   = '';
@@ -60,7 +60,7 @@ function hideVehicleForm() {
   document.getElementById('vehicle-form').style.display = 'none';
   vSelectedDates = [];
   document.getElementById('v-date-tags').innerHTML = '';
-  document.getElementById('v-date').style.display = 'block';
+  
   document.getElementById('v-clash-alert').style.display = 'none';
   clearBookErrors(['v-date','v-time-from','v-time-to']);
 }
@@ -68,10 +68,8 @@ function hideVehicleForm() {
 function addVehicleDate() {
   var d = document.getElementById('v-date').value;
   if (!d) return;
-  if (vSelectedDates.length && vSelectedDates[0] === d) return; // already set
   vSelectedDates = [d];
   renderVehicleDateTags();
-  document.getElementById('v-date').style.display = 'none';
   document.getElementById('v-clash-alert').style.display = 'none';
   checkVehicleClash();
 }
@@ -80,7 +78,6 @@ function removeVehicleDate(d) {
   vSelectedDates = [];
   document.getElementById('v-date-tags').innerHTML = '';
   document.getElementById('v-date').value = '';
-  document.getElementById('v-date').style.display = 'block';
   checkVehicleClash();
 }
 
@@ -301,7 +298,7 @@ function showRoomForm() {
   var today = new Date().toISOString().split('T')[0];
   document.getElementById('r-date').min   = today;
   document.getElementById('r-date').value = '';
-  document.getElementById('r-date').style.display = 'block';
+  
   document.getElementById('r-date-tags').innerHTML = '';
   document.getElementById('r-time-from').value = '';
   document.getElementById('r-time-to').value   = '';
@@ -315,7 +312,7 @@ function hideRoomForm() {
   document.getElementById('room-form').style.display = 'none';
   rSelectedDates = [];
   document.getElementById('r-date-tags').innerHTML = '';
-  document.getElementById('r-date').style.display = 'block';
+  
   document.getElementById('r-time-from').value = '';
   document.getElementById('r-time-to').value   = '';
   document.getElementById('r-purpose').value   = '';
@@ -326,10 +323,8 @@ function hideRoomForm() {
 function addRoomDate() {
   var d = document.getElementById('r-date').value;
   if (!d) return;
-  if (rSelectedDates.length && rSelectedDates[0] === d) return; // already set
   rSelectedDates = [d];
   renderRoomDateTags();
-  document.getElementById('r-date').style.display = 'none';
   document.getElementById('r-clash-alert').style.display = 'none';
 }
 
@@ -337,7 +332,6 @@ function removeRoomDate(d) {
   rSelectedDates = [];
   document.getElementById('r-date-tags').innerHTML = '';
   document.getElementById('r-date').value = '';
-  document.getElementById('r-date').style.display = 'block';
   document.getElementById('r-clash-alert').style.display = 'none';
 }
 
