@@ -2316,7 +2316,8 @@ html, body {
 
       // Send invite email via Supabase Auth (requires service role key)
       var user = JSON.parse(sessionStorage.getItem('mjm_user') || '{}');
-      var res = await fetch(SURL + '/auth/v1/invite', {
+      var redirectTo = window.location.origin + window.location.pathname.replace(/admin\.html$/, 'register.html');
+      var res = await fetch(SURL + '/auth/v1/invite?redirect_to=' + encodeURIComponent(redirectTo), {
         method: 'POST',
         headers: {
           'apikey': SVCKEY,
@@ -2325,7 +2326,6 @@ html, body {
         },
         body: JSON.stringify({
           email: email,
-          redirect_to: window.location.origin + window.location.pathname.replace(/admin\.html$/, 'register.html'),
           data: { full_name: name, invited_by: user.name || 'HR Admin' }
         })
       });
