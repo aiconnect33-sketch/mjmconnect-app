@@ -216,11 +216,8 @@ html,body{min-height:100%;font-family:'Inter',-apple-system,sans-serif;backgroun
         </div>
         <div class="pw-checklist">
           <div class="pw-check-item" id="chk-len"><i class="ti ti-circle"></i> At least 8 characters</div>
-          <div class="pw-check-item" id="chk-upper"><i class="ti ti-circle"></i> One uppercase letter (A–Z)</div>
-          <div class="pw-check-item" id="chk-num"><i class="ti ti-circle"></i> One number (0–9)</div>
-          <div class="pw-check-item" id="chk-special"><i class="ti ti-circle"></i> One special character (!@#$…)</div>
         </div>
-        <div class="field-error" id="pw-error"><i class="ti ti-alert-circle"></i><span>Password must meet all requirements.</span></div>
+        <div class="field-error" id="pw-error"><i class="ti ti-alert-circle"></i><span>Password must be at least 8 characters.</span></div>
       </div>
       <div class="form-group">
         <label class="form-label">Confirm Password</label>
@@ -438,17 +435,8 @@ function togglePw(inputId, iconId) {
 
 function evalPassword() {
   var val = document.getElementById('pw-new').value;
-  var checks = {
-    len:     val.length >= 8,
-    upper:   /[A-Z]/.test(val),
-    num:     /[0-9]/.test(val),
-    special: /[^A-Za-z0-9]/.test(val)
-  };
-  setCheck('chk-len',     checks.len);
-  setCheck('chk-upper',   checks.upper);
-  setCheck('chk-num',     checks.num);
-  setCheck('chk-special', checks.special);
-  var score   = Object.values(checks).filter(Boolean).length;
+  setCheck('chk-len', val.length >= 8);
+  var score  = val.length === 0 ? 0 : val.length < 8 ? 1 : val.length < 12 ? 2 : val.length < 16 ? 3 : 4;
   var bars    = ['bar1','bar2','bar3','bar4'];
   var levels  = ['','weak','fair','good','strong'];
   var labels  = ['—','Weak','Fair','Good','Strong'];
@@ -489,17 +477,11 @@ async function handleCreate() {
   clearErrors();
   var pw1 = document.getElementById('pw-new').value;
   var pw2 = document.getElementById('pw-confirm').value;
-  var checks = {
-    len:     pw1.length >= 8,
-    upper:   /[A-Z]/.test(pw1),
-    num:     /[0-9]/.test(pw1),
-    special: /[^A-Za-z0-9]/.test(pw1)
-  };
 
-  if (!pw1 || !Object.values(checks).every(Boolean)) {
+  if (!pw1 || pw1.length < 8) {
     document.getElementById('pw-new').classList.add('error');
     document.getElementById('pw-error').classList.add('visible');
-    document.getElementById('p2-alert-msg').textContent = 'Password must meet all requirements listed.';
+    document.getElementById('p2-alert-msg').textContent = 'Password must be at least 8 characters.';
     document.getElementById('p2-alert').classList.add('visible');
     return;
   }
