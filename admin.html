@@ -2325,7 +2325,7 @@ html, body {
         },
         body: JSON.stringify({
           email: email,
-          redirect_to: 'http://127.0.0.1:5500/register.html',
+          redirect_to: window.location.origin + window.location.pathname.replace(/admin\.html$/, 'register.html'),
           data: { full_name: name, invited_by: user.name || 'HR Admin' }
         })
       });

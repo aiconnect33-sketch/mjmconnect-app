@@ -362,8 +362,7 @@ async function changePassword() {
 
 function evalPassword() {
   var val = document.getElementById('pw-new').value;
-  var checks = { len: val.length >= 8, upper: /[A-Z]/.test(val), num: /[0-9]/.test(val), special: /[^A-Za-z0-9]/.test(val) };
-  var score   = Object.values(checks).filter(Boolean).length;
+  var score = val.length === 0 ? 0 : val.length < 8 ? 1 : val.length < 12 ? 2 : val.length < 16 ? 3 : 4;
   var bars    = ['bar1','bar2','bar3','bar4'];
   var levels  = ['','weak','fair','good','strong'];
   var labels  = ['—','Weak','Fair','Good','Strong'];
