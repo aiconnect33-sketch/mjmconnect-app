@@ -575,6 +575,24 @@
 
     <!-- ── ANNOUNCEMENTS ── -->
     <div class="screen-section" id="screen-announce">
+      <div id="ann-add-trigger" style="display:none;margin-bottom:10px;">
+        <button class="book-btn-primary" style="width:100%;" onclick="showAnnForm()"><i class="ti ti-plus"></i> New Announcement</button>
+      </div>
+      <div id="ann-form" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin-bottom:12px;">
+        <div class="book-form-title" id="ann-form-title">New Announcement</div>
+        <div class="book-form-group">
+          <label class="book-form-label">Title</label>
+          <input class="book-form-input" type="text" id="ann-form-title-input" placeholder="Announcement title">
+        </div>
+        <div class="book-form-group">
+          <label class="book-form-label">Message</label>
+          <textarea class="book-form-input" id="ann-form-body-input" rows="3" placeholder="Announcement details" style="resize:vertical;"></textarea>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="book-btn-primary" style="flex:1;" onclick="saveAnnouncement()">Save</button>
+          <button class="book-btn-ghost" style="flex:1;" onclick="hideAnnForm()">Cancel</button>
+        </div>
+      </div>
       <div id="ann-tab-list">
         <div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">Loading...</div>
       </div>
@@ -582,6 +600,34 @@
 
     <!-- ── EVENT ── -->
     <div class="screen-section" id="screen-event">
+      <div id="event-add-trigger" style="display:none;margin-bottom:10px;">
+        <button class="book-btn-primary" style="width:100%;" onclick="showStaffEventForm()"><i class="ti ti-plus"></i> New Event</button>
+      </div>
+      <div id="staff-event-form" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin-bottom:12px;">
+        <div class="book-form-title" id="staff-event-form-title">New Event</div>
+        <div class="book-form-group">
+          <label class="book-form-label">Title</label>
+          <input class="book-form-input" type="text" id="staff-event-title" placeholder="Event title">
+        </div>
+        <div style="display:flex;gap:10px;">
+          <div class="book-form-group" style="flex:1;">
+            <label class="book-form-label">Date</label>
+            <input class="book-form-input" type="date" id="staff-event-date">
+          </div>
+          <div class="book-form-group" style="flex:1;">
+            <label class="book-form-label">Time <span style="font-size:10px;color:var(--text-light);font-weight:400;text-transform:none;">(optional)</span></label>
+            <input class="book-form-input" type="time" id="staff-event-time">
+          </div>
+        </div>
+        <div class="book-form-group">
+          <label class="book-form-label">Description <span style="font-size:10px;color:var(--text-light);font-weight:400;text-transform:none;">(optional)</span></label>
+          <textarea class="book-form-input" id="staff-event-desc" rows="2" style="resize:vertical;"></textarea>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="book-btn-primary" style="flex:1;" onclick="saveStaffEvent()">Save</button>
+          <button class="book-btn-ghost" style="flex:1;" onclick="hideStaffEventForm()">Cancel</button>
+        </div>
+      </div>
       <div id="staff-event-list">
         <div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">Loading...</div>
       </div>
@@ -589,6 +635,41 @@
 
     <!-- ── LEAVE ── -->
     <div class="screen-section" id="screen-leave">
+      <div id="leave-add-trigger" style="display:none;margin-bottom:10px;">
+        <button class="book-btn-primary" style="width:100%;" onclick="showLeaveForm()"><i class="ti ti-plus"></i> Request Leave</button>
+      </div>
+      <div id="leave-form" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin-bottom:12px;">
+        <div class="book-form-title">Request Leave</div>
+        <div class="book-form-group">
+          <label class="book-form-label">Staff</label>
+          <input class="book-form-input" type="text" id="leave-form-name" disabled style="opacity:0.7;">
+        </div>
+        <div class="book-form-group">
+          <label class="book-form-label">Leave Type</label>
+          <select class="book-form-input" id="leave-form-type">
+            <option value="Annual Leave">Annual Leave</option>
+            <option value="Medical Leave">Medical Leave</option>
+            <option value="Paternity Leave">Paternity Leave</option>
+            <option value="Maternity Leave">Maternity Leave</option>
+            <option value="Compassionate Leave">Compassionate Leave</option>
+            <option value="Unpaid Leave">Unpaid Leave</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:10px;">
+          <div class="book-form-group" style="flex:1;">
+            <label class="book-form-label">From</label>
+            <input class="book-form-input" type="date" id="leave-form-from">
+          </div>
+          <div class="book-form-group" style="flex:1;">
+            <label class="book-form-label">To</label>
+            <input class="book-form-input" type="date" id="leave-form-to">
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="book-btn-primary" style="flex:1;" onclick="saveLeaveRequest()">Submit</button>
+          <button class="book-btn-ghost" style="flex:1;" onclick="hideLeaveForm()">Cancel</button>
+        </div>
+      </div>
       <div id="leave-tab-list">
         <div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">Loading...</div>
       </div>
@@ -596,6 +677,34 @@
 
     <!-- ── DUTY ── -->
     <div class="screen-section" id="screen-duty">
+      <div id="duty-add-trigger" style="display:none;margin-bottom:10px;">
+        <button class="book-btn-primary" style="width:100%;" onclick="showDutyForm()"><i class="ti ti-plus"></i> New Duty Assignment</button>
+      </div>
+      <div id="duty-form" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin-bottom:12px;">
+        <div class="book-form-title">New Duty Assignment</div>
+        <div class="book-form-group">
+          <label class="book-form-label">Staff Name</label>
+          <input class="book-form-input" type="text" id="duty-form-name" placeholder="e.g. Ahmad bin Ismail">
+        </div>
+        <div class="book-form-group">
+          <label class="book-form-label">Duty Role</label>
+          <input class="book-form-input" type="text" id="duty-form-role" placeholder="e.g. Front Desk">
+        </div>
+        <div style="display:flex;gap:10px;">
+          <div class="book-form-group" style="flex:1;">
+            <label class="book-form-label">From</label>
+            <input class="book-form-input" type="date" id="duty-form-from">
+          </div>
+          <div class="book-form-group" style="flex:1;">
+            <label class="book-form-label">To</label>
+            <input class="book-form-input" type="date" id="duty-form-to">
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="book-btn-primary" style="flex:1;" onclick="saveDutyAssignment()">Save</button>
+          <button class="book-btn-ghost" style="flex:1;" onclick="hideDutyForm()">Cancel</button>
+        </div>
+      </div>
       <div id="duty-tab-list">
         <div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">Loading...</div>
       </div>

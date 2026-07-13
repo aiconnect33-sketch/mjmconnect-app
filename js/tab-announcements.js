@@ -160,6 +160,10 @@ async function loadAnnouncements() {
     }
 
     // Tab
+    var canEdit = typeof hasEditPermission === 'function' && hasEditPermission('announcements');
+    var addTrigger = document.getElementById('ann-add-trigger');
+    if (addTrigger) addTrigger.style.display = canEdit ? 'block' : 'none';
+
     var tabEl = document.getElementById('ann-tab-list');
     if (tabEl) {
       if (!tabItems.length) {
@@ -169,14 +173,79 @@ async function loadAnnouncements() {
       tabEl.innerHTML = tabItems.map(function(ann) {
         var d = new Date(ann.created_at).toLocaleDateString('en-MY', { day:'numeric', month:'short', year:'numeric' });
         var t = new Date(ann.created_at).toLocaleTimeString('en-MY', { hour:'numeric', minute:'2-digit', hour12:true });
-        return '<div class="card card-info" style="margin-bottom:10px;">'
+        var actions = canEdit
+          ? '<div style="display:flex;gap:6px;margin-top:8px;">'
+            + '<div style="cursor:pointer;font-size:11px;color:var(--text-secondary);" onclick="editAnnouncement(\'' + ann.id + '\')"><i class="ti ti-pencil"></i> Edit</div>'
+            + '<div style="cursor:pointer;font-size:11px;color:var(--red-text);" onclick="deleteAnnouncement(\'' + ann.id + '\')"><i class="ti ti-trash"></i> Delete</div>'
+            + '</div>'
+          : '';
+        return '<div class="card card-info" style="margin-bottom:10px;" data-ann-id="' + ann.id + '">'
           + '<div class="card-meta"><span class="card-time">' + d + ' · ' + t + '</span></div>'
           + '<div class="card-title">' + escHtml(ann.title) + '</div>'
           + '<div class="card-body">'  + escHtml(ann.body)  + '</div>'
+          + actions
           + '</div>';
       }).join('');
     }
   } catch(e) {}
+}
+
+// ── ANNOUNCEMENTS — STAFF EDIT (Announcements module permission) ──
+var editingAnnId = null;
+
+function showAnnForm(id) {
+  document.getElementById('ann-form').style.display = 'block';
+  document.getElementById('ann-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (!id) {
+    editingAnnId = null;
+    document.getElementById('ann-form-title').textContent = 'New Announcement';
+    document.getElementById('ann-form-title-input').value = '';
+    document.getElementById('ann-form-body-input').value  = '';
+  }
+}
+
+function hideAnnForm() {
+  document.getElementById('ann-form').style.display = 'none';
+  document.getElementById('ann-form-title-input').value = '';
+  document.getElementById('ann-form-body-input').value  = '';
+  editingAnnId = null;
+}
+
+async function editAnnouncement(id) {
+  var card = document.querySelector('[data-ann-id="' + id + '"]');
+  if (!card) return;
+  var title = card.querySelector('.card-title').textContent;
+  var body  = card.querySelector('.card-body').textContent;
+  editingAnnId = id;
+  document.getElementById('ann-form-title').textContent = 'Edit Announcement';
+  document.getElementById('ann-form-title-input').value = title;
+  document.getElementById('ann-form-body-input').value  = body;
+  showAnnForm(id);
+}
+
+async function saveAnnouncement() {
+  var title = document.getElementById('ann-form-title-input').value.trim();
+  var body  = document.getElementById('ann-form-body-input').value.trim();
+  if (!title || !body) { alert('Please fill in both title and message.'); return; }
+  var raw = sessionStorage.getItem('mjm_user');
+  var user = raw ? JSON.parse(raw) : {};
+  try {
+    if (editingAnnId) {
+      await sbWrite('PATCH', 'announcements', { title: title, body: body }, 'id=eq.' + editingAnnId);
+    } else {
+      await sbWrite('POST', 'announcements', { title: title, body: body, posted_by: user.name || 'Staff' });
+    }
+    hideAnnForm();
+    loadAnnouncements();
+  } catch(e) { alert('Could not save announcement. Please try again.'); }
+}
+
+async function deleteAnnouncement(id) {
+  if (!confirm('Delete this announcement?')) return;
+  try {
+    await sbWrite('DELETE', 'announcements', null, 'id=eq.' + id);
+    loadAnnouncements();
+  } catch(e) { alert('Could not delete announcement. Please try again.'); }
 }
 
 // ── NOTIFICATION BELL ──

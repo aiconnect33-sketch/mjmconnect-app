@@ -175,9 +175,9 @@ async function handleSignIn() {
       return;
     }
     var profile = await sbFetch('GET', '/rest/v1/profiles?email=eq.' + encodeURIComponent(email) + '&select=*');
-    var role = 'staff', name = email.split('@')[0];
-    if (profile && profile.length > 0) { role = profile[0].role || 'staff'; name = profile[0].full_name || name; }
-    sessionStorage.setItem('mjm_user', JSON.stringify({ email: email, role: role, name: name, access_token: data.access_token }));
+    var role = 'staff', name = email.split('@')[0], permissions = null;
+    if (profile && profile.length > 0) { role = profile[0].role || 'staff'; name = profile[0].full_name || name; permissions = profile[0].permissions || null; }
+    sessionStorage.setItem('mjm_user', JSON.stringify({ email: email, role: role, name: name, access_token: data.access_token, permissions: permissions }));
     // Clear any cached pages and redirect
       if ('caches' in window) {
         caches.keys().then(function(names) {

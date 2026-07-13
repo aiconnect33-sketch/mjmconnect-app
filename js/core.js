@@ -11,6 +11,36 @@ async function sbGet(table, filter) {
   try { return await res.json(); } catch(e) { return []; }
 }
 
+async function sbWrite(method, table, body, filter) {
+  var url = SURL + '/rest/v1/' + table;
+  if (filter) url += '?' + filter;
+  var res = await fetch(url, {
+    method: method,
+    headers: {
+      'apikey': SKEY,
+      'Authorization': 'Bearer ' + SKEY,
+      'Content-Type': 'application/json',
+      'Prefer': method === 'POST' ? 'return=representation' : ''
+    },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  if (!res.ok) throw new Error('Request failed: ' + res.status);
+  try { return await res.json(); } catch(e) { return null; }
+}
+
+// ── Per-module permissions ──
+var DEFAULT_PERMISSIONS = { announcements: 'view', leave: 'view', duty: 'view', events: 'view', book: 'edit' };
+
+function hasEditPermission(module) {
+  var raw = sessionStorage.getItem('mjm_user');
+  if (!raw) return false;
+  var u = JSON.parse(raw);
+  if (u.role === 'hradmin' || u.role === 'superadmin') return true;
+  var perms = u.permissions || DEFAULT_PERMISSIONS;
+  var level = perms[module] !== undefined ? perms[module] : DEFAULT_PERMISSIONS[module];
+  return level === 'edit';
+}
+
 function escHtml(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
