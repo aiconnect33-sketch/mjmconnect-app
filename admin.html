@@ -542,14 +542,25 @@ html, body {
 </head>
 <body>
 <script>
-  // Auth guard — set a demo admin session if none exists (for direct file testing)
+  // Auth guard — require a logged-in session with an admin role
   (function() {
-    if (!sessionStorage.getItem('mjm_user')) {
-      sessionStorage.setItem('mjm_user', JSON.stringify({
-        email: 'admin@mjmconnect.com',
-        role: 'admin',
-        name: 'HR Admin'
-      }));
+    var raw = sessionStorage.getItem('mjm_user');
+    if (!raw) {
+      if (window.location.protocol === 'file:') {
+        // Local file testing only — seed a demo admin session
+        sessionStorage.setItem('mjm_user', JSON.stringify({
+          email: 'admin@mjmconnect.com',
+          role: 'superadmin',
+          name: 'HR Admin'
+        }));
+        return;
+      }
+      window.location.replace('login.html');
+      return;
+    }
+    var user = JSON.parse(raw);
+    if (user.role !== 'hradmin' && user.role !== 'superadmin') {
+      window.location.replace('index.html');
     }
   })();
 </script>
