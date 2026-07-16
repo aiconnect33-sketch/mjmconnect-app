@@ -5,8 +5,9 @@ var SURL = 'https://jkbxngfwkytscgxnnnnd.supabase.co';
 var SKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImprYnhuZ2Z3a3l0c2NneG5ubm5kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNTcyMjcsImV4cCI6MjA5NTYzMzIyN30._FIzBEcmwtAkADDiDZVTS-YQY0kLoGBowL8n7T45Ulk';
 
 async function sbGet(table, filter) {
-  var url = SURL + '/rest/v1/' + table + '?order=created_at.desc';
-  if (filter) url += '&' + filter;
+  var hasOwnOrder = filter && /(^|&)order=/.test(filter);
+  var url = SURL + '/rest/v1/' + table + '?' + (hasOwnOrder ? '' : 'order=created_at.desc&') + (filter || '');
+  url = url.replace(/[?&]$/, '');
   var res = await fetch(url, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
   try { return await res.json(); } catch(e) { return []; }
 }
