@@ -115,13 +115,13 @@ async function saveLeaveRequest() {
     await sbWrite('POST', 'leave_records', { staff_name: name, leave_type: type, date_from: from, date_to: to });
     hideLeaveForm();
     loadLeave();
-  } catch(e) { alert('Could not submit leave request. Please try again.'); }
+  } catch(e) { alert('Could not save leave. Please try again.'); }
 }
 
 async function deleteLeaveRequest(id) {
-  if (!confirm('Delete this leave request?')) return;
+  if (!confirm('Delete this leave record?')) return;
   try {
     await sbWrite('DELETE', 'leave_records', null, 'id=eq.' + id);
     loadLeave();
-  } catch(e) { alert('Could not delete leave request. Please try again.'); }
+  } catch(e) { alert('Could not delete leave record. Please try again.'); }
 }
