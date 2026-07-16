@@ -1537,7 +1537,7 @@ html, body {
     });
     if (!matches.length) { dd.style.display = 'none'; return; }
     dd.innerHTML = matches.map(function(n){
-      return '<div onclick="selectDutyStaff(\'' + n.replace(/'/g,"\\'") + '\')" style="padding:9px 12px;font-size:13px;color:var(--text);cursor:pointer;border-bottom:0.5px solid var(--border);" onmouseover="this.style.background=\'var(--green-bg)\'" onmouseout="this.style.background=\'\'">'+escHtml(n)+'</div>';
+      return '<div onclick="selectDutyStaff(\'' + escJsAttr(n) + '\')" style="padding:9px 12px;font-size:13px;color:var(--text);cursor:pointer;border-bottom:0.5px solid var(--border);" onmouseover="this.style.background=\'var(--green-bg)\'" onmouseout="this.style.background=\'\'">'+escHtml(n)+'</div>';
     }).join('');
     dd.style.display = 'block';
   }
@@ -1548,7 +1548,7 @@ html, body {
     var tags = document.getElementById('duty-staff-tags');
     var tag  = document.createElement('div');
     tag.style.cssText = 'display:flex;align-items:center;gap:5px;background:var(--green-bg);border:0.5px solid var(--green-dark);border-radius:20px;padding:3px 10px;font-size:12px;color:var(--green-text);';
-    tag.innerHTML = escHtml(name) + '<span onclick="removeDutyStaff(\'' + name.replace(/'/g,"\\'") + '\',this)" style="cursor:pointer;font-size:15px;line-height:1;color:var(--green-dark);">&times;</span>';
+    tag.innerHTML = escHtml(name) + '<span onclick="removeDutyStaff(\'' + escJsAttr(name) + '\',this)" style="cursor:pointer;font-size:15px;line-height:1;color:var(--green-dark);">&times;</span>';
     tags.appendChild(tag);
     document.getElementById('duty-staff-search').value = '';
     document.getElementById('duty-staff-dropdown').style.display = 'none';
@@ -1721,7 +1721,14 @@ html, body {
 
   // ── HELPERS ──
   function escHtml(str) {
-    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+  // For building onclick="fn('...')" handlers from untrusted values: JS-string-escapes
+  // the value for the inner '...' literal, then HTML-attribute-escapes the result so
+  // it's also safe as the outer onclick="..." attribute content.
+  function escJsAttr(str) {
+    var jsEscaped = String(str).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return jsEscaped.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
   function formatDate(dateStr) {
     if (!dateStr) return '';
@@ -1824,7 +1831,7 @@ html, body {
           var isSelf = u.email === user.email;
           var canRemove = user.role === 'superadmin' && !isSelf && u.role !== 'superadmin';
           var removeBtn = canRemove
-            ? '<div class="btn-icon danger" onclick="demoteToStaff(\'' + u.email.replace(/'/g,"\\'") + '\')" title="Remove admin access"><i class="ti ti-user-minus"></i></div>'
+            ? '<div class="btn-icon danger" onclick="demoteToStaff(\'' + escJsAttr(u.email) + '\')" title="Remove admin access"><i class="ti ti-user-minus"></i></div>'
             : '';
           var selfTag = isSelf ? ' <span style="font-size:10px;color:var(--text3);">(you)</span>' : '';
           return '<div class="person-row">'
@@ -1859,11 +1866,9 @@ html, body {
           var avCls = AV_COLORS[i % AV_COLORS.length];
           var canPromote = user.role === 'superadmin';
           var promoteBtn = canPromote
-            ? '<div class="btn-icon" onclick="promoteToAdmin(\'' + u.email.replace(/'/g,"\\'") + '\')" title="Make HR Admin" style="color:var(--green);border-color:var(--green-bg);background:var(--green-bg);"><i class="ti ti-shield-up"></i></div>'
+            ? '<div class="btn-icon" onclick="promoteToAdmin(\'' + escJsAttr(u.email) + '\')" title="Make HR Admin" style="color:var(--green);border-color:var(--green-bg);background:var(--green-bg);"><i class="ti ti-shield-up"></i></div>'
             : '';
-          var safeId   = String(u.id).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-          var safeName = String(u.name).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-          var deleteBtn = '<div class="btn-icon" onclick="deleteStaff(\'' + safeId + '\',\'' + safeName + '\')" title="Remove staff" style="color:#c0392b;border-color:#fde8e8;background:#fde8e8;"><i class="ti ti-trash"></i></div>';
+          var deleteBtn = '<div class="btn-icon" onclick="deleteStaff(\'' + escJsAttr(u.id) + '\',\'' + escJsAttr(u.name) + '\')" title="Remove staff" style="color:#c0392b;border-color:#fde8e8;background:#fde8e8;"><i class="ti ti-trash"></i></div>';
           return '<div class="person-row">'
             + '<div class="av ' + avCls + '">' + ini + '</div>'
             + '<div style="flex:1;">'

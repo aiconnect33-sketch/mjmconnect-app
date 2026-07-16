@@ -175,11 +175,11 @@ async function loadAnnouncements() {
         var t = new Date(ann.created_at).toLocaleTimeString('en-MY', { hour:'numeric', minute:'2-digit', hour12:true });
         var actions = canEdit
           ? '<div style="display:flex;gap:6px;margin-top:8px;">'
-            + '<div style="cursor:pointer;font-size:11px;color:var(--text-secondary);" onclick="editAnnouncement(\'' + ann.id + '\')"><i class="ti ti-pencil"></i> Edit</div>'
-            + '<div style="cursor:pointer;font-size:11px;color:var(--red-text);" onclick="deleteAnnouncement(\'' + ann.id + '\')"><i class="ti ti-trash"></i> Delete</div>'
+            + '<div style="cursor:pointer;font-size:11px;color:var(--text-secondary);" onclick="editAnnouncement(\'' + escJsAttr(ann.id) + '\')"><i class="ti ti-pencil"></i> Edit</div>'
+            + '<div style="cursor:pointer;font-size:11px;color:var(--red-text);" onclick="deleteAnnouncement(\'' + escJsAttr(ann.id) + '\')"><i class="ti ti-trash"></i> Delete</div>'
             + '</div>'
           : '';
-        return '<div class="card card-info" style="margin-bottom:10px;" data-ann-id="' + ann.id + '">'
+        return '<div class="card card-info" style="margin-bottom:10px;" data-ann-id="' + escHtml(ann.id) + '">'
           + '<div class="card-meta"><span class="card-time">' + d + ' · ' + t + '</span></div>'
           + '<div class="card-title">' + escHtml(ann.title) + '</div>'
           + '<div class="card-body">'  + escHtml(ann.body)  + '</div>'

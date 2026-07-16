@@ -80,7 +80,7 @@ async function loadDuty() {
         var badgeCls   = isActive ? 'badge-success' : 'badge badge-info';
         var badgeLabel = isActive ? 'Active' : 'Upcoming';
         var delBtn = canEdit
-          ? '<div style="cursor:pointer;color:var(--red-text);" onclick="deleteDutyAssignment(\'' + g.ids.join(',') + '\')"><i class="ti ti-trash"></i></div>'
+          ? '<div style="cursor:pointer;color:var(--red-text);" onclick="deleteDutyAssignment(\'' + escJsAttr(g.ids.join(',')) + '\')"><i class="ti ti-trash"></i></div>'
           : '';
         return '<div class="card" style="margin-bottom:10px;">'
           + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">'

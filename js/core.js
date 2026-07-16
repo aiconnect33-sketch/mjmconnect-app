@@ -45,7 +45,14 @@ function hasEditPermission(module) {
 }
 
 function escHtml(str) {
-  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+// For building onclick="fn('...')" handlers from untrusted values: JS-string-escapes
+// the value for the inner '...' literal, then HTML-attribute-escapes the result so
+// it's also safe as the outer onclick="..." attribute content.
+function escJsAttr(str) {
+  var jsEscaped = String(str).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  return jsEscaped.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 // ── Clock ──

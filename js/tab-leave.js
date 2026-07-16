@@ -67,7 +67,7 @@ async function loadLeave() {
           var to   = new Date(r.date_to+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'});
           var isMine = canEdit && myName && r.staff_name.toLowerCase() === myName.toLowerCase();
           var delBtn = isMine
-            ? '<div style="cursor:pointer;color:var(--red-text);margin-left:6px;" onclick="deleteLeaveRequest(\'' + r.id + '\')"><i class="ti ti-trash"></i></div>'
+            ? '<div style="cursor:pointer;color:var(--red-text);margin-left:6px;" onclick="deleteLeaveRequest(\'' + escJsAttr(r.id) + '\')"><i class="ti ti-trash"></i></div>'
             : '';
           h += '<div class="person-row">'
             + '<div class="avatar ' + avCls + '">' + ini + '</div>'
