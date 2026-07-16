@@ -37,6 +37,12 @@ async function loadLeave() {
 
   // ── LEAVE TAB: current + upcoming ──
   var tabEl = document.getElementById('leave-tab-list');
+  var canEdit = typeof hasEditPermission === 'function' && hasEditPermission('leave');
+  var addTrigger = document.getElementById('leave-add-trigger');
+  if (addTrigger) addTrigger.style.display = canEdit ? 'block' : 'none';
+  var rawUser = sessionStorage.getItem('mjm_user');
+  var myName  = rawUser ? (JSON.parse(rawUser).name || '') : '';
+
   if (tabEl) {
     try {
       var url2 = SURL + '/rest/v1/leave_records?date_to=gte.' + today + '&order=date_from.asc&limit=100';
@@ -59,11 +65,17 @@ async function loadLeave() {
           var badgeCls  = r.leave_type === 'Medical Leave' ? 'badge-urgent' : 'badge-amber';
           var from = new Date(r.date_from+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'});
           var to   = new Date(r.date_to+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'});
+          var isMine = canEdit && myName && r.staff_name.toLowerCase() === myName.toLowerCase();
+          var delBtn = isMine
+            ? '<div style="cursor:pointer;color:var(--red-text);margin-left:6px;" onclick="deleteLeaveRequest(\'' + escJsAttr(r.id) + '\')"><i class="ti ti-trash"></i></div>'
+            : '';
           h += '<div class="person-row">'
             + '<div class="avatar ' + avCls + '">' + ini + '</div>'
             + '<div style="flex:1;"><div class="person-name">' + escHtml(r.staff_name) + '</div>'
             + '<div class="person-sub">' + escHtml(r.leave_type) + ' · ' + from + (from !== to ? ' – ' + to : '') + '</div></div>'
-            + '<span class="badge ' + badgeCls + '">' + shortType + '</span></div>';
+            + '<span class="badge ' + badgeCls + '">' + shortType + '</span>'
+            + delBtn
+            + '</div>';
         });
         h += '</div>';
         return h;
@@ -75,4 +87,44 @@ async function loadLeave() {
       tabEl.innerHTML = '<div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">Could not load leave records.</div>';
     }
   }
+}
+
+// ── LEAVE — STAFF SELF-SERVICE (Leave module permission) ──
+function showLeaveForm() {
+  var raw = sessionStorage.getItem('mjm_user');
+  var user = raw ? JSON.parse(raw) : {};
+  document.getElementById('leave-form-name').value = user.name || user.email || '';
+  document.getElementById('leave-form-type').value = 'Annual Leave';
+  document.getElementById('leave-form-from').value = '';
+  document.getElementById('leave-form-to').value   = '';
+  document.getElementById('leave-form').style.display = 'block';
+  document.getElementById('leave-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function hideLeaveForm() {
+  document.getElementById('leave-form').style.display = 'none';
+}
+
+async function saveLeaveRequest() {
+  if (!hasEditPermission('leave')) return;
+  var name = document.getElementById('leave-form-name').value.trim();
+  var type = document.getElementById('leave-form-type').value;
+  var from = document.getElementById('leave-form-from').value;
+  var to   = document.getElementById('leave-form-to').value;
+  if (!name || !from || !to) { alert('Please fill in the leave dates.'); return; }
+  if (from > to) { alert('The "From" date must be before the "To" date.'); return; }
+  try {
+    await sbWrite('POST', 'leave_records', { staff_name: name, leave_type: type, date_from: from, date_to: to });
+    hideLeaveForm();
+    loadLeave();
+  } catch(e) { alert('Could not submit leave request. Please try again.'); }
+}
+
+async function deleteLeaveRequest(id) {
+  if (!hasEditPermission('leave')) return;
+  if (!confirm('Delete this leave request?')) return;
+  try {
+    await sbWrite('DELETE', 'leave_records', null, 'id=eq.' + id);
+    loadLeave();
+  } catch(e) { alert('Could not delete leave request. Please try again.'); }
 }

@@ -542,14 +542,25 @@ html, body {
 </head>
 <body>
 <script>
-  // Auth guard — set a demo admin session if none exists (for direct file testing)
+  // Auth guard — require a logged-in session with an admin role
   (function() {
-    if (!sessionStorage.getItem('mjm_user')) {
-      sessionStorage.setItem('mjm_user', JSON.stringify({
-        email: 'admin@mjmconnect.com',
-        role: 'admin',
-        name: 'HR Admin'
-      }));
+    var raw = sessionStorage.getItem('mjm_user');
+    if (!raw) {
+      if (window.location.protocol === 'file:') {
+        // Local file testing only — seed a demo admin session
+        sessionStorage.setItem('mjm_user', JSON.stringify({
+          email: 'admin@mjmconnect.com',
+          role: 'superadmin',
+          name: 'HR Admin'
+        }));
+        return;
+      }
+      window.location.replace('login.html');
+      return;
+    }
+    var user = JSON.parse(raw);
+    if (user.role !== 'hradmin' && user.role !== 'superadmin') {
+      window.location.replace('index.html');
     }
   })();
 </script>
@@ -705,11 +716,11 @@ html, body {
           </div>
         </div>
 
-        <div class="form-group" style="display:none;">
+        <div class="form-group">
           <label class="form-label">Badge Type</label>
           <div class="badge-picker">
-            <div class="badge-opt badge-opt-urgent selected" onclick="selectBadge(this,'urgent')">Urgent</div>
-            <div class="badge-opt badge-opt-general" onclick="selectBadge(this,'general')">General</div>
+            <div class="badge-opt badge-opt-urgent" onclick="selectBadge(this,'urgent')">Urgent</div>
+            <div class="badge-opt badge-opt-general selected" onclick="selectBadge(this,'general')">General</div>
             <div class="badge-opt badge-opt-hr" onclick="selectBadge(this,'hr')">HR</div>
             <div class="badge-opt badge-opt-facility" onclick="selectBadge(this,'facility')">Facilities</div>
             <div class="badge-opt badge-opt-event" onclick="selectBadge(this,'event')">Event</div>
@@ -1272,7 +1283,7 @@ html, body {
   }
 
   // ── BADGE PICKER ──
-  var selectedBadge = 'urgent';
+  var selectedBadge = 'general';
   function selectBadge(el, type) {
     document.querySelectorAll('.badge-opt').forEach(b => b.classList.remove('selected'));
     el.classList.add('selected');
@@ -1307,10 +1318,18 @@ html, body {
     editingAnnId = null;
     updateCharCount(); updateBodyCount();
     clearFormErrors();
+    setBadgeSelection('general');
+  }
+
+  function setBadgeSelection(type) {
+    selectedBadge = type;
+    document.querySelectorAll('.badge-opt').forEach(function(b) {
+      b.classList.toggle('selected', b.classList.contains('badge-opt-' + type));
+    });
   }
 
   // ── PUBLISH ANNOUNCEMENT ──
-  function publishAnnouncement() {
+  async function publishAnnouncement() {
     clearFormErrors();
     var title = document.getElementById('ann-title').value.trim();
     var body  = document.getElementById('ann-body').value.trim();
@@ -1327,69 +1346,25 @@ html, body {
     }
     if (!valid) return;
 
-    // Loading
     setLoading('pub', true);
     var user = JSON.parse(sessionStorage.getItem('mjm_user') || '{}');
-    if (editingAnnId) {
-      // PATCH existing record — preserves original created_at so banner timing is unchanged
-      sbFetch('PATCH', '/rest/v1/announcements?id=eq.' + editingAnnId, { title: title, body: body, badge: selectedBadge, posted_by: user.name || 'HR' }, { 'Prefer': '' }).then(function(){
+    try {
+      if (editingAnnId) {
+        // PATCH existing record — preserves original created_at so banner timing is unchanged
+        await sbFetch('PATCH', '/rest/v1/announcements?id=eq.' + editingAnnId, { title: title, body: body, badge: selectedBadge, posted_by: user.name || 'HR' }, { 'Prefer': '' });
         editingAnnId = null;
-        setLoading('pub', false);
-        hidePostForm();
-        loadDbAnnouncements();
-        document.getElementById('ann-success').classList.add('visible');
-        setTimeout(function(){ document.getElementById('ann-success').classList.remove('visible'); }, 4000);
-      }).catch(function(){ editingAnnId = null; setLoading('pub', false); });
-    } else {
-      publishToDb(title, body, selectedBadge, notifyOn, user.name || 'HR').catch(function(){});
-      setTimeout(() => {
-        setLoading('pub', false);
-      // Prepend new announcement to list
-      var badgeMap = {
-        urgent:   { cls:'card-urgent',   badgeCls:'b-red',    label:'Urgent' },
-        general:  { cls:'card-general',  badgeCls:'b-green',  label:'General' },
-        hr:       { cls:'card-hr',       badgeCls:'b-blue',   label:'HR' },
-        facility: { cls:'card-facility', badgeCls:'b-amber',  label:'Facilities' },
-        event:    { cls:'card-event',    badgeCls:'b-purple', label:'Event' },
-      };
-      var b    = badgeMap[selectedBadge];
-      var html = `
-        <div class="ann-item ${b.cls}">
-          <div class="ann-meta">
-            <span class="badge ${b.badgeCls}">${b.label}</span>
-            <span class="ann-time">Just now</span>
-          </div>
-          <div class="ann-title">${escHtml(title)}</div>
-          <div class="ann-body">${escHtml(body)}</div>
-          <div class="ann-actions">
-            <div class="ann-author"><i class="ti ti-user"></i> Posted by HR</div>
-            <div class="btn-icon" onclick="editAnn(this)" title="Edit"><i class="ti ti-pencil"></i></div>
-            <div class="btn-icon danger" onclick="confirmDelete(this)" title="Delete"><i class="ti ti-trash"></i></div>
-          </div>
-        </div>`;
-      document.getElementById('ann-list').insertAdjacentHTML('afterbegin', html);
-      // Update count
-      var countEl = document.getElementById('ann-count');
-      var cur = parseInt(countEl.textContent.replace(/\D/g,''));
-      countEl.textContent = '(' + (cur + 1) + ')';
-      hidePostForm();
-      if (selectedBadge === 'urgent') {
-        var ub = document.getElementById('admin-urgent-banner');
-        var ut = document.getElementById('admin-urgent-text');
-        if (ub && ut) {
-          var newItem = '<div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:6px;">'
-            + '<i class="ti ti-alert-circle" style="font-size:13px;color:#F0A500;flex-shrink:0;margin-top:2px;"></i>'
-            + '<div><div style="font-weight:700;font-size:12px;color:#7A5800;margin-bottom:2px;">' + escHtml(title) + '</div>'
-            + '<div style="font-size:12px;color:#7A5800;line-height:1.5;">' + escHtml(body) + '</div></div></div>';
-          ut.innerHTML = newItem + ut.innerHTML;
-          ub.style.display = 'block';
-        }
+      } else {
+        await publishToDb(title, body, selectedBadge, notifyOn, user.name || 'HR');
       }
+      setLoading('pub', false);
+      hidePostForm();
+      await loadDbAnnouncements();
       document.getElementById('ann-success').classList.add('visible');
-      setTimeout(() => document.getElementById('ann-success').classList.remove('visible'), 4000);
-      loadDbAnnouncements();
-    }, 1400);
-    } // end else (new announcement)
+      setTimeout(function(){ document.getElementById('ann-success').classList.remove('visible'); }, 4000);
+    } catch(e) {
+      setLoading('pub', false);
+      alert('Could not save announcement. Please try again.');
+    }
   }
 
   // ── LEAVE FORM ──
@@ -1405,7 +1380,7 @@ html, body {
     document.getElementById('leave-to').value   = '';
     clearFormErrors();
   }
-  function saveLeave() {
+  async function saveLeave() {
     clearFormErrors();
     var name  = document.getElementById('leave-name').value.trim();
     var type  = document.getElementById('leave-type').value;
@@ -1424,42 +1399,17 @@ html, body {
     if (!valid) return;
 
     setLoading('leave-save', true);
-    sbFetch('POST', '/rest/v1/leave_records', { staff_name: name, leave_type: type || 'Annual Leave', date_from: from, date_to: to }).then(function() {
-      loadDbLeave();
-    }).catch(function(){});
-    setTimeout(() => {
+    try {
+      await sbFetch('POST', '/rest/v1/leave_records', { staff_name: name, leave_type: type || 'Annual Leave', date_from: from, date_to: to });
       setLoading('leave-save', false);
-      var typeLabel = type || 'Leave';
-      var shortType = typeLabel === 'Annual Leave' ? 'AL'
-        : typeLabel === 'Medical Leave' ? 'MC'
-        : typeLabel === 'Paternity Leave' ? 'PL'
-        : typeLabel === 'Maternity Leave' ? 'ML'
-        : typeLabel === 'Compassionate Leave' ? 'CL' : 'UL';
-      var badgeCls  = typeLabel === 'Medical Leave' ? 'b-red'
-        : typeLabel.includes('Paternity') || typeLabel.includes('Maternity') ? 'b-blue'
-        : 'b-amber';
-      var initials  = name.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();
-      var fromFmt   = formatDate(from);
-      var toFmt     = formatDate(to);
-      var html = `
-        <div class="person-row" id="lr-${Date.now()}">
-          <div class="av av-g">${initials}</div>
-          <div style="flex:1;">
-            <div class="p-name">${escHtml(name)}</div>
-            <div class="p-sub">${escHtml(typeLabel)} · ${fromFmt}–${toFmt}</div>
-          </div>
-          <div style="display:flex;gap:6px;">
-            <span class="badge ${badgeCls}">${shortType}</span>
-            <div class="btn-icon danger" onclick="confirmDeleteLeave(this)"><i class="ti ti-trash"></i></div>
-          </div>
-        </div>`;
-      // Add to "On Leave Now" card
-      var cards = document.querySelectorAll('#leave-list .card');
-      cards[0].insertAdjacentHTML('beforeend', html);
       hideLeaveForm();
+      await loadDbLeave();
       document.getElementById('leave-success').classList.add('visible');
       setTimeout(() => document.getElementById('leave-success').classList.remove('visible'), 3500);
-    }, 1200);
+    } catch(e) {
+      setLoading('leave-save', false);
+      alert('Could not save leave record. Please try again.');
+    }
   }
 
   // ── DUTY FORM ──
@@ -1587,7 +1537,7 @@ html, body {
     });
     if (!matches.length) { dd.style.display = 'none'; return; }
     dd.innerHTML = matches.map(function(n){
-      return '<div onclick="selectDutyStaff(\'' + n.replace(/'/g,"\\'") + '\')" style="padding:9px 12px;font-size:13px;color:var(--text);cursor:pointer;border-bottom:0.5px solid var(--border);" onmouseover="this.style.background=\'var(--green-bg)\'" onmouseout="this.style.background=\'\'">'+escHtml(n)+'</div>';
+      return '<div onclick="selectDutyStaff(\'' + escJsAttr(n) + '\')" style="padding:9px 12px;font-size:13px;color:var(--text);cursor:pointer;border-bottom:0.5px solid var(--border);" onmouseover="this.style.background=\'var(--green-bg)\'" onmouseout="this.style.background=\'\'">'+escHtml(n)+'</div>';
     }).join('');
     dd.style.display = 'block';
   }
@@ -1598,7 +1548,7 @@ html, body {
     var tags = document.getElementById('duty-staff-tags');
     var tag  = document.createElement('div');
     tag.style.cssText = 'display:flex;align-items:center;gap:5px;background:var(--green-bg);border:0.5px solid var(--green-dark);border-radius:20px;padding:3px 10px;font-size:12px;color:var(--green-text);';
-    tag.innerHTML = escHtml(name) + '<span onclick="removeDutyStaff(\'' + name.replace(/'/g,"\\'") + '\',this)" style="cursor:pointer;font-size:15px;line-height:1;color:var(--green-dark);">&times;</span>';
+    tag.innerHTML = escHtml(name) + '<span onclick="removeDutyStaff(\'' + escJsAttr(name) + '\',this)" style="cursor:pointer;font-size:15px;line-height:1;color:var(--green-dark);">&times;</span>';
     tags.appendChild(tag);
     document.getElementById('duty-staff-search').value = '';
     document.getElementById('duty-staff-dropdown').style.display = 'none';
@@ -1628,7 +1578,7 @@ html, body {
     if (!role)  { document.getElementById('duty-role-input').classList.add('error'); document.getElementById('duty-role-error').classList.add('visible'); valid = false; }
     if (!dfrom) { document.getElementById('duty-date-from').classList.add('error');  document.getElementById('duty-date-error').classList.add('visible'); valid = false; }
     if (dto && dfrom && dto < dfrom) { document.getElementById('duty-date-to').classList.add('error'); document.getElementById('duty-date-to-error').classList.add('visible'); valid = false; }
-    if (!editingDutyId && !checked.length) { document.getElementById('duty-staff-error').classList.add('visible'); valid = false; }
+    if (!checked.length) { document.getElementById('duty-staff-error').classList.add('visible'); valid = false; }
     if (!valid) return;
 
     setLoading('duty-save', true);
@@ -1723,17 +1673,30 @@ html, body {
     document.getElementById('delete-modal').classList.remove('visible');
     pendingDeleteEl = null;
   }
-  function executeDelete() {
-    if (pendingDeleteEl) {
-      var elToRemove = pendingDeleteEl;
-      pendingDeleteEl = null;
-      elToRemove.style.transition = 'opacity 0.2s';
-      elToRemove.style.opacity    = '0';
-      setTimeout(function(){
-        if (elToRemove && elToRemove.parentNode) elToRemove.remove();
-      }, 220);
-    }
+  async function executeDelete() {
+    if (!pendingDeleteEl) { closeModal(); return; }
+    var elToRemove = pendingDeleteEl;
+    var type = pendingDeleteType;
+    pendingDeleteEl = null;
     closeModal();
+
+    var table = type === 'ann' ? 'announcements' : type === 'leave' ? 'leave_records' : type === 'duty' ? 'duty_roster' : null;
+    var idAttr = type === 'ann' ? 'data-id' : type === 'leave' ? 'data-leave-id' : 'data-duty-id';
+    var id = elToRemove.getAttribute(idAttr);
+
+    if (table && id) {
+      try {
+        await sbFetch('DELETE', '/rest/v1/' + table + '?id=eq.' + id, null, { 'Prefer': '' });
+      } catch(e) {
+        alert('Could not delete. Please try again.');
+        return;
+      }
+    }
+    elToRemove.style.transition = 'opacity 0.2s';
+    elToRemove.style.opacity    = '0';
+    setTimeout(function(){
+      if (elToRemove && elToRemove.parentNode) elToRemove.remove();
+    }, 220);
   }
 
   // ── EDIT ANNOUNCEMENT (inline toggle) ──
@@ -1743,26 +1706,27 @@ html, body {
     var item  = btn.closest('.ann-item');
     var title = item.querySelector('.ann-title').textContent;
     var body  = item.querySelector('.ann-body').textContent;
+    var badge = item.getAttribute('data-badge') || 'general';
     editingAnnId = item.getAttribute('data-id') || null;
     // Populate post form and scroll to it
     switchTabByName('announce');
     document.getElementById('ann-title').value = title;
     document.getElementById('ann-body').value  = body;
     updateCharCount(); updateBodyCount();
+    setBadgeSelection(badge);
     showPostForm();
-    // Remove original
-    item.remove();
   }
 
   // ── HELPERS ──
   function escHtml(str) {
-    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   }
-  function formatDate(dateStr) {
-    if (!dateStr) return '';
-    var d = new Date(dateStr);
-    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    return d.getDate() + ' ' + months[d.getMonth()];
+  // For building onclick="fn('...')" handlers from untrusted values: JS-string-escapes
+  // the value for the inner '...' literal, then HTML-attribute-escapes the result so
+  // it's also safe as the outer onclick="..." attribute content.
+  function escJsAttr(str) {
+    var jsEscaped = String(str).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return jsEscaped.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
   function clearFormErrors() {
     document.querySelectorAll('.field-error').forEach(e => e.classList.remove('visible'));
@@ -1859,7 +1823,7 @@ html, body {
           var isSelf = u.email === user.email;
           var canRemove = user.role === 'superadmin' && !isSelf && u.role !== 'superadmin';
           var removeBtn = canRemove
-            ? '<div class="btn-icon danger" onclick="demoteToStaff(\'' + u.email.replace(/'/g,"\\'") + '\')" title="Remove admin access"><i class="ti ti-user-minus"></i></div>'
+            ? '<div class="btn-icon danger" onclick="demoteToStaff(\'' + escJsAttr(u.email) + '\')" title="Remove admin access"><i class="ti ti-user-minus"></i></div>'
             : '';
           var selfTag = isSelf ? ' <span style="font-size:10px;color:var(--text3);">(you)</span>' : '';
           return '<div class="person-row">'
@@ -1894,11 +1858,9 @@ html, body {
           var avCls = AV_COLORS[i % AV_COLORS.length];
           var canPromote = user.role === 'superadmin';
           var promoteBtn = canPromote
-            ? '<div class="btn-icon" onclick="promoteToAdmin(\'' + u.email.replace(/'/g,"\\'") + '\')" title="Make HR Admin" style="color:var(--green);border-color:var(--green-bg);background:var(--green-bg);"><i class="ti ti-shield-up"></i></div>'
+            ? '<div class="btn-icon" onclick="promoteToAdmin(\'' + escJsAttr(u.email) + '\')" title="Make HR Admin" style="color:var(--green);border-color:var(--green-bg);background:var(--green-bg);"><i class="ti ti-shield-up"></i></div>'
             : '';
-          var safeId   = String(u.id).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-          var safeName = String(u.name).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-          var deleteBtn = '<div class="btn-icon" onclick="deleteStaff(\'' + safeId + '\',\'' + safeName + '\')" title="Remove staff" style="color:#c0392b;border-color:#fde8e8;background:#fde8e8;"><i class="ti ti-trash"></i></div>';
+          var deleteBtn = '<div class="btn-icon" onclick="deleteStaff(\'' + escJsAttr(u.id) + '\',\'' + escJsAttr(u.name) + '\')" title="Remove staff" style="color:#c0392b;border-color:#fde8e8;background:#fde8e8;"><i class="ti ti-trash"></i></div>';
           return '<div class="person-row">'
             + '<div class="av ' + avCls + '">' + ini + '</div>'
             + '<div style="flex:1;">'
@@ -1965,7 +1927,9 @@ html, body {
     var oldRole = list[idx].role;
     list[idx].role = role;
     saveStaffList(list);
-    syncRoleToDb(list[idx].email, role);
+    syncRoleToDb(list[idx].email, role).catch(function(){
+      alert('Role change may not have saved — please refresh and check before relying on it.');
+    });
     document.getElementById('assign-email').value = '';
     document.getElementById('assign-role').value  = 'hradmin';
     showAdminSuccess(
@@ -2054,7 +2018,6 @@ html, body {
       loadAdminLeaveDuty();
       loadDbProfiles();
       loadInviteLog();
-      updatePendingCount();
       loadDbEvents();
     }
   });
@@ -2069,6 +2032,7 @@ html, body {
     var headers = { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
     if (extra_headers) Object.assign(headers, extra_headers);
     var res = await fetch(SURL + path, { method: method, headers: headers, body: body ? JSON.stringify(body) : undefined });
+    if (!res.ok) throw new Error('Request failed: ' + res.status);
     try { return await res.json(); } catch(e) { return null; }
   }
 
@@ -2088,7 +2052,7 @@ html, body {
         var d = new Date(ann.created_at).toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'});
         var t = new Date(ann.created_at).toLocaleTimeString('en-MY',{hour:'numeric',minute:'2-digit',hour12:true});
         var dt = d + ' · ' + t;
-        var html = '<div class="ann-item ' + b.cls + '" data-id="' + ann.id + '">'
+        var html = '<div class="ann-item ' + b.cls + '" data-id="' + ann.id + '" data-badge="' + (ann.badge || 'general') + '">'
           + '<div class="ann-meta"><span class="ann-time">' + dt + '</span></div>'
           + '<div class="ann-title">' + escHtml(ann.title) + '</div>'
           + '<div class="ann-body">' + escHtml(ann.body) + '</div>'
@@ -2126,11 +2090,17 @@ html, body {
 
   // ── LOAD LEAVE FROM SUPABASE ──
   async function loadDbLeave() {
+    var card = document.getElementById('leave-list');
+    if (!card) return;
+    var today = new Date().toISOString().split('T')[0];
     try {
-      var data = await sbFetch('GET', '/rest/v1/leave_records?order=created_at.desc&limit=50');
-      if (!data || data.length === 0) return;
-      var card = document.getElementById('leave-list');
-      if (!card) return;
+      var data = await sbFetch('GET', '/rest/v1/leave_records?date_to=gte.' + today + '&order=date_from.asc&limit=200');
+      if (!data) return;
+      if (!data.length) {
+        card.innerHTML = '<div class="card"><div class="card-label">All Leave Records</div>'
+          + '<div style="font-size:12px;color:var(--text3);text-align:center;padding:14px 0;">No current or upcoming leave.</div></div>';
+        return;
+      }
       card.innerHTML = '<div class="card"><div class="card-label">All Leave Records</div>' +
         data.map(function(r) {
           var ini = r.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
@@ -2152,7 +2122,9 @@ html, body {
     var row = btn.closest('.person-row'), id = row ? row.getAttribute('data-leave-id') : null;
     if (!id) { confirmDeleteLeave(btn); return; }
     if (!confirm('Remove this leave entry?')) return;
-    await sbFetch('DELETE', '/rest/v1/leave_records?id=eq.' + id, null, { 'Prefer': '' });
+    try {
+      await sbFetch('DELETE', '/rest/v1/leave_records?id=eq.' + id, null, { 'Prefer': '' });
+    } catch(e) { alert('Could not remove leave entry. Please try again.'); return; }
     row.style.transition = 'opacity 0.2s'; row.style.opacity = '0';
     setTimeout(function(){ row.remove(); }, 220);
   }
@@ -2214,7 +2186,9 @@ html, body {
     var row = btn.closest('.duty-slot'), id = row ? row.getAttribute('data-duty-id') : null;
     if (!id) { confirmDeleteDuty(btn); return; }
     if (!confirm('Remove this duty assignment?')) return;
-    await sbFetch('DELETE', '/rest/v1/duty_roster?id=eq.' + id, null, { 'Prefer': '' });
+    try {
+      await sbFetch('DELETE', '/rest/v1/duty_roster?id=eq.' + id, null, { 'Prefer': '' });
+    } catch(e) { alert('Could not remove duty assignment. Please try again.'); return; }
     var card = row.closest('.card');
     row.style.transition = 'opacity 0.2s'; row.style.opacity = '0';
     setTimeout(function(){
@@ -2343,10 +2317,11 @@ html, body {
         setTimeout(function(){ document.getElementById('invite-success').classList.remove('visible'); }, 5000);
         // Refresh log
         loadInviteLog();
-        // Update pending count
-        updatePendingCount();
       } else {
         var err = await res.json();
+        // Roll back the pending profile row so this email can be retried,
+        // instead of being permanently blocked by the "already has an account" check.
+        try { await sbFetch('DELETE', '/rest/v1/profiles?email=eq.' + encodeURIComponent(email), null, { 'Prefer': '' }); } catch(e2) {}
         document.getElementById('invite-error-msg').textContent =
           err.msg || err.message || 'Could not send invite. Please try again.';
         document.getElementById('invite-error').classList.add('visible');
@@ -2355,6 +2330,7 @@ html, body {
 
     } catch(e) {
       setInviteLoading(false);
+      try { await sbFetch('DELETE', '/rest/v1/profiles?email=eq.' + encodeURIComponent(email), null, { 'Prefer': '' }); } catch(e2) {}
       document.getElementById('invite-error-msg').textContent = 'Connection error. Check your internet and try again.';
       document.getElementById('invite-error').classList.add('visible');
       setTimeout(function(){ document.getElementById('invite-error').classList.remove('visible'); }, 5000);
@@ -2397,14 +2373,6 @@ html, body {
       document.getElementById('invite-log-list').innerHTML =
         '<div style="text-align:center;padding:12px 0;font-size:12px;color:var(--text3);">Could not load invite log.</div>';
     }
-  }
-
-  async function updatePendingCount() {
-    try {
-      var data = await sbFetch('GET', '/rest/v1/profiles?role=eq.pending&select=email');
-      var countEl = document.querySelector('.stat-card.alert .stat-val');
-      if (countEl && data) countEl.textContent = data.length;
-    } catch(e) {}
   }
 
   function setInviteLoading(on) {
@@ -2689,7 +2657,11 @@ html, body {
     var item = btn.closest('.ann-item');
     var id   = item ? item.getAttribute('data-event-id') : null;
     if (!confirm('Delete this event?')) return;
-    if (id) await sbFetch('DELETE', '/rest/v1/events?id=eq.' + id, null, { 'Prefer': '' });
+    if (id) {
+      try {
+        await sbFetch('DELETE', '/rest/v1/events?id=eq.' + id, null, { 'Prefer': '' });
+      } catch(e) { alert('Could not delete event. Please try again.'); return; }
+    }
     item.style.transition = 'opacity 0.2s'; item.style.opacity = '0';
     setTimeout(function(){ item.remove(); loadAdminCalendar(); }, 220);
   }
@@ -2848,6 +2820,11 @@ html, body {
     }
   });
 
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+      navigator.serviceWorker.register('sw.js').catch(function(e){});
+    });
+  }
 </script>
 </body>
 </html>

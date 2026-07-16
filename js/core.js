@@ -5,14 +5,55 @@ var SURL = 'https://jkbxngfwkytscgxnnnnd.supabase.co';
 var SKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImprYnhuZ2Z3a3l0c2NneG5ubm5kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNTcyMjcsImV4cCI6MjA5NTYzMzIyN30._FIzBEcmwtAkADDiDZVTS-YQY0kLoGBowL8n7T45Ulk';
 
 async function sbGet(table, filter) {
-  var url = SURL + '/rest/v1/' + table + '?order=created_at.desc';
-  if (filter) url += '&' + filter;
+  var hasOwnOrder = filter && /(^|&)order=/.test(filter);
+  var url = SURL + '/rest/v1/' + table + '?' + (hasOwnOrder ? '' : 'order=created_at.desc&') + (filter || '');
+  url = url.replace(/[?&]$/, '');
   var res = await fetch(url, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
   try { return await res.json(); } catch(e) { return []; }
 }
 
+async function sbWrite(method, table, body, filter) {
+  var url = SURL + '/rest/v1/' + table;
+  if (filter) url += '?' + filter;
+  var res = await fetch(url, {
+    method: method,
+    headers: {
+      'apikey': SKEY,
+      'Authorization': 'Bearer ' + SKEY,
+      'Content-Type': 'application/json',
+      'Prefer': method === 'POST' ? 'return=representation' : ''
+    },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  if (!res.ok) throw new Error('Request failed: ' + res.status);
+  try { return await res.json(); } catch(e) { return null; }
+}
+
+// ── Per-module permissions ──
+var DEFAULT_PERMISSIONS = { announcements: 'view', leave: 'view', duty: 'view', events: 'view', book: 'edit' };
+
+function hasEditPermission(module) {
+  var raw = sessionStorage.getItem('mjm_user');
+  if (!raw) return false;
+  try {
+    var u = JSON.parse(raw);
+    if (!u) return false;
+    if (u.role === 'hradmin' || u.role === 'superadmin') return true;
+    var perms = u.permissions || DEFAULT_PERMISSIONS;
+    var level = perms[module] !== undefined ? perms[module] : DEFAULT_PERMISSIONS[module];
+    return level === 'edit';
+  } catch(e) { return false; }
+}
+
 function escHtml(str) {
-  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+// For building onclick="fn('...')" handlers from untrusted values: JS-string-escapes
+// the value for the inner '...' literal, then HTML-attribute-escapes the result so
+// it's also safe as the outer onclick="..." attribute content.
+function escJsAttr(str) {
+  var jsEscaped = String(str).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  return jsEscaped.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 // ── Clock ──

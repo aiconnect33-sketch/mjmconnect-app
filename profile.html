@@ -264,6 +264,10 @@ window.addEventListener('DOMContentLoaded', async function() {
 
 // Save profile
 async function saveProfile() {
+  document.getElementById('edit-name').classList.remove('error');
+  document.getElementById('profile-error').classList.remove('visible');
+  document.getElementById('profile-success').classList.remove('visible');
+
   var name  = document.getElementById('edit-name').value.trim();
   var phone = document.getElementById('edit-phone').value.trim();
   var email = user.email;
@@ -311,6 +315,11 @@ async function saveProfile() {
 
 // Change password
 async function changePassword() {
+  document.getElementById('pw-new').classList.remove('error');
+  document.getElementById('confirm-error').classList.remove('visible');
+  document.getElementById('pw-error-alert').classList.remove('visible');
+  document.getElementById('pw-success').classList.remove('visible');
+
   var pw1 = document.getElementById('pw-new').value;
   var pw2 = document.getElementById('pw-confirm').value;
 
@@ -348,6 +357,9 @@ async function changePassword() {
       // Reset strength bars
       ['bar1','bar2','bar3','bar4'].forEach(function(id){ document.getElementById(id).className = 'pw-bar'; });
       document.getElementById('strength-label').textContent = '—';
+    } else if (res.status === 401) {
+      document.getElementById('pw-error-msg').textContent = 'Your session has expired. Please sign out and sign in again to change your password.';
+      document.getElementById('pw-error-alert').classList.add('visible');
     } else {
       var err = await res.json();
       document.getElementById('pw-error-msg').textContent = err.msg || 'Could not change password. Please sign out and sign in again.';
@@ -407,6 +419,11 @@ function signOut() {
     sessionStorage.removeItem('mjm_user');
     window.location.replace('login.html');
   }
+}
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('sw.js').catch(function(e){});
+  });
 }
 </script>
 </body>
