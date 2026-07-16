@@ -522,7 +522,7 @@ async function handleCreate() {
     }
 
     // Update profile in database
-    await fetch(SURL + '/rest/v1/profiles?email=eq.' + encodeURIComponent(userEmail), {
+    var profileRes = await fetch(SURL + '/rest/v1/profiles?email=eq.' + encodeURIComponent(userEmail), {
       method: 'PATCH',
       headers: {
         'apikey': SKEY,
@@ -532,6 +532,13 @@ async function handleCreate() {
       },
       body: JSON.stringify({ full_name: name, phone: phone, role: 'staff' })
     });
+
+    if (!profileRes.ok) {
+      btn.disabled = false; lbl.style.display = 'inline'; spn.style.display = 'none';
+      document.getElementById('p2-alert-msg').textContent = 'Your password was set, but we could not finish setting up your profile. Please try again.';
+      document.getElementById('p2-alert').classList.add('visible');
+      return;
+    }
 
     // Show success screen
     document.getElementById('success-name').textContent = 'Welcome, ' + name.split(' ')[0] + '!';
