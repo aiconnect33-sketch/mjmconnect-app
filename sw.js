@@ -1,12 +1,13 @@
 // MJMConnect Service Worker v1.0
 var CACHE_NAME = 'mjmconnect-v1';
 var ASSETS = [
-  '/login.html',
-  '/register.html',
-  '/index.html',
-  '/admin.html',
-  '/admin-invite.html',
-  '/manifest.json'
+  'login.html',
+  'register.html',
+  'index.html',
+  'admin.html',
+  'admin-invite.html',
+  'profile.html',
+  'manifest.json'
 ];
 
 // Install — cache all assets

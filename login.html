@@ -226,6 +226,11 @@ document.addEventListener('keydown', function(e) {
   if (a && a.id === 'panel-login') handleSignIn();
   if (a && a.id === 'panel-forgot') handleReset();
 });
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('sw.js').catch(function(e){});
+  });
+}
 </script>
 </body>
 </html>
