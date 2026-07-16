@@ -2094,11 +2094,17 @@ html, body {
 
   // ── LOAD LEAVE FROM SUPABASE ──
   async function loadDbLeave() {
+    var card = document.getElementById('leave-list');
+    if (!card) return;
+    var today = new Date().toISOString().split('T')[0];
     try {
-      var data = await sbFetch('GET', '/rest/v1/leave_records?order=created_at.desc&limit=50');
-      if (!data || data.length === 0) return;
-      var card = document.getElementById('leave-list');
-      if (!card) return;
+      var data = await sbFetch('GET', '/rest/v1/leave_records?date_to=gte.' + today + '&order=date_from.asc&limit=200');
+      if (!data) return;
+      if (!data.length) {
+        card.innerHTML = '<div class="card"><div class="card-label">All Leave Records</div>'
+          + '<div style="font-size:12px;color:var(--text3);text-align:center;padding:14px 0;">No current or upcoming leave.</div></div>';
+        return;
+      }
       card.innerHTML = '<div class="card"><div class="card-label">All Leave Records</div>' +
         data.map(function(r) {
           var ini = r.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
