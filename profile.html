@@ -357,6 +357,9 @@ async function changePassword() {
       // Reset strength bars
       ['bar1','bar2','bar3','bar4'].forEach(function(id){ document.getElementById(id).className = 'pw-bar'; });
       document.getElementById('strength-label').textContent = '—';
+    } else if (res.status === 401) {
+      document.getElementById('pw-error-msg').textContent = 'Your session has expired. Please sign out and sign in again to change your password.';
+      document.getElementById('pw-error-alert').classList.add('visible');
     } else {
       var err = await res.json();
       document.getElementById('pw-error-msg').textContent = err.msg || 'Could not change password. Please sign out and sign in again.';
