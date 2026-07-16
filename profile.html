@@ -264,6 +264,10 @@ window.addEventListener('DOMContentLoaded', async function() {
 
 // Save profile
 async function saveProfile() {
+  document.getElementById('edit-name').classList.remove('error');
+  document.getElementById('profile-error').classList.remove('visible');
+  document.getElementById('profile-success').classList.remove('visible');
+
   var name  = document.getElementById('edit-name').value.trim();
   var phone = document.getElementById('edit-phone').value.trim();
   var email = user.email;
@@ -311,6 +315,11 @@ async function saveProfile() {
 
 // Change password
 async function changePassword() {
+  document.getElementById('pw-new').classList.remove('error');
+  document.getElementById('confirm-error').classList.remove('visible');
+  document.getElementById('pw-error-alert').classList.remove('visible');
+  document.getElementById('pw-success').classList.remove('visible');
+
   var pw1 = document.getElementById('pw-new').value;
   var pw2 = document.getElementById('pw-confirm').value;
 
