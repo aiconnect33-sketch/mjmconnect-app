@@ -1909,10 +1909,8 @@ html, body {
   // ── MANAGE PERMISSIONS ──
   var PERM_MODULES = [
     { key: 'announcements', label: 'Announcements' },
-    { key: 'leave',         label: 'Leave' },
     { key: 'duty',          label: 'Duty' },
-    { key: 'events',        label: 'Events' },
-    { key: 'timeoff',       label: 'Estate Trip' }
+    { key: 'events',        label: 'Events' }
   ];
   var permModalEmail = null;
   var permModalState = {};
@@ -2117,7 +2115,7 @@ html, body {
   var SKEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImprYnhuZ2Z3a3l0c2NneG5ubm5kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNTcyMjcsImV4cCI6MjA5NTYzMzIyN30._FIzBEcmwtAkADDiDZVTS-YQY0kLoGBowL8n7T45Ulk';
   var SVCKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImprYnhuZ2Z3a3l0c2NneG5ubm5kIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDA1NzIyNywiZXhwIjoyMDk1NjMzMjI3fQ.qPOdtakulLrJXEmSO-FW8a2EiTJE7qLYzdK8Xf6vK3I'; // service role — used only for sending invites
   // Mirrors js/core.js's DEFAULT_PERMISSIONS (admin.html doesn't include core.js)
-  var DEFAULT_PERMISSIONS = { announcements: 'view', leave: 'view', duty: 'view', events: 'view', timeoff: 'view' };
+  var DEFAULT_PERMISSIONS = { announcements: 'view', duty: 'view', events: 'view' };
 
   async function sbFetch(method, path, body, extra_headers) {
     var headers = { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
