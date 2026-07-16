@@ -1728,12 +1728,6 @@ html, body {
     var jsEscaped = String(str).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     return jsEscaped.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
-  function formatDate(dateStr) {
-    if (!dateStr) return '';
-    var d = new Date(dateStr);
-    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    return d.getDate() + ' ' + months[d.getMonth()];
-  }
   function clearFormErrors() {
     document.querySelectorAll('.field-error').forEach(e => e.classList.remove('visible'));
     document.querySelectorAll('.form-input, .form-textarea').forEach(i => i.classList.remove('error'));
