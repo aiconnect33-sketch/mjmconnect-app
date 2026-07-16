@@ -4,6 +4,10 @@ async function loadStaffEvents() {
   var el = document.getElementById('staff-event-list');
   if (!el) return;
   var today = new Date().toISOString().split('T')[0];
+  var canEdit = typeof hasEditPermission === 'function' && hasEditPermission('events');
+  var addTrigger = document.getElementById('event-add-trigger');
+  if (addTrigger) addTrigger.style.display = canEdit ? 'block' : 'none';
+
   el.innerHTML = '<div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">Loading...</div>';
   try {
     var url  = SURL + '/rest/v1/events?event_date=gte.' + today + '&order=event_date.asc,event_time.asc&limit=200';
@@ -19,16 +23,87 @@ async function loadStaffEvents() {
         var p = s.split(':'), h = parseInt(p[0]), m = p[1], ap = h >= 12 ? 'PM' : 'AM';
         h = h % 12 || 12; return h + ':' + m + ' ' + ap;
       })(ev.event_time) : '';
-      return '<div class="card" style="margin-bottom:10px;border-left:3px solid #534AB7;border-radius:0 var(--radius-lg) var(--radius-lg) 0;">'
+      var actions = canEdit
+        ? '<div style="display:flex;gap:6px;margin-top:8px;">'
+          + '<div style="cursor:pointer;font-size:11px;color:var(--text-secondary);" onclick="editStaffEvent(\'' + escJsAttr(ev.id) + '\')"><i class="ti ti-pencil"></i> Edit</div>'
+          + '<div style="cursor:pointer;font-size:11px;color:var(--red-text);" onclick="deleteStaffEvent(\'' + escJsAttr(ev.id) + '\')"><i class="ti ti-trash"></i> Delete</div>'
+          + '</div>'
+        : '';
+      return '<div class="card" style="margin-bottom:10px;border-left:3px solid #534AB7;border-radius:0 var(--radius-lg) var(--radius-lg) 0;" data-event-id="' + escHtml(ev.id) + '" data-event-date="' + escHtml(ev.event_date) + '" data-event-time="' + escHtml(ev.event_time || '') + '">'
         + '<div class="card-meta">'
         + '<span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;background:#EEEDFE;color:#534AB7;">Event</span>'
         + '<span class="card-time">' + d + (t ? ' · ' + t : '') + '</span>'
         + '</div>'
         + '<div class="card-title">' + escHtml(ev.title) + '</div>'
         + (ev.description ? '<div class="card-body">' + escHtml(ev.description) + '</div>' : '')
+        + actions
         + '</div>';
     }).join('');
   } catch(e) {
     el.innerHTML = '<div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">Could not load events.</div>';
   }
+}
+
+// ── EVENTS — STAFF EDIT (Events module permission) ──
+var editingStaffEventId = null;
+
+function showStaffEventForm(id) {
+  if (!id) {
+    editingStaffEventId = null;
+    document.getElementById('staff-event-form-title').textContent = 'New Event';
+    document.getElementById('staff-event-title').value = '';
+    document.getElementById('staff-event-date').value  = '';
+    document.getElementById('staff-event-time').value  = '';
+    document.getElementById('staff-event-desc').value  = '';
+  }
+  document.getElementById('staff-event-form').style.display = 'block';
+  document.getElementById('staff-event-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function hideStaffEventForm() {
+  document.getElementById('staff-event-form').style.display = 'none';
+  editingStaffEventId = null;
+}
+
+function editStaffEvent(id) {
+  var card = document.querySelector('[data-event-id="' + id + '"]');
+  if (!card) return;
+  editingStaffEventId = id;
+  document.getElementById('staff-event-form-title').textContent = 'Edit Event';
+  document.getElementById('staff-event-title').value = card.querySelector('.card-title').textContent;
+  document.getElementById('staff-event-date').value  = card.getAttribute('data-event-date') || '';
+  document.getElementById('staff-event-time').value  = card.getAttribute('data-event-time') || '';
+  var bodyEl = card.querySelector('.card-body');
+  document.getElementById('staff-event-desc').value = bodyEl ? bodyEl.textContent : '';
+  showStaffEventForm(id);
+}
+
+async function saveStaffEvent() {
+  if (!hasEditPermission('events')) return;
+  var title = document.getElementById('staff-event-title').value.trim();
+  var date  = document.getElementById('staff-event-date').value;
+  var time  = document.getElementById('staff-event-time').value;
+  var desc  = document.getElementById('staff-event-desc').value.trim();
+  if (!title || !date) { alert('Please fill in the event title and date.'); return; }
+
+  var raw = sessionStorage.getItem('mjm_user');
+  var user = raw ? JSON.parse(raw) : {};
+  try {
+    if (editingStaffEventId) {
+      await sbWrite('PATCH', 'events', { title: title, event_date: date, event_time: time || null, description: desc || null }, 'id=eq.' + editingStaffEventId);
+    } else {
+      await sbWrite('POST', 'events', { title: title, event_date: date, event_time: time || null, description: desc || null, created_by: user.name || 'Staff' });
+    }
+    hideStaffEventForm();
+    loadStaffEvents();
+  } catch(e) { alert('Could not save event. Please try again.'); }
+}
+
+async function deleteStaffEvent(id) {
+  if (!hasEditPermission('events')) return;
+  if (!confirm('Delete this event?')) return;
+  try {
+    await sbWrite('DELETE', 'events', null, 'id=eq.' + id);
+    loadStaffEvents();
+  } catch(e) { alert('Could not delete event. Please try again.'); }
 }
