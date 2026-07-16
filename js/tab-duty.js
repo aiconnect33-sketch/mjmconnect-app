@@ -125,7 +125,7 @@ async function saveDutyAssignment() {
   if (!name || !from || !to) { alert('Please fill in staff name and dates.'); return; }
   if (from > to) { alert('The "From" date must be before the "To" date.'); return; }
   try {
-    await sbWrite('POST', 'duty_roster', { staff_name: name, duty_role: role || 'General Duty', date_from: from, date_to: to });
+    await sbWrite('POST', 'duty_roster', { staff_name: name, duty_role: role || 'General Duty', date_from: from, date_to: to, period: from + ' to ' + to });
     hideDutyForm();
     loadDuty();
   } catch(e) { alert('Could not save duty assignment. Please try again.'); }
