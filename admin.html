@@ -1673,17 +1673,30 @@ html, body {
     document.getElementById('delete-modal').classList.remove('visible');
     pendingDeleteEl = null;
   }
-  function executeDelete() {
-    if (pendingDeleteEl) {
-      var elToRemove = pendingDeleteEl;
-      pendingDeleteEl = null;
-      elToRemove.style.transition = 'opacity 0.2s';
-      elToRemove.style.opacity    = '0';
-      setTimeout(function(){
-        if (elToRemove && elToRemove.parentNode) elToRemove.remove();
-      }, 220);
-    }
+  async function executeDelete() {
+    if (!pendingDeleteEl) { closeModal(); return; }
+    var elToRemove = pendingDeleteEl;
+    var type = pendingDeleteType;
+    pendingDeleteEl = null;
     closeModal();
+
+    var table = type === 'ann' ? 'announcements' : type === 'leave' ? 'leave_records' : type === 'duty' ? 'duty_roster' : null;
+    var idAttr = type === 'ann' ? 'data-id' : type === 'leave' ? 'data-leave-id' : 'data-duty-id';
+    var id = elToRemove.getAttribute(idAttr);
+
+    if (table && id) {
+      try {
+        await sbFetch('DELETE', '/rest/v1/' + table + '?id=eq.' + id, null, { 'Prefer': '' });
+      } catch(e) {
+        alert('Could not delete. Please try again.');
+        return;
+      }
+    }
+    elToRemove.style.transition = 'opacity 0.2s';
+    elToRemove.style.opacity    = '0';
+    setTimeout(function(){
+      if (elToRemove && elToRemove.parentNode) elToRemove.remove();
+    }, 220);
   }
 
   // ── EDIT ANNOUNCEMENT (inline toggle) ──
