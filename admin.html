@@ -2325,6 +2325,9 @@ html, body {
         updatePendingCount();
       } else {
         var err = await res.json();
+        // Roll back the pending profile row so this email can be retried,
+        // instead of being permanently blocked by the "already has an account" check.
+        try { await sbFetch('DELETE', '/rest/v1/profiles?email=eq.' + encodeURIComponent(email), null, { 'Prefer': '' }); } catch(e2) {}
         document.getElementById('invite-error-msg').textContent =
           err.msg || err.message || 'Could not send invite. Please try again.';
         document.getElementById('invite-error').classList.add('visible');
@@ -2333,6 +2336,7 @@ html, body {
 
     } catch(e) {
       setInviteLoading(false);
+      try { await sbFetch('DELETE', '/rest/v1/profiles?email=eq.' + encodeURIComponent(email), null, { 'Prefer': '' }); } catch(e2) {}
       document.getElementById('invite-error-msg').textContent = 'Connection error. Check your internet and try again.';
       document.getElementById('invite-error').classList.add('visible');
       setTimeout(function(){ document.getElementById('invite-error').classList.remove('visible'); }, 5000);
