@@ -118,6 +118,7 @@ function hideDutyForm() {
 }
 
 async function saveDutyAssignment() {
+  if (!hasEditPermission('duty')) return;
   var name = document.getElementById('duty-form-name').value.trim();
   var role = document.getElementById('duty-form-role').value.trim();
   var from = document.getElementById('duty-form-from').value;
@@ -132,6 +133,7 @@ async function saveDutyAssignment() {
 }
 
 async function deleteDutyAssignment(idsStr) {
+  if (!hasEditPermission('duty')) return;
   if (!confirm('Delete this duty assignment?')) return;
   var ids = idsStr.split(',').filter(Boolean);
   try {

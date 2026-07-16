@@ -224,6 +224,7 @@ async function editAnnouncement(id) {
 }
 
 async function saveAnnouncement() {
+  if (!hasEditPermission('announcements')) return;
   var title = document.getElementById('ann-form-title-input').value.trim();
   var body  = document.getElementById('ann-form-body-input').value.trim();
   if (!title || !body) { alert('Please fill in both title and message.'); return; }
@@ -241,6 +242,7 @@ async function saveAnnouncement() {
 }
 
 async function deleteAnnouncement(id) {
+  if (!hasEditPermission('announcements')) return;
   if (!confirm('Delete this announcement?')) return;
   try {
     await sbWrite('DELETE', 'announcements', null, 'id=eq.' + id);

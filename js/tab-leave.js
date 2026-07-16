@@ -106,6 +106,7 @@ function hideLeaveForm() {
 }
 
 async function saveLeaveRequest() {
+  if (!hasEditPermission('leave')) return;
   var name = document.getElementById('leave-form-name').value.trim();
   var type = document.getElementById('leave-form-type').value;
   var from = document.getElementById('leave-form-from').value;
@@ -120,6 +121,7 @@ async function saveLeaveRequest() {
 }
 
 async function deleteLeaveRequest(id) {
+  if (!hasEditPermission('leave')) return;
   if (!confirm('Delete this leave request?')) return;
   try {
     await sbWrite('DELETE', 'leave_records', null, 'id=eq.' + id);

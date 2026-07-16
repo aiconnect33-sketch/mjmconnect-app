@@ -34,11 +34,14 @@ var DEFAULT_PERMISSIONS = { announcements: 'view', leave: 'view', duty: 'view', 
 function hasEditPermission(module) {
   var raw = sessionStorage.getItem('mjm_user');
   if (!raw) return false;
-  var u = JSON.parse(raw);
-  if (u.role === 'hradmin' || u.role === 'superadmin') return true;
-  var perms = u.permissions || DEFAULT_PERMISSIONS;
-  var level = perms[module] !== undefined ? perms[module] : DEFAULT_PERMISSIONS[module];
-  return level === 'edit';
+  try {
+    var u = JSON.parse(raw);
+    if (!u) return false;
+    if (u.role === 'hradmin' || u.role === 'superadmin') return true;
+    var perms = u.permissions || DEFAULT_PERMISSIONS;
+    var level = perms[module] !== undefined ? perms[module] : DEFAULT_PERMISSIONS[module];
+    return level === 'edit';
+  } catch(e) { return false; }
 }
 
 function escHtml(str) {
