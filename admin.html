@@ -1424,7 +1424,7 @@ html, body {
     document.getElementById('leave-to').value   = '';
     clearFormErrors();
   }
-  function saveLeave() {
+  async function saveLeave() {
     clearFormErrors();
     var name  = document.getElementById('leave-name').value.trim();
     var type  = document.getElementById('leave-type').value;
@@ -1443,42 +1443,17 @@ html, body {
     if (!valid) return;
 
     setLoading('leave-save', true);
-    sbFetch('POST', '/rest/v1/leave_records', { staff_name: name, leave_type: type || 'Annual Leave', date_from: from, date_to: to }).then(function() {
-      loadDbLeave();
-    }).catch(function(){});
-    setTimeout(() => {
+    try {
+      await sbFetch('POST', '/rest/v1/leave_records', { staff_name: name, leave_type: type || 'Annual Leave', date_from: from, date_to: to });
       setLoading('leave-save', false);
-      var typeLabel = type || 'Leave';
-      var shortType = typeLabel === 'Annual Leave' ? 'AL'
-        : typeLabel === 'Medical Leave' ? 'MC'
-        : typeLabel === 'Paternity Leave' ? 'PL'
-        : typeLabel === 'Maternity Leave' ? 'ML'
-        : typeLabel === 'Compassionate Leave' ? 'CL' : 'UL';
-      var badgeCls  = typeLabel === 'Medical Leave' ? 'b-red'
-        : typeLabel.includes('Paternity') || typeLabel.includes('Maternity') ? 'b-blue'
-        : 'b-amber';
-      var initials  = name.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();
-      var fromFmt   = formatDate(from);
-      var toFmt     = formatDate(to);
-      var html = `
-        <div class="person-row" id="lr-${Date.now()}">
-          <div class="av av-g">${initials}</div>
-          <div style="flex:1;">
-            <div class="p-name">${escHtml(name)}</div>
-            <div class="p-sub">${escHtml(typeLabel)} · ${fromFmt}–${toFmt}</div>
-          </div>
-          <div style="display:flex;gap:6px;">
-            <span class="badge ${badgeCls}">${shortType}</span>
-            <div class="btn-icon danger" onclick="confirmDeleteLeave(this)"><i class="ti ti-trash"></i></div>
-          </div>
-        </div>`;
-      // Add to "On Leave Now" card
-      var cards = document.querySelectorAll('#leave-list .card');
-      cards[0].insertAdjacentHTML('beforeend', html);
       hideLeaveForm();
+      await loadDbLeave();
       document.getElementById('leave-success').classList.add('visible');
       setTimeout(() => document.getElementById('leave-success').classList.remove('visible'), 3500);
-    }, 1200);
+    } catch(e) {
+      setLoading('leave-save', false);
+      alert('Could not save leave record. Please try again.');
+    }
   }
 
   // ── DUTY FORM ──
