@@ -2024,7 +2024,6 @@ html, body {
       loadAdminLeaveDuty();
       loadDbProfiles();
       loadInviteLog();
-      updatePendingCount();
       loadDbEvents();
     }
   });
@@ -2324,8 +2323,6 @@ html, body {
         setTimeout(function(){ document.getElementById('invite-success').classList.remove('visible'); }, 5000);
         // Refresh log
         loadInviteLog();
-        // Update pending count
-        updatePendingCount();
       } else {
         var err = await res.json();
         // Roll back the pending profile row so this email can be retried,
@@ -2382,14 +2379,6 @@ html, body {
       document.getElementById('invite-log-list').innerHTML =
         '<div style="text-align:center;padding:12px 0;font-size:12px;color:var(--text3);">Could not load invite log.</div>';
     }
-  }
-
-  async function updatePendingCount() {
-    try {
-      var data = await sbFetch('GET', '/rest/v1/profiles?role=eq.pending&select=email');
-      var countEl = document.querySelector('.stat-card.alert .stat-val');
-      if (countEl && data) countEl.textContent = data.length;
-    } catch(e) {}
   }
 
   function setInviteLoading(on) {
