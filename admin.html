@@ -716,11 +716,11 @@ html, body {
           </div>
         </div>
 
-        <div class="form-group" style="display:none;">
+        <div class="form-group">
           <label class="form-label">Badge Type</label>
           <div class="badge-picker">
-            <div class="badge-opt badge-opt-urgent selected" onclick="selectBadge(this,'urgent')">Urgent</div>
-            <div class="badge-opt badge-opt-general" onclick="selectBadge(this,'general')">General</div>
+            <div class="badge-opt badge-opt-urgent" onclick="selectBadge(this,'urgent')">Urgent</div>
+            <div class="badge-opt badge-opt-general selected" onclick="selectBadge(this,'general')">General</div>
             <div class="badge-opt badge-opt-hr" onclick="selectBadge(this,'hr')">HR</div>
             <div class="badge-opt badge-opt-facility" onclick="selectBadge(this,'facility')">Facilities</div>
             <div class="badge-opt badge-opt-event" onclick="selectBadge(this,'event')">Event</div>
@@ -1283,7 +1283,7 @@ html, body {
   }
 
   // ── BADGE PICKER ──
-  var selectedBadge = 'urgent';
+  var selectedBadge = 'general';
   function selectBadge(el, type) {
     document.querySelectorAll('.badge-opt').forEach(b => b.classList.remove('selected'));
     el.classList.add('selected');
@@ -1318,6 +1318,14 @@ html, body {
     editingAnnId = null;
     updateCharCount(); updateBodyCount();
     clearFormErrors();
+    setBadgeSelection('general');
+  }
+
+  function setBadgeSelection(type) {
+    selectedBadge = type;
+    document.querySelectorAll('.badge-opt').forEach(function(b) {
+      b.classList.toggle('selected', b.classList.contains('badge-opt-' + type));
+    });
   }
 
   // ── PUBLISH ANNOUNCEMENT ──
@@ -1754,12 +1762,14 @@ html, body {
     var item  = btn.closest('.ann-item');
     var title = item.querySelector('.ann-title').textContent;
     var body  = item.querySelector('.ann-body').textContent;
+    var badge = item.getAttribute('data-badge') || 'general';
     editingAnnId = item.getAttribute('data-id') || null;
     // Populate post form and scroll to it
     switchTabByName('announce');
     document.getElementById('ann-title').value = title;
     document.getElementById('ann-body').value  = body;
     updateCharCount(); updateBodyCount();
+    setBadgeSelection(badge);
     showPostForm();
     // Remove original
     item.remove();
@@ -2099,7 +2109,7 @@ html, body {
         var d = new Date(ann.created_at).toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'});
         var t = new Date(ann.created_at).toLocaleTimeString('en-MY',{hour:'numeric',minute:'2-digit',hour12:true});
         var dt = d + ' · ' + t;
-        var html = '<div class="ann-item ' + b.cls + '" data-id="' + ann.id + '">'
+        var html = '<div class="ann-item ' + b.cls + '" data-id="' + ann.id + '" data-badge="' + (ann.badge || 'general') + '">'
           + '<div class="ann-meta"><span class="ann-time">' + dt + '</span></div>'
           + '<div class="ann-title">' + escHtml(ann.title) + '</div>'
           + '<div class="ann-body">' + escHtml(ann.body) + '</div>'
