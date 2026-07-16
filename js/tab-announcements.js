@@ -233,7 +233,7 @@ async function saveAnnouncement() {
     if (editingAnnId) {
       await sbWrite('PATCH', 'announcements', { title: title, body: body }, 'id=eq.' + editingAnnId);
     } else {
-      await sbWrite('POST', 'announcements', { title: title, body: body, posted_by: user.name || 'Staff' });
+      await sbWrite('POST', 'announcements', { title: title, body: body, badge: 'general', posted_by: user.name || 'Staff' });
     }
     hideAnnForm();
     loadAnnouncements();
