@@ -30,7 +30,7 @@ async function sbWrite(method, table, body, filter) {
 }
 
 // ── Per-module permissions ──
-var DEFAULT_PERMISSIONS = { announcements: 'view', leave: 'view', duty: 'view', events: 'view', book: 'edit' };
+var DEFAULT_PERMISSIONS = { announcements: 'view', leave: 'view', duty: 'view', events: 'view', book: 'edit', timeoff: 'view' };
 
 function hasEditPermission(module) {
   var raw = sessionStorage.getItem('mjm_user');
