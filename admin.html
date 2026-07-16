@@ -1329,7 +1329,7 @@ html, body {
   }
 
   // ── PUBLISH ANNOUNCEMENT ──
-  function publishAnnouncement() {
+  async function publishAnnouncement() {
     clearFormErrors();
     var title = document.getElementById('ann-title').value.trim();
     var body  = document.getElementById('ann-body').value.trim();
@@ -1346,69 +1346,25 @@ html, body {
     }
     if (!valid) return;
 
-    // Loading
     setLoading('pub', true);
     var user = JSON.parse(sessionStorage.getItem('mjm_user') || '{}');
-    if (editingAnnId) {
-      // PATCH existing record — preserves original created_at so banner timing is unchanged
-      sbFetch('PATCH', '/rest/v1/announcements?id=eq.' + editingAnnId, { title: title, body: body, badge: selectedBadge, posted_by: user.name || 'HR' }, { 'Prefer': '' }).then(function(){
+    try {
+      if (editingAnnId) {
+        // PATCH existing record — preserves original created_at so banner timing is unchanged
+        await sbFetch('PATCH', '/rest/v1/announcements?id=eq.' + editingAnnId, { title: title, body: body, badge: selectedBadge, posted_by: user.name || 'HR' }, { 'Prefer': '' });
         editingAnnId = null;
-        setLoading('pub', false);
-        hidePostForm();
-        loadDbAnnouncements();
-        document.getElementById('ann-success').classList.add('visible');
-        setTimeout(function(){ document.getElementById('ann-success').classList.remove('visible'); }, 4000);
-      }).catch(function(){ editingAnnId = null; setLoading('pub', false); });
-    } else {
-      publishToDb(title, body, selectedBadge, notifyOn, user.name || 'HR').catch(function(){});
-      setTimeout(() => {
-        setLoading('pub', false);
-      // Prepend new announcement to list
-      var badgeMap = {
-        urgent:   { cls:'card-urgent',   badgeCls:'b-red',    label:'Urgent' },
-        general:  { cls:'card-general',  badgeCls:'b-green',  label:'General' },
-        hr:       { cls:'card-hr',       badgeCls:'b-blue',   label:'HR' },
-        facility: { cls:'card-facility', badgeCls:'b-amber',  label:'Facilities' },
-        event:    { cls:'card-event',    badgeCls:'b-purple', label:'Event' },
-      };
-      var b    = badgeMap[selectedBadge];
-      var html = `
-        <div class="ann-item ${b.cls}">
-          <div class="ann-meta">
-            <span class="badge ${b.badgeCls}">${b.label}</span>
-            <span class="ann-time">Just now</span>
-          </div>
-          <div class="ann-title">${escHtml(title)}</div>
-          <div class="ann-body">${escHtml(body)}</div>
-          <div class="ann-actions">
-            <div class="ann-author"><i class="ti ti-user"></i> Posted by HR</div>
-            <div class="btn-icon" onclick="editAnn(this)" title="Edit"><i class="ti ti-pencil"></i></div>
-            <div class="btn-icon danger" onclick="confirmDelete(this)" title="Delete"><i class="ti ti-trash"></i></div>
-          </div>
-        </div>`;
-      document.getElementById('ann-list').insertAdjacentHTML('afterbegin', html);
-      // Update count
-      var countEl = document.getElementById('ann-count');
-      var cur = parseInt(countEl.textContent.replace(/\D/g,''));
-      countEl.textContent = '(' + (cur + 1) + ')';
-      hidePostForm();
-      if (selectedBadge === 'urgent') {
-        var ub = document.getElementById('admin-urgent-banner');
-        var ut = document.getElementById('admin-urgent-text');
-        if (ub && ut) {
-          var newItem = '<div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:6px;">'
-            + '<i class="ti ti-alert-circle" style="font-size:13px;color:#F0A500;flex-shrink:0;margin-top:2px;"></i>'
-            + '<div><div style="font-weight:700;font-size:12px;color:#7A5800;margin-bottom:2px;">' + escHtml(title) + '</div>'
-            + '<div style="font-size:12px;color:#7A5800;line-height:1.5;">' + escHtml(body) + '</div></div></div>';
-          ut.innerHTML = newItem + ut.innerHTML;
-          ub.style.display = 'block';
-        }
+      } else {
+        await publishToDb(title, body, selectedBadge, notifyOn, user.name || 'HR');
       }
+      setLoading('pub', false);
+      hidePostForm();
+      await loadDbAnnouncements();
       document.getElementById('ann-success').classList.add('visible');
-      setTimeout(() => document.getElementById('ann-success').classList.remove('visible'), 4000);
-      loadDbAnnouncements();
-    }, 1400);
-    } // end else (new announcement)
+      setTimeout(function(){ document.getElementById('ann-success').classList.remove('visible'); }, 4000);
+    } catch(e) {
+      setLoading('pub', false);
+      alert('Could not save announcement. Please try again.');
+    }
   }
 
   // ── LEAVE FORM ──
@@ -1961,7 +1917,9 @@ html, body {
     var oldRole = list[idx].role;
     list[idx].role = role;
     saveStaffList(list);
-    syncRoleToDb(list[idx].email, role);
+    syncRoleToDb(list[idx].email, role).catch(function(){
+      alert('Role change may not have saved — please refresh and check before relying on it.');
+    });
     document.getElementById('assign-email').value = '';
     document.getElementById('assign-role').value  = 'hradmin';
     showAdminSuccess(
@@ -2065,6 +2023,7 @@ html, body {
     var headers = { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
     if (extra_headers) Object.assign(headers, extra_headers);
     var res = await fetch(SURL + path, { method: method, headers: headers, body: body ? JSON.stringify(body) : undefined });
+    if (!res.ok) throw new Error('Request failed: ' + res.status);
     try { return await res.json(); } catch(e) { return null; }
   }
 
@@ -2148,7 +2107,9 @@ html, body {
     var row = btn.closest('.person-row'), id = row ? row.getAttribute('data-leave-id') : null;
     if (!id) { confirmDeleteLeave(btn); return; }
     if (!confirm('Remove this leave entry?')) return;
-    await sbFetch('DELETE', '/rest/v1/leave_records?id=eq.' + id, null, { 'Prefer': '' });
+    try {
+      await sbFetch('DELETE', '/rest/v1/leave_records?id=eq.' + id, null, { 'Prefer': '' });
+    } catch(e) { alert('Could not remove leave entry. Please try again.'); return; }
     row.style.transition = 'opacity 0.2s'; row.style.opacity = '0';
     setTimeout(function(){ row.remove(); }, 220);
   }
@@ -2210,7 +2171,9 @@ html, body {
     var row = btn.closest('.duty-slot'), id = row ? row.getAttribute('data-duty-id') : null;
     if (!id) { confirmDeleteDuty(btn); return; }
     if (!confirm('Remove this duty assignment?')) return;
-    await sbFetch('DELETE', '/rest/v1/duty_roster?id=eq.' + id, null, { 'Prefer': '' });
+    try {
+      await sbFetch('DELETE', '/rest/v1/duty_roster?id=eq.' + id, null, { 'Prefer': '' });
+    } catch(e) { alert('Could not remove duty assignment. Please try again.'); return; }
     var card = row.closest('.card');
     row.style.transition = 'opacity 0.2s'; row.style.opacity = '0';
     setTimeout(function(){
@@ -2685,7 +2648,11 @@ html, body {
     var item = btn.closest('.ann-item');
     var id   = item ? item.getAttribute('data-event-id') : null;
     if (!confirm('Delete this event?')) return;
-    if (id) await sbFetch('DELETE', '/rest/v1/events?id=eq.' + id, null, { 'Prefer': '' });
+    if (id) {
+      try {
+        await sbFetch('DELETE', '/rest/v1/events?id=eq.' + id, null, { 'Prefer': '' });
+      } catch(e) { alert('Could not delete event. Please try again.'); return; }
+    }
     item.style.transition = 'opacity 0.2s'; item.style.opacity = '0';
     setTimeout(function(){ item.remove(); loadAdminCalendar(); }, 220);
   }
