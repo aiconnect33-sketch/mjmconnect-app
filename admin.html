@@ -2664,7 +2664,7 @@ html, body {
         await sbFetch('POST', '/rest/v1/events', {
           title: title, event_date: date,
           event_time: time || null, description: desc || null,
-          created_by: user.name || 'HR Admin'
+          created_by: user.name || 'HR Admin', created_by_email: user.email || ''
         });
       }
       editingEventId = null;
