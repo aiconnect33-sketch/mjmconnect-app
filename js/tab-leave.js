@@ -40,7 +40,9 @@ async function loadLeave() {
   var addTrigger = document.getElementById('leave-add-trigger');
   if (addTrigger) addTrigger.style.display = 'block';
   var rawUser = sessionStorage.getItem('mjm_user');
-  var myName  = rawUser ? (JSON.parse(rawUser).name || '') : '';
+  var me = rawUser ? JSON.parse(rawUser) : {};
+  var myName  = me.name || '';
+  var isAdminUser = me.role === 'hradmin' || me.role === 'superadmin';
 
   if (tabEl) {
     try {
@@ -64,15 +66,19 @@ async function loadLeave() {
           var badgeCls  = r.leave_type === 'Medical Leave' ? 'badge-urgent' : 'badge-amber';
           var from = new Date(r.date_from+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'});
           var to   = new Date(r.date_to+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'});
-          var isMine = myName && r.staff_name.toLowerCase() === myName.toLowerCase();
-          var delBtn = isMine
+          var canManage = isAdminUser || (myName && r.staff_name.toLowerCase() === myName.toLowerCase());
+          var editBtn = canManage
+            ? '<div style="cursor:pointer;color:var(--text-secondary);margin-left:6px;" onclick="editLeaveRequest(\'' + escJsAttr(r.id) + '\',\'' + escJsAttr(r.leave_type) + '\',\'' + escJsAttr(r.date_from) + '\',\'' + escJsAttr(r.date_to) + '\')"><i class="ti ti-pencil"></i></div>'
+            : '';
+          var delBtn = canManage
             ? '<div style="cursor:pointer;color:var(--red-text);margin-left:6px;" onclick="deleteLeaveRequest(\'' + escJsAttr(r.id) + '\')"><i class="ti ti-trash"></i></div>'
             : '';
-          h += '<div class="person-row">'
+          h += '<div class="person-row" data-leave-id="' + escHtml(r.id) + '" data-staff-name="' + escHtml(r.staff_name) + '">'
             + '<div class="avatar ' + avCls + '">' + ini + '</div>'
             + '<div style="flex:1;"><div class="person-name">' + escHtml(r.staff_name) + '</div>'
             + '<div class="person-sub">' + escHtml(r.leave_type) + ' · ' + from + (from !== to ? ' – ' + to : '') + '</div></div>'
             + '<span class="badge ' + badgeCls + '">' + shortType + '</span>'
+            + editBtn
             + delBtn
             + '</div>';
         });
@@ -89,9 +95,13 @@ async function loadLeave() {
 }
 
 // ── LEAVE — STAFF SELF-SERVICE (open to all staff) ──
+var editingLeaveId = null;
+
 function showLeaveForm() {
   var raw = sessionStorage.getItem('mjm_user');
   var user = raw ? JSON.parse(raw) : {};
+  editingLeaveId = null;
+  document.getElementById('leave-form-title').textContent = 'Add Leave';
   document.getElementById('leave-form-name').value = user.name || user.email || '';
   document.getElementById('leave-form-type').value = 'Annual Leave';
   document.getElementById('leave-form-from').value = '';
@@ -102,9 +112,40 @@ function showLeaveForm() {
 
 function hideLeaveForm() {
   document.getElementById('leave-form').style.display = 'none';
+  editingLeaveId = null;
+}
+
+// HR Admin/Super Admin can manage any leave record; everyone else can only
+// manage their own, matched by staff name -- the same ownership signal
+// already used for the Delete button on this tab, since the "Staff" field
+// is locked to the logged-in user's own name when adding a new record.
+function canManageLeave(id) {
+  var raw = sessionStorage.getItem('mjm_user');
+  var me = raw ? JSON.parse(raw) : {};
+  if (me.role === 'hradmin' || me.role === 'superadmin') return true;
+  var row = document.querySelector('[data-leave-id="' + id + '"]');
+  var ownerName = row ? (row.getAttribute('data-staff-name') || '') : '';
+  return !!(me.name && ownerName && me.name.toLowerCase() === ownerName.toLowerCase());
+}
+
+function editLeaveRequest(id, type, from, to) {
+  if (!canManageLeave(id)) return;
+  var raw = sessionStorage.getItem('mjm_user');
+  var user = raw ? JSON.parse(raw) : {};
+  var row = document.querySelector('[data-leave-id="' + id + '"]');
+  var ownerName = row ? row.getAttribute('data-staff-name') : (user.name || user.email || '');
+  editingLeaveId = id;
+  document.getElementById('leave-form-title').textContent = 'Edit Leave';
+  document.getElementById('leave-form-name').value = ownerName;
+  document.getElementById('leave-form-type').value = type;
+  document.getElementById('leave-form-from').value = from;
+  document.getElementById('leave-form-to').value   = to;
+  document.getElementById('leave-form').style.display = 'block';
+  document.getElementById('leave-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 async function saveLeaveRequest() {
+  if (editingLeaveId && !canManageLeave(editingLeaveId)) { alert('You can only edit your own leave records.'); return; }
   var name = document.getElementById('leave-form-name').value.trim();
   var type = document.getElementById('leave-form-type').value;
   var from = document.getElementById('leave-form-from').value;
@@ -112,13 +153,19 @@ async function saveLeaveRequest() {
   if (!name || !from || !to) { alert('Please fill in the leave dates.'); return; }
   if (from > to) { alert('The "From" date must be before the "To" date.'); return; }
   try {
-    await sbWrite('POST', 'leave_records', { staff_name: name, leave_type: type, date_from: from, date_to: to });
+    if (editingLeaveId) {
+      await sbWrite('PATCH', 'leave_records', { leave_type: type, date_from: from, date_to: to }, 'id=eq.' + editingLeaveId);
+      editingLeaveId = null;
+    } else {
+      await sbWrite('POST', 'leave_records', { staff_name: name, leave_type: type, date_from: from, date_to: to });
+    }
     hideLeaveForm();
     loadLeave();
   } catch(e) { alert('Could not save leave. Please try again.'); }
 }
 
 async function deleteLeaveRequest(id) {
+  if (!canManageLeave(id)) { alert('You can only delete your own leave records.'); return; }
   if (!confirm('Delete this leave record?')) return;
   try {
     await sbWrite('DELETE', 'leave_records', null, 'id=eq.' + id);
