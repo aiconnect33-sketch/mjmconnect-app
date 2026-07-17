@@ -114,13 +114,13 @@ html,body{min-height:100%;font-family:'Inter',-apple-system,sans-serif;backgroun
     <div class="header-icon"><i class="ti ti-user-check"></i></div>
     <div>
       <div class="header-title">MJM<span>Connect</span></div>
-      <div class="header-sub">Set up your account</div>
+      <div class="header-sub" id="header-sub">Set up your account</div>
     </div>
   </div>
 
   <div class="invite-banner" id="invite-banner">
     <i class="ti ti-mail-check"></i>
-    <div class="invite-banner-text">You've been invited by <strong>HR Department</strong>. Complete the steps below to activate your account.</div>
+    <div class="invite-banner-text" id="invite-banner-text">You've been invited by <strong>HR Department</strong>. Complete the steps below to activate your account.</div>
   </div>
 
   <div class="steps-bar">
@@ -193,8 +193,8 @@ html,body{min-height:100%;font-family:'Inter',-apple-system,sans-serif;backgroun
   <!-- PANEL 2 — PASSWORD -->
   <div class="reg-panel" id="panel-2">
     <div class="card-body">
-      <div class="panel-title">Create your password</div>
-      <div class="panel-sub">Choose a strong password to keep your account secure.</div>
+      <div class="panel-title" id="panel2-title">Create your password</div>
+      <div class="panel-sub" id="panel2-sub">Choose a strong password to keep your account secure.</div>
       <div class="alert alert-error" id="p2-alert">
         <i class="ti ti-alert-circle"></i><span id="p2-alert-msg">Please check your password.</span>
       </div>
@@ -238,7 +238,7 @@ html,body{min-height:100%;font-family:'Inter',-apple-system,sans-serif;backgroun
         <span id="create-label">Create My Account</span>
         <div class="spinner" id="create-spinner"></div>
       </button>
-      <button class="btn-ghost" onclick="goStep(1)"><i class="ti ti-arrow-left"></i> Back</button>
+      <button class="btn-ghost" id="panel2-back-btn" onclick="goStep(1)"><i class="ti ti-arrow-left"></i> Back</button>
       <div class="hdivider"></div>
       <div class="footer-note">Wrong details? <a href="login.html">Contact HR</a> to update your invite.</div>
     </div>
@@ -250,7 +250,7 @@ html,body{min-height:100%;font-family:'Inter',-apple-system,sans-serif;backgroun
       <div style="text-align:center;padding:12px 0 8px;">
         <div class="success-icon-circle"><i class="ti ti-confetti"></i></div>
         <div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:5px;" id="success-name">You're all set!</div>
-        <div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:14px;">Your MJMConnect account is ready. Welcome to the team!</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:14px;" id="success-sub">Your MJMConnect account is ready. Welcome to the team!</div>
         <div class="profile-preview">
           <div class="profile-av" id="success-av">?</div>
           <div style="text-align:left;">
@@ -280,8 +280,8 @@ html,body{min-height:100%;font-family:'Inter',-apple-system,sans-serif;backgroun
     <div class="card-body">
       <div style="text-align:center;padding:20px 0 12px;">
         <div class="expired-icon"><i class="ti ti-clock-x"></i></div>
-        <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:5px;">This invite link has expired</div>
-        <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:14px;">
+        <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:5px;" id="expired-title">This invite link has expired</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:14px;" id="expired-body">
           Invite links are valid for 48 hours. This one has expired or has already been used.<br><br>
           Please contact HR to request a new invite link.
         </div>
@@ -311,12 +311,13 @@ var currentStep = 1;
 var accessToken  = null;
 var refreshToken = null;
 var userEmail    = null;
+var flowType     = null; // 'invite' or 'recovery'
 
 // ── ON LOAD — parse token from URL ──
 window.addEventListener('DOMContentLoaded', async function() {
 
   // Supabase puts tokens in the URL hash after redirect
-  // Format: #access_token=xxx&refresh_token=xxx&type=invite
+  // Format: #access_token=xxx&refresh_token=xxx&type=invite (or type=recovery)
   var hash   = window.location.hash.substring(1);
   var params = new URLSearchParams(hash);
 
@@ -324,10 +325,22 @@ window.addEventListener('DOMContentLoaded', async function() {
   refreshToken = params.get('refresh_token');
   var type     = params.get('type');
 
-  if (!accessToken || type !== 'invite') {
-    // No valid invite token — show expired screen
+  if (!accessToken || (type !== 'invite' && type !== 'recovery')) {
+    // No valid invite/recovery token — show expired screen
     showPanel('expired');
     return;
+  }
+  flowType = type;
+
+  if (flowType === 'recovery') {
+    document.getElementById('header-sub').textContent = 'Reset your password';
+    document.getElementById('invite-banner-text').innerHTML = 'Enter a new password below to finish resetting your account.';
+    document.getElementById('panel2-title').textContent = 'Reset your password';
+    document.getElementById('panel2-sub').textContent = 'Choose a new password for your account.';
+    document.getElementById('create-label').textContent = 'Reset Password';
+    document.getElementById('panel2-back-btn').style.display = 'none';
+    document.getElementById('expired-title').textContent = 'This reset link has expired';
+    document.getElementById('expired-body').innerHTML = 'Reset links are valid for 30 minutes. Please request a new one from the sign-in page.';
   }
 
   // Get user info from Supabase using the access token
@@ -360,8 +373,14 @@ window.addEventListener('DOMContentLoaded', async function() {
       updateAvatar();
     }
 
-    // Show step 1
-    showPanel('1');
+    if (flowType === 'recovery') {
+      // Skip "Your Info" -- go straight to the password step
+      showPanel(2);
+      currentStep = 2;
+      updateStepUI(2);
+    } else {
+      showPanel('1');
+    }
 
   } catch(e) {
     showPanel('expired');
@@ -521,27 +540,36 @@ async function handleCreate() {
       return;
     }
 
-    // Update profile in database
-    var profileRes = await fetch(SURL + '/rest/v1/profiles?email=eq.' + encodeURIComponent(userEmail), {
-      method: 'PATCH',
-      headers: {
-        'apikey': SKEY,
-        'Authorization': 'Bearer ' + accessToken,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=representation'
-      },
-      body: JSON.stringify({ full_name: name, phone: phone, role: 'staff' })
-    });
+    // For a fresh invite, finalize the profile (name/phone/role). A password
+    // reset must NOT touch role or overwrite the existing profile -- the
+    // account already exists and may belong to an HR Admin or Super Admin.
+    if (flowType !== 'recovery') {
+      var profileRes = await fetch(SURL + '/rest/v1/profiles?email=eq.' + encodeURIComponent(userEmail), {
+        method: 'PATCH',
+        headers: {
+          'apikey': SKEY,
+          'Authorization': 'Bearer ' + accessToken,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify({ full_name: name, phone: phone, role: 'staff' })
+      });
 
-    if (!profileRes.ok) {
-      btn.disabled = false; lbl.style.display = 'inline'; spn.style.display = 'none';
-      document.getElementById('p2-alert-msg').textContent = 'Your password was set, but we could not finish setting up your profile. Please try again.';
-      document.getElementById('p2-alert').classList.add('visible');
-      return;
+      if (!profileRes.ok) {
+        btn.disabled = false; lbl.style.display = 'inline'; spn.style.display = 'none';
+        document.getElementById('p2-alert-msg').textContent = 'Your password was set, but we could not finish setting up your profile. Please try again.';
+        document.getElementById('p2-alert').classList.add('visible');
+        return;
+      }
     }
 
     // Show success screen
-    document.getElementById('success-name').textContent = 'Welcome, ' + name.split(' ')[0] + '!';
+    if (flowType === 'recovery') {
+      document.getElementById('success-name').textContent = 'Password reset!';
+      document.getElementById('success-sub').textContent = 'Your password has been updated. You can now sign in with your new password.';
+    } else {
+      document.getElementById('success-name').textContent = 'Welcome, ' + name.split(' ')[0] + '!';
+    }
     document.getElementById('success-fullname').textContent = name;
     document.getElementById('success-email').textContent   = userEmail;
     updateAvatar();
