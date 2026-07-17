@@ -35,11 +35,10 @@ async function loadLeave() {
     } catch(e) {}
   }
 
-  // ── LEAVE TAB: current + upcoming ──
+  // ── LEAVE TAB: current + upcoming (open to all staff) ──
   var tabEl = document.getElementById('leave-tab-list');
-  var canEdit = typeof hasEditPermission === 'function' && hasEditPermission('leave');
   var addTrigger = document.getElementById('leave-add-trigger');
-  if (addTrigger) addTrigger.style.display = canEdit ? 'block' : 'none';
+  if (addTrigger) addTrigger.style.display = 'block';
   var rawUser = sessionStorage.getItem('mjm_user');
   var myName  = rawUser ? (JSON.parse(rawUser).name || '') : '';
 
@@ -65,7 +64,7 @@ async function loadLeave() {
           var badgeCls  = r.leave_type === 'Medical Leave' ? 'badge-urgent' : 'badge-amber';
           var from = new Date(r.date_from+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'});
           var to   = new Date(r.date_to+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'});
-          var isMine = canEdit && myName && r.staff_name.toLowerCase() === myName.toLowerCase();
+          var isMine = myName && r.staff_name.toLowerCase() === myName.toLowerCase();
           var delBtn = isMine
             ? '<div style="cursor:pointer;color:var(--red-text);margin-left:6px;" onclick="deleteLeaveRequest(\'' + escJsAttr(r.id) + '\')"><i class="ti ti-trash"></i></div>'
             : '';
@@ -89,7 +88,7 @@ async function loadLeave() {
   }
 }
 
-// ── LEAVE — STAFF SELF-SERVICE (Leave module permission) ──
+// ── LEAVE — STAFF SELF-SERVICE (open to all staff) ──
 function showLeaveForm() {
   var raw = sessionStorage.getItem('mjm_user');
   var user = raw ? JSON.parse(raw) : {};
@@ -106,7 +105,6 @@ function hideLeaveForm() {
 }
 
 async function saveLeaveRequest() {
-  if (!hasEditPermission('leave')) return;
   var name = document.getElementById('leave-form-name').value.trim();
   var type = document.getElementById('leave-form-type').value;
   var from = document.getElementById('leave-form-from').value;
@@ -117,14 +115,13 @@ async function saveLeaveRequest() {
     await sbWrite('POST', 'leave_records', { staff_name: name, leave_type: type, date_from: from, date_to: to });
     hideLeaveForm();
     loadLeave();
-  } catch(e) { alert('Could not submit leave request. Please try again.'); }
+  } catch(e) { alert('Could not save leave. Please try again.'); }
 }
 
 async function deleteLeaveRequest(id) {
-  if (!hasEditPermission('leave')) return;
-  if (!confirm('Delete this leave request?')) return;
+  if (!confirm('Delete this leave record?')) return;
   try {
     await sbWrite('DELETE', 'leave_records', null, 'id=eq.' + id);
     loadLeave();
-  } catch(e) { alert('Could not delete leave request. Please try again.'); }
+  } catch(e) { alert('Could not delete leave record. Please try again.'); }
 }

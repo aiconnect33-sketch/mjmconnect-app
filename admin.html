@@ -296,6 +296,15 @@ html, body {
 .badge-opt-facility { background: var(--amber-bg);  color: var(--amber-text); }
 .badge-opt-event    { background: var(--purple-bg); color: var(--purple-text); }
 
+.perm-opt {
+  padding: 5px 10px; border-radius: 20px;
+  font-size: 11px; font-weight: 600;
+  cursor: pointer; border: 1.5px solid transparent;
+  background: #EDEFEE; color: var(--text3);
+  transition: all 0.15s; user-select: none;
+}
+.perm-opt.selected { border-color: var(--green); background: var(--green-bg); color: var(--green-text); }
+
 /* ── NOTIFY TOGGLE ── */
 .toggle-row {
   display: flex; align-items: center;
@@ -1217,6 +1226,21 @@ html, body {
   </div>
 </div>
 
+<!-- ── MANAGE PERMISSIONS MODAL ── -->
+<div class="modal-overlay" id="permissions-modal">
+  <div class="modal" style="max-width:360px;">
+    <div class="modal-title">Manage Permissions</div>
+    <div class="modal-body" style="text-align:left;">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:12px;" id="perm-modal-staff-name">—</div>
+      <div id="perm-rows"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" style="margin:0;" onclick="closePermissionsModal()">Cancel</button>
+      <button class="btn-primary" style="margin:0;" onclick="savePermissions()">Save</button>
+    </div>
+  </div>
+</div>
+
 <script>
   // ── CLOCK ──
   function tick() {
@@ -1860,6 +1884,9 @@ html, body {
           var promoteBtn = canPromote
             ? '<div class="btn-icon" onclick="promoteToAdmin(\'' + escJsAttr(u.email) + '\')" title="Make HR Admin" style="color:var(--green);border-color:var(--green-bg);background:var(--green-bg);"><i class="ti ti-shield-up"></i></div>'
             : '';
+          var permsBtn = canPromote
+            ? '<div class="btn-icon" onclick="openPermissionsModal(\'' + escJsAttr(u.email) + '\')" title="Manage Permissions" style="color:var(--blue-text);border-color:var(--blue-bg);background:var(--blue-bg);"><i class="ti ti-adjustments-horizontal"></i></div>'
+            : '';
           var deleteBtn = '<div class="btn-icon" onclick="deleteStaff(\'' + escJsAttr(u.id) + '\',\'' + escJsAttr(u.name) + '\')" title="Remove staff" style="color:#c0392b;border-color:#fde8e8;background:#fde8e8;"><i class="ti ti-trash"></i></div>';
           return '<div class="person-row">'
             + '<div class="av ' + avCls + '">' + ini + '</div>'
@@ -1869,12 +1896,72 @@ html, body {
             + '</div>'
             + '<div style="display:flex;align-items:center;gap:6px;">'
             + '<span class="badge b-green">Staff</span>'
+            + permsBtn
             + promoteBtn
             + deleteBtn
             + '</div>'
             + '</div>';
         }).join('');
       }
+    }
+  }
+
+  // ── MANAGE PERMISSIONS ──
+  var PERM_MODULES = [
+    { key: 'announcements', label: 'Announcements' },
+    { key: 'duty',          label: 'Duty' },
+    { key: 'events',        label: 'Events' }
+  ];
+  var permModalEmail = null;
+  var permModalState = {};
+
+  function openPermissionsModal(email) {
+    var list = getStaffList();
+    var staffMember = list.find(function(u){ return u.email === email; });
+    if (!staffMember) return;
+
+    permModalEmail = email;
+    permModalState = Object.assign({}, DEFAULT_PERMISSIONS, staffMember.permissions || {});
+
+    document.getElementById('perm-modal-staff-name').textContent = staffMember.name + ' — ' + staffMember.email;
+    renderPermRows();
+    document.getElementById('permissions-modal').classList.add('visible');
+  }
+
+  function renderPermRows() {
+    document.getElementById('perm-rows').innerHTML = PERM_MODULES.map(function(m) {
+      var level = permModalState[m.key] || 'view';
+      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid var(--border);">'
+        + '<div style="font-size:13px;font-weight:600;color:var(--text);">' + m.label + '</div>'
+        + '<div style="display:flex;gap:6px;">'
+        + '<div class="perm-opt' + (level === 'view' ? ' selected' : '') + '" onclick="setPermLevel(\'' + m.key + '\',\'view\')">View</div>'
+        + '<div class="perm-opt' + (level === 'edit' ? ' selected' : '') + '" onclick="setPermLevel(\'' + m.key + '\',\'edit\')">View &amp; Edit</div>'
+        + '</div>'
+        + '</div>';
+    }).join('');
+  }
+
+  function setPermLevel(moduleKey, level) {
+    permModalState[moduleKey] = level;
+    renderPermRows();
+  }
+
+  function closePermissionsModal() {
+    document.getElementById('permissions-modal').classList.remove('visible');
+    permModalEmail = null;
+  }
+
+  async function savePermissions() {
+    if (!permModalEmail) return;
+    try {
+      await sbFetch('PATCH', '/rest/v1/profiles?email=eq.' + encodeURIComponent(permModalEmail), { permissions: permModalState }, { 'Prefer': '' });
+      // Update local cache so the change reflects immediately without a re-fetch
+      var list = getStaffList();
+      var idx = list.findIndex(function(u){ return u.email === permModalEmail; });
+      if (idx !== -1) { list[idx].permissions = permModalState; saveStaffList(list); }
+      closePermissionsModal();
+    } catch(e) {
+      alert('Could not save permissions. Please try again.');
     }
   }
 
@@ -2027,6 +2114,8 @@ html, body {
   var SURL  = 'https://jkbxngfwkytscgxnnnnd.supabase.co';
   var SKEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImprYnhuZ2Z3a3l0c2NneG5ubm5kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNTcyMjcsImV4cCI6MjA5NTYzMzIyN30._FIzBEcmwtAkADDiDZVTS-YQY0kLoGBowL8n7T45Ulk';
   var SVCKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImprYnhuZ2Z3a3l0c2NneG5ubm5kIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDA1NzIyNywiZXhwIjoyMDk1NjMzMjI3fQ.qPOdtakulLrJXEmSO-FW8a2EiTJE7qLYzdK8Xf6vK3I'; // service role — used only for sending invites
+  // Mirrors js/core.js's DEFAULT_PERMISSIONS (admin.html doesn't include core.js)
+  var DEFAULT_PERMISSIONS = { announcements: 'view', duty: 'view', events: 'view' };
 
   async function sbFetch(method, path, body, extra_headers) {
     var headers = { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
@@ -2234,7 +2323,7 @@ html, body {
       var data = await sbFetch('GET', '/rest/v1/profiles?order=created_at.asc&limit=100');
       if (!data || data.length === 0) return;
       localStorage.setItem('mjm_staff', JSON.stringify(data.map(function(p) {
-        return { id: p.id, name: p.full_name, email: p.email, role: p.role || 'staff' };
+        return { id: p.id, name: p.full_name, email: p.email, role: p.role || 'staff', permissions: p.permissions || null };
       })));
     } catch(e) { /* Supabase not reachable */ }
   }
