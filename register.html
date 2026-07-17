@@ -258,7 +258,7 @@ html,body{min-height:100%;font-family:'Inter',-apple-system,sans-serif;backgroun
             <div style="font-size:11px;color:var(--text2);" id="success-email"></div>
           </div>
         </div>
-        <div style="background:var(--bg);border-radius:var(--r-lg);border:0.5px solid var(--border);padding:10px 12px;margin-bottom:14px;text-align:left;">
+        <div style="background:var(--bg);border-radius:var(--r-lg);border:0.5px solid var(--border);padding:10px 12px;margin-bottom:14px;text-align:left;" id="success-access-list">
           <div class="access-item"><i class="ti ti-speakerphone"></i> Announcements &amp; notices</div>
           <div class="access-item"><i class="ti ti-calendar"></i> Office calendar &amp; events</div>
           <div class="access-item"><i class="ti ti-beach"></i> Leave schedule</div>
@@ -341,6 +341,7 @@ window.addEventListener('DOMContentLoaded', async function() {
     document.getElementById('panel2-back-btn').style.display = 'none';
     document.getElementById('expired-title').textContent = 'This reset link has expired';
     document.getElementById('expired-body').innerHTML = 'Reset links are valid for 30 minutes. Please request a new one from the sign-in page.';
+    document.getElementById('success-access-list').style.display = 'none';
   }
 
   // Get user info from Supabase using the access token
