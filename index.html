@@ -560,12 +560,12 @@
         <div class="card"><div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:8px 0;">Loading...</div></div>
       </div>
 
-      <!-- This week's duty -->
+      <!-- Today's Estate Trip -->
       <div class="section-row">
-        <div class="section-title">This Week's Duty</div>
-        <div class="see-all" onclick="switchTabByName('duty')">See all</div>
+        <div class="section-title">Today's Estate Trip</div>
+        <div class="see-all" onclick="switchNav('estatetrip');loadEstateTrips()">See all</div>
       </div>
-      <div id="home-duty-card">
+      <div id="home-estatetrip-today">
         <div class="card">
           <div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:8px 0;">Loading...</div>
         </div>
@@ -709,6 +709,31 @@
         <div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">Loading...</div>
       </div>
     </div><!-- /duty -->
+
+    <!-- ── ESTATE TRIP ── -->
+    <div class="screen-section" id="screen-estatetrip">
+      <div style="margin-bottom:10px;">
+        <button class="book-btn-primary" style="width:100%;" onclick="showEstateTripForm()"><i class="ti ti-plus"></i> Add Estate Trip</button>
+      </div>
+      <div id="estatetrip-form" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin-bottom:12px;">
+        <div class="book-form-title" id="estatetrip-form-title">Add Estate Trip</div>
+        <div class="book-form-group">
+          <label class="book-form-label">Going To</label>
+          <input class="book-form-input" type="text" id="estatetrip-form-going-to" placeholder="e.g. Sungai Estate">
+        </div>
+        <div class="book-form-group">
+          <label class="book-form-label">Date</label>
+          <input class="book-form-input" type="date" id="estatetrip-form-date">
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="book-btn-primary" style="flex:1;" onclick="saveEstateTrip()">Save</button>
+          <button class="book-btn-ghost" style="flex:1;" onclick="hideEstateTripForm()">Cancel</button>
+        </div>
+      </div>
+      <div id="estatetrip-tab-list">
+        <div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">Loading...</div>
+      </div>
+    </div><!-- /estatetrip -->
 
     <!-- ── BOOK ── -->
     <div class="screen-section" id="screen-book">
@@ -940,6 +965,9 @@
     <div class="nav-item active" id="nav-book" onclick="switchNav('book');initBookTab()">
       <i class="ti ti-calendar-event"></i><span>Booking</span>
     </div>
+    <div class="nav-item" id="nav-estatetrip" onclick="switchNav('estatetrip');loadEstateTrips()">
+      <i class="ti ti-map-pin"></i><span>Estate Trip</span>
+    </div>
     <div class="nav-item" id="nav-timeoff" onclick="window.open('https://docs.google.com/forms/d/e/1FAIpQLScxTncnL4ekGi6qmxw6mEXsu4cS-n_c9Z6s5IDLUptJf0L09Q/viewform','_blank')">
       <i class="ti ti-clock-off"></i><span>Time Off</span>
     </div>
@@ -953,6 +981,7 @@
 <script src="js/tab-events.js"></script>
 <script src="js/tab-leave.js"></script>
 <script src="js/tab-duty.js"></script>
+<script src="js/tab-estatetrip.js"></script>
 <script src="js/tab-book.js"></script>
 
 <!-- Day detail modal -->
