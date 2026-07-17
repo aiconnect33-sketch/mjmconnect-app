@@ -2144,20 +2144,29 @@ html, body {
           + '<div style="font-size:12px;color:var(--text3);text-align:center;padding:14px 0;">No current or upcoming leave.</div></div>';
         return;
       }
-      card.innerHTML = '<div class="card"><div class="card-label">All Leave Records</div>' +
-        data.map(function(r) {
-          var ini = r.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
-          var shortType = r.leave_type === 'Annual Leave' ? 'AL' : r.leave_type === 'Medical Leave' ? 'MC' : r.leave_type === 'Paternity Leave' ? 'PL' : r.leave_type === 'Maternity Leave' ? 'ML' : 'CL';
-          var bCls = r.leave_type === 'Medical Leave' ? 'b-red' : (r.leave_type.includes('Paternity') || r.leave_type.includes('Maternity')) ? 'b-blue' : 'b-amber';
-          var from = new Date(r.date_from + 'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'});
-          var to   = new Date(r.date_to + 'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'});
-          return '<div class="person-row" data-leave-id="' + r.id + '">'
-            + '<div class="av av-g">' + ini + '</div>'
-            + '<div style="flex:1;"><div class="p-name">' + escHtml(r.staff_name) + '</div><div class="p-sub">' + escHtml(r.leave_type) + ' · ' + from + '–' + to + '</div></div>'
-            + '<div style="display:flex;gap:6px;"><span class="badge ' + bCls + '">' + shortType + '</span>'
-            + '<div class="btn-icon danger" onclick="deleteLeaveDb(this)"><i class="ti ti-trash"></i></div></div>'
-            + '</div>';
-        }).join('') + '</div>';
+      // Matches the staff app's Leave tab: split into Currently on Leave / Upcoming Leave.
+      var current  = data.filter(function(r){ return r.date_from <= today && today <= r.date_to; });
+      var upcoming = data.filter(function(r){ return r.date_from > today; });
+
+      function renderLeaveGroup(label, items) {
+        if (!items.length) return '';
+        return '<div class="card"><div class="card-label">' + label + '</div>' +
+          items.map(function(r) {
+            var ini = r.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
+            var shortType = r.leave_type === 'Annual Leave' ? 'AL' : r.leave_type === 'Medical Leave' ? 'MC' : r.leave_type === 'Paternity Leave' ? 'PL' : r.leave_type === 'Maternity Leave' ? 'ML' : 'CL';
+            var bCls = r.leave_type === 'Medical Leave' ? 'b-red' : (r.leave_type.includes('Paternity') || r.leave_type.includes('Maternity')) ? 'b-blue' : 'b-amber';
+            var from = new Date(r.date_from + 'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'});
+            var to   = new Date(r.date_to + 'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'});
+            return '<div class="person-row" data-leave-id="' + r.id + '">'
+              + '<div class="av av-g">' + ini + '</div>'
+              + '<div style="flex:1;"><div class="p-name">' + escHtml(r.staff_name) + '</div><div class="p-sub">' + escHtml(r.leave_type) + ' · ' + from + '–' + to + '</div></div>'
+              + '<div style="display:flex;gap:6px;"><span class="badge ' + bCls + '">' + shortType + '</span>'
+              + '<div class="btn-icon danger" onclick="deleteLeaveDb(this)"><i class="ti ti-trash"></i></div></div>'
+              + '</div>';
+          }).join('') + '</div>';
+      }
+
+      card.innerHTML = renderLeaveGroup('Currently on Leave', current) + renderLeaveGroup('Upcoming Leave', upcoming);
     } catch(e) { /* Supabase not reachable */ }
   }
 
