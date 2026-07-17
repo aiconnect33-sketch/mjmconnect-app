@@ -164,6 +164,11 @@ async function loadAnnouncements() {
     var addTrigger = document.getElementById('ann-add-trigger');
     if (addTrigger) addTrigger.style.display = canEdit ? 'block' : 'none';
 
+    var rawUser = sessionStorage.getItem('mjm_user');
+    var me = rawUser ? JSON.parse(rawUser) : {};
+    var isAdminUser = me.role === 'hradmin' || me.role === 'superadmin';
+    var myEmailLow = (me.email || '').toLowerCase();
+
     var tabEl = document.getElementById('ann-tab-list');
     if (tabEl) {
       if (!tabItems.length) {
@@ -173,16 +178,19 @@ async function loadAnnouncements() {
       tabEl.innerHTML = tabItems.map(function(ann) {
         var d = new Date(ann.created_at).toLocaleDateString('en-MY', { day:'numeric', month:'short', year:'numeric' });
         var t = new Date(ann.created_at).toLocaleTimeString('en-MY', { hour:'numeric', minute:'2-digit', hour12:true });
-        var actions = canEdit
+        var isOwner = isAdminUser || (myEmailLow && ann.posted_by_email && ann.posted_by_email.toLowerCase() === myEmailLow);
+        var canManage = canEdit && isOwner;
+        var actions = canManage
           ? '<div style="display:flex;gap:6px;margin-top:8px;">'
             + '<div style="cursor:pointer;font-size:11px;color:var(--text-secondary);" onclick="editAnnouncement(\'' + escJsAttr(ann.id) + '\')"><i class="ti ti-pencil"></i> Edit</div>'
             + '<div style="cursor:pointer;font-size:11px;color:var(--red-text);" onclick="deleteAnnouncement(\'' + escJsAttr(ann.id) + '\')"><i class="ti ti-trash"></i> Delete</div>'
             + '</div>'
           : '';
-        return '<div class="card card-info" style="margin-bottom:10px;" data-ann-id="' + escHtml(ann.id) + '">'
+        return '<div class="card card-info" style="margin-bottom:10px;" data-ann-id="' + escHtml(ann.id) + '" data-posted-by-email="' + escHtml(ann.posted_by_email || '') + '">'
           + '<div class="card-meta"><span class="card-time">' + d + ' · ' + t + '</span></div>'
           + '<div class="card-title">' + escHtml(ann.title) + '</div>'
           + '<div class="card-body">'  + escHtml(ann.body)  + '</div>'
+          + '<div style="font-size:11px;color:var(--text-light);margin-top:6px;"><i class="ti ti-user"></i> ' + escHtml(ann.posted_by || 'Staff') + '</div>'
           + actions
           + '</div>';
       }).join('');
@@ -211,7 +219,22 @@ function hideAnnForm() {
   editingAnnId = null;
 }
 
+// HR Admin/Super Admin can manage any announcement; everyone else can only
+// manage the ones they personally posted (matched by the owning account's
+// email, read off the rendered card since that's already the source of
+// truth for this list -- announcements posted before this feature existed
+// have no recorded owner, so nobody but an admin can touch those).
+function canManageAnnouncement(id) {
+  var raw = sessionStorage.getItem('mjm_user');
+  var me = raw ? JSON.parse(raw) : {};
+  if (me.role === 'hradmin' || me.role === 'superadmin') return true;
+  var card = document.querySelector('[data-ann-id="' + id + '"]');
+  var ownerEmail = card ? (card.getAttribute('data-posted-by-email') || '') : '';
+  return !!(me.email && ownerEmail && me.email.toLowerCase() === ownerEmail.toLowerCase());
+}
+
 async function editAnnouncement(id) {
+  if (!canManageAnnouncement(id)) return;
   var card = document.querySelector('[data-ann-id="' + id + '"]');
   if (!card) return;
   var title = card.querySelector('.card-title').textContent;
@@ -225,6 +248,7 @@ async function editAnnouncement(id) {
 
 async function saveAnnouncement() {
   if (!hasEditPermission('announcements')) return;
+  if (editingAnnId && !canManageAnnouncement(editingAnnId)) { alert('You can only edit your own announcements.'); return; }
   var title = document.getElementById('ann-form-title-input').value.trim();
   var body  = document.getElementById('ann-form-body-input').value.trim();
   if (!title || !body) { alert('Please fill in both title and message.'); return; }
@@ -234,7 +258,7 @@ async function saveAnnouncement() {
     if (editingAnnId) {
       await sbWrite('PATCH', 'announcements', { title: title, body: body }, 'id=eq.' + editingAnnId);
     } else {
-      await sbWrite('POST', 'announcements', { title: title, body: body, badge: 'general', posted_by: user.name || 'Staff' });
+      await sbWrite('POST', 'announcements', { title: title, body: body, badge: 'general', posted_by: user.name || 'Staff', posted_by_email: user.email || '' });
     }
     hideAnnForm();
     loadAnnouncements();
@@ -243,6 +267,7 @@ async function saveAnnouncement() {
 
 async function deleteAnnouncement(id) {
   if (!hasEditPermission('announcements')) return;
+  if (!canManageAnnouncement(id)) { alert('You can only delete your own announcements.'); return; }
   if (!confirm('Delete this announcement?')) return;
   try {
     await sbWrite('DELETE', 'announcements', null, 'id=eq.' + id);
