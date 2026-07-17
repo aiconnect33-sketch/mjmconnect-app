@@ -198,7 +198,8 @@ async function handleReset() {
   if (!isValidEmail(email)) { document.getElementById('reset-email').classList.add('error'); return; }
   setLoading('reset', true);
   try {
-    await fetch(SURL + '/auth/v1/recover', { method: 'POST', headers: { 'apikey': SKEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email }) });
+    var resetRedirectTo = window.location.origin + window.location.pathname.replace(/login\.html$/, 'register.html');
+    await fetch(SURL + '/auth/v1/recover?redirect_to=' + encodeURIComponent(resetRedirectTo), { method: 'POST', headers: { 'apikey': SKEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email }) });
     setLoading('reset', false);
     document.getElementById('reset-email-shown').textContent = email;
     document.getElementById('reset-success').classList.add('visible');
