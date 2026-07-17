@@ -202,7 +202,7 @@ html,body{min-height:100%;font-family:'Inter',-apple-system,sans-serif;backgroun
         <label class="form-label">New Password</label>
         <div class="input-wrap">
           <i class="ti ti-lock input-icon"></i>
-          <input class="form-input" type="password" id="pw-new" placeholder="At least 4 characters" oninput="evalPassword()" autocomplete="new-password">
+          <input class="form-input" type="password" id="pw-new" placeholder="At least 6 characters" oninput="evalPassword()" autocomplete="new-password">
           <button class="input-icon-right" type="button" onclick="togglePw('pw-new','eye-new')"><i class="ti ti-eye" id="eye-new"></i></button>
         </div>
         <div class="pw-strength-row">
@@ -215,9 +215,9 @@ html,body{min-height:100%;font-family:'Inter',-apple-system,sans-serif;backgroun
           <div class="pw-strength-label" id="strength-label" style="color:var(--text3);">—</div>
         </div>
         <div class="pw-checklist">
-          <div class="pw-check-item" id="chk-len"><i class="ti ti-circle"></i> At least 4 characters</div>
+          <div class="pw-check-item" id="chk-len"><i class="ti ti-circle"></i> At least 6 characters</div>
         </div>
-        <div class="field-error" id="pw-error"><i class="ti ti-alert-circle"></i><span>Password must be at least 4 characters.</span></div>
+        <div class="field-error" id="pw-error"><i class="ti ti-alert-circle"></i><span>Password must be at least 6 characters.</span></div>
       </div>
       <div class="form-group">
         <label class="form-label">Confirm Password</label>
@@ -455,7 +455,7 @@ function togglePw(inputId, iconId) {
 
 function evalPassword() {
   var val = document.getElementById('pw-new').value;
-  setCheck('chk-len', val.length >= 4);
+  setCheck('chk-len', val.length >= 6);
   var score  = val.length === 0 ? 0 : val.length < 8 ? 1 : val.length < 12 ? 2 : val.length < 16 ? 3 : 4;
   var bars    = ['bar1','bar2','bar3','bar4'];
   var levels  = ['','weak','fair','good','strong'];
@@ -498,10 +498,10 @@ async function handleCreate() {
   var pw1 = document.getElementById('pw-new').value;
   var pw2 = document.getElementById('pw-confirm').value;
 
-  if (!pw1 || pw1.length < 4) {
+  if (!pw1 || pw1.length < 6) {
     document.getElementById('pw-new').classList.add('error');
     document.getElementById('pw-error').classList.add('visible');
-    document.getElementById('p2-alert-msg').textContent = 'Password must be at least 4 characters.';
+    document.getElementById('p2-alert-msg').textContent = 'Password must be at least 6 characters.';
     document.getElementById('p2-alert').classList.add('visible');
     return;
   }
