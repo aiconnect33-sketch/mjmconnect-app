@@ -42,7 +42,7 @@ async function loadLeave() {
       var res2 = await fetch(url2, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
       var data2 = await res2.json();
       if (!data2 || !data2.length) {
-        tabEl.innerHTML = '<div style="font-size:12px;color:rgba(255,255,255,0.8);text-align:center;padding:14px 0;">No leave records.</div>';
+        tabEl.innerHTML = '<div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">No leave records.</div>';
         return;
       }
       var current  = data2.filter(function(r){ return r.date_from <= today && today <= r.date_to; });
@@ -81,7 +81,7 @@ async function loadLeave() {
       html2 += renderGroup('Upcoming Leave', upcoming);
       tabEl.innerHTML = html2;
     } catch(e) {
-      tabEl.innerHTML = '<div style="font-size:12px;color:rgba(255,255,255,0.8);text-align:center;padding:14px 0;">Could not load leave records.</div>';
+      tabEl.innerHTML = '<div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">Could not load leave records.</div>';
     }
   }
 }

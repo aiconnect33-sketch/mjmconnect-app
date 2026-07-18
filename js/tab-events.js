@@ -13,13 +13,13 @@ async function loadStaffEvents() {
   var isAdminUser = me.role === 'hradmin' || me.role === 'superadmin';
   var myEmailLow = (me.email || '').toLowerCase();
 
-  el.innerHTML = '<div style="font-size:12px;color:rgba(255,255,255,0.8);text-align:center;padding:14px 0;">Loading...</div>';
+  el.innerHTML = '<div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">Loading...</div>';
   try {
     var url  = SURL + '/rest/v1/events?event_date=gte.' + today + '&order=event_date.asc,event_time.asc&limit=200';
     var res  = await fetch(url, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
     var data = await res.json();
     if (!data || !data.length) {
-      el.innerHTML = '<div style="font-size:12px;color:rgba(255,255,255,0.8);text-align:center;padding:14px 0;">No upcoming events.</div>';
+      el.innerHTML = '<div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">No upcoming events.</div>';
       return;
     }
     el.innerHTML = data.map(function(ev) {
@@ -48,7 +48,7 @@ async function loadStaffEvents() {
         + '</div>';
     }).join('');
   } catch(e) {
-    el.innerHTML = '<div style="font-size:12px;color:rgba(255,255,255,0.8);text-align:center;padding:14px 0;">Could not load events.</div>';
+    el.innerHTML = '<div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">Could not load events.</div>';
   }
 }
 

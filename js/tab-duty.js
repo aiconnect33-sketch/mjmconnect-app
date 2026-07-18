@@ -17,7 +17,7 @@ async function loadDuty() {
       var res2 = await fetch(url2, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
       var data2 = await res2.json();
       if (!data2 || !data2.length) {
-        tabEl.innerHTML = '<div style="font-size:12px;color:rgba(255,255,255,0.8);text-align:center;padding:14px 0;">No upcoming duty assignments.</div>';
+        tabEl.innerHTML = '<div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">No upcoming duty assignments.</div>';
         return;
       }
       // Group by role + date range
@@ -56,7 +56,7 @@ async function loadDuty() {
           + '</div>';
       }).join('');
     } catch(e) {
-      tabEl.innerHTML = '<div style="font-size:12px;color:rgba(255,255,255,0.8);text-align:center;padding:14px 0;">Could not load duty roster.</div>';
+      tabEl.innerHTML = '<div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">Could not load duty roster.</div>';
     }
   }
 }

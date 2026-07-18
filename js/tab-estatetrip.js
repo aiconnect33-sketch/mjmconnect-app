@@ -42,7 +42,7 @@ async function loadEstateTrips() {
       var res2  = await fetch(url2, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
       var data2 = await res2.json();
       if (!data2 || !data2.length) {
-        tabEl.innerHTML = '<div style="font-size:12px;color:rgba(255,255,255,0.8);text-align:center;padding:14px 0;">No estate trips scheduled.</div>';
+        tabEl.innerHTML = '<div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">No estate trips scheduled.</div>';
         return;
       }
       var todays   = data2.filter(function(r){ return r.trip_date === today; });
@@ -77,7 +77,7 @@ async function loadEstateTrips() {
       html2 += renderGroup('Upcoming', upcoming);
       tabEl.innerHTML = html2;
     } catch(e) {
-      tabEl.innerHTML = '<div style="font-size:12px;color:rgba(255,255,255,0.8);text-align:center;padding:14px 0;">Could not load estate trips.</div>';
+      tabEl.innerHTML = '<div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">Could not load estate trips.</div>';
     }
   }
 }

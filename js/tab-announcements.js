@@ -177,7 +177,7 @@ async function loadAnnouncements() {
     var tabEl = document.getElementById('ann-tab-list');
     if (tabEl) {
       if (!tabItems.length) {
-        tabEl.innerHTML = '<div style="font-size:12px;color:rgba(255,255,255,0.8);text-align:center;padding:14px 0;">No announcements.</div>';
+        tabEl.innerHTML = '<div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">No announcements.</div>';
         return;
       }
       tabEl.innerHTML = tabItems.map(function(ann) {
