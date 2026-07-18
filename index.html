@@ -30,48 +30,51 @@
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    /* App green theme -- richer emerald/jade combination */
-    --green-dark:   #0B6B50;
-    --green-mid:    #12A87D;
-    --green-light:  #6EE7B7;
-    --green-bg:     #E1F5EE;
-    --green-text:   #085041;
+    /* Refined emerald-green theme */
+    --green-dark:   #075E54;  /* Top header */
+    --green-mid:    #16B890;  /* Primary accent */
+    --green-light:  #8EF0CF;  /* light accent, e.g. wordmark */
+    --green-bg:     #E1F5EE;  /* Leave -- kept in its existing pastel colour */
+    --green-text:   #085041;  /* Leave -- kept in its existing pastel colour */
     --red-bg:       #FCEBEB;
     --red-text:     #A32D2D;
     --red-dot:      #E24B4A;
     --amber-bg:     #FAEEDA;
     --amber-text:   #854F0B;
-    --blue-bg:      #E6F1FB;
-    --blue-text:    #185FA5;
-    --purple-bg:    #EEEDFE;
-    --purple-text:  #534AB7;
-    --coral-bg:     #FAECE7;
-    --coral-text:   #993C1D;
+    --blue-bg:      #E6F1FB;  /* Time Off -- kept in its existing pastel colour */
+    --blue-text:    #185FA5;  /* Time Off -- kept in its existing pastel colour */
+    --purple-bg:    #EEEDFE;  /* Announcement -- kept in its existing pastel colour */
+    --purple-text:  #534AB7;  /* Announcement -- kept in its existing pastel colour */
+    --coral-bg:     #FAECE7;  /* Faulty Complain -- kept in its existing pastel colour */
+    --coral-text:   #993C1D;  /* Faulty Complain -- kept in its existing pastel colour */
 
-    /* Additional feature-colour tokens, mapped onto the existing palette above */
-    --estate-bg:    var(--green-bg);   --estate-text: var(--green-text);
-    --booking-bg:   var(--purple-bg);  --booking-text: var(--purple-text);
+    /* Additional feature-colour tokens */
+    --estate-bg:    #DCF5ED;  /* Soft green icon background */
+    --estate-text:  #159B78;  /* Green icon */
+    --booking-bg:   var(--purple-bg);  /* Booking -- kept in its existing pastel colour */
+    --booking-text: var(--purple-text);
     --profile-bg:   var(--border);     --profile-text: var(--text-secondary);
 
-    /* Calendar dot indicators, reusing existing palette colours */
+    /* Calendar dot indicators, reusing the palette above */
     --cal-event-dot:  var(--green-mid);
     --cal-leave-dot:  var(--amber-text);
     --cal-estate-dot: var(--red-dot);
     --cal-orange-dot: var(--amber-text);
+    --cal-selected-date: #087864;
 
-    --navy-deep:    #073B2C;
-    --nav-gradient: linear-gradient(90deg, var(--green-dark) 0%, var(--green-mid) 50%, var(--green-dark) 100%);
-    --home-gradient: linear-gradient(160deg, var(--green-mid) 0%, var(--green-dark) 55%, var(--navy-deep) 100%);
+    --navy-deep:    #064F46;  /* Dark green */
+    --nav-gradient: linear-gradient(90deg, #075E54 0%, #087864 50%, #064F46 100%);
+    --home-gradient: linear-gradient(180deg, #0B7A63 0%, #08705C 55%, #064F46 100%);
 
-    --bg:           #F4F6F5;
-    --surface:      #FFFFFF;
-    --border:       #E2E8E5;
+    --bg:           #0B7A63;  /* Main page background */
+    --surface:      #FFFFFF; /* Card background */
+    --border:       #E2ECE8; /* Divider */
     --text-primary: #111C18;
-    --navy-text:    var(--green-text);
-    --text-secondary: #6B7A73;
+    --navy-text:    #064F46; /* Card title */
+    --text-secondary: #70827D;
     --text-light:   #9AABA3;
-    --icon-inactive: var(--text-light);
-    --nav-active:   #FFFFFF;
+    --icon-inactive: #79B9A8; /* Inactive navigation */
+    --nav-active:   #8EF0CF;  /* Active navigation */
     --radius-sm:    8px;
     --radius-md:    14px;
     --radius-lg:    22px;
@@ -167,11 +170,11 @@
     display: flex; justify-content: space-between; align-items: center;
     padding: 8px 4px 18px;
   }
-  .menu-header h1 { font-size: 29px; font-weight: 700; color: var(--text-primary); }
+  .menu-header h1 { font-size: 29px; font-weight: 700; color: #fff; }
   .menu-row {
     display: flex; align-items: center; gap: 14px;
     min-height: 76px; padding: 12px 4px;
-    border-bottom: 0.5px solid var(--border);
+    border-bottom: 0.5px solid rgba(255,255,255,0.18);
     cursor: pointer;
   }
   .menu-row:last-child { border-bottom: none; }
@@ -179,8 +182,8 @@
     width: 50px; height: 50px; border-radius: 14px; flex-shrink: 0;
     display: flex; align-items: center; justify-content: center; font-size: 22px;
   }
-  .menu-label { flex: 1; font-size: 17px; font-weight: 600; color: var(--text-primary); }
-  .menu-chev { color: var(--icon-inactive); font-size: 20px; flex-shrink: 0; }
+  .menu-label { flex: 1; font-size: 17px; font-weight: 600; color: #fff; }
+  .menu-chev { color: rgba(255,255,255,0.6); font-size: 20px; flex-shrink: 0; }
   .qa-title { font-size: 17px; font-weight: 700; color: #fff; margin: 24px 0 14px; }
   .qa-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
   .qa-item { display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; }
@@ -263,9 +266,9 @@
     margin-bottom: 8px; margin-top: 4px;
   }
   .section-title {
-    font-size: 17px; font-weight: 700; color: var(--navy-text);
+    font-size: 17px; font-weight: 700; color: #fff;
   }
-  .see-all { font-size: 12px; font-weight: 500; color: var(--green-dark); cursor: pointer; }
+  .see-all { font-size: 12px; font-weight: 500; color: var(--green-light); cursor: pointer; }
 
   /* ── CALENDAR ── */
   .cal-card {
@@ -295,7 +298,7 @@
   }
   .cal-day span { line-height: 1; }
   .cal-day.today span {
-    background: var(--green-dark); color: #fff; font-weight: 600;
+    background: var(--cal-selected-date); color: #fff; font-weight: 600;
     border-radius: 50%; width: 28px; height: 28px;
     display: flex; align-items: center; justify-content: center;
   }
@@ -477,7 +480,7 @@
     transition: transform 0.2s; box-shadow: 0 1px 4px rgba(0,0,0,0.15);
   }
   .book-toggle.on .book-toggle-knob { transform: translateX(18px); }
-  .book-empty { text-align: center; padding: 14px 0; font-size: 12px; color: var(--text-light); }
+  .book-empty { text-align: center; padding: 14px 0; font-size: 12px; color: rgba(255,255,255,0.8); }
   .book-item {
     background: var(--surface); border: 0.5px solid var(--border);
     border-radius: var(--radius-lg); padding: 12px 14px; margin-bottom: 8px;
@@ -680,7 +683,7 @@
         </div>
       </div>
       <div id="ann-tab-list">
-        <div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">Loading...</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.8);text-align:center;padding:14px 0;">Loading...</div>
       </div>
     </div><!-- /announce -->
 
@@ -715,7 +718,7 @@
         </div>
       </div>
       <div id="staff-event-list">
-        <div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">Loading...</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.8);text-align:center;padding:14px 0;">Loading...</div>
       </div>
     </div><!-- /event -->
 
@@ -757,7 +760,7 @@
         </div>
       </div>
       <div id="leave-tab-list">
-        <div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">Loading...</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.8);text-align:center;padding:14px 0;">Loading...</div>
       </div>
     </div><!-- /leave -->
 
@@ -792,7 +795,7 @@
         </div>
       </div>
       <div id="duty-tab-list">
-        <div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">Loading...</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.8);text-align:center;padding:14px 0;">Loading...</div>
       </div>
     </div><!-- /duty -->
 
@@ -817,7 +820,7 @@
         </div>
       </div>
       <div id="estatetrip-tab-list">
-        <div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">Loading...</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.8);text-align:center;padding:14px 0;">Loading...</div>
       </div>
     </div><!-- /estatetrip -->
 
