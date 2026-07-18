@@ -1,51 +1,9 @@
-// ── tab-duty.js — Duty tab + Home duty section ──
+// ── tab-duty.js — Duty tab ──
 
 async function loadDuty() {
   if (window.location.protocol === 'file:') return;
   var today = new Date().toISOString().split('T')[0];
   var avColors = ['av-green','av-amber','av-coral','av-blue','av-purple','av-red'];
-
-  // ── HOME TAB: currently on duty only ──
-  var homeEl = document.getElementById('home-duty-card');
-  if (homeEl) {
-    try {
-      var url = SURL + '/rest/v1/duty_roster?date_from=lte.' + today + '&date_to=gte.' + today + '&order=duty_role.asc,staff_name.asc&limit=50';
-      var res  = await fetch(url, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
-      var data = await res.json();
-      if (data && data.length) {
-        // Group by role
-        var groups = {};
-        data.forEach(function(r) {
-          var role = r.duty_role || 'General Duty';
-          if (!groups[role]) groups[role] = { members: [], date_from: r.date_from, date_to: r.date_to };
-          groups[role].members.push(r);
-        });
-        var html = '';
-        Object.keys(groups).forEach(function(role) {
-          var g    = groups[role];
-          var from = g.date_from ? new Date(g.date_from+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'}) : '';
-          var to   = g.date_to   ? new Date(g.date_to+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'}) : '';
-          var period = from === to ? from : from + ' – ' + to;
-          html += '<div style="margin-bottom:10px;">'
-            + '<div style="font-weight:600;font-size:12px;color:var(--text-primary);margin-bottom:2px;">' + escHtml(role) + '</div>'
-            + '<div style="font-size:10px;color:var(--text-secondary);margin-bottom:6px;">' + period + '</div>';
-          g.members.forEach(function(r, i) {
-            var ini = r.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
-            html += '<div class="person-row" style="padding:4px 0;">'
-              + '<div class="avatar av-green" style="font-size:10px;">' + ini + '</div>'
-              + '<div style="flex:1;"><div class="person-name" style="font-size:12px;">' + escHtml(r.staff_name) + '</div></div>'
-              + '<span class="badge badge-success">On duty</span></div>';
-          });
-          html += '</div>';
-        });
-        homeEl.innerHTML = '<div class="card">' + html + '</div>';
-      } else {
-        homeEl.innerHTML = '<div class="card"><div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:8px 0;">No one on duty today.</div></div>';
-      }
-    } catch(e) {
-      homeEl.innerHTML = '<div class="card"><div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:8px 0;">Could not load duty.</div></div>';
-    }
-  }
 
   // ── DUTY TAB: upcoming + active, past auto-removed ──
   var tabEl = document.getElementById('duty-tab-list');

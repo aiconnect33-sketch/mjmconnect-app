@@ -84,7 +84,7 @@ function switchNav(name) {
   if (navEl) navEl.classList.add('active');
   document.querySelectorAll('.screen-section').forEach(function(s){ s.classList.remove('active'); });
   document.getElementById('screen-' + name).classList.add('active');
-  var tabMap = { home:0, announce:1, leave:2, duty:3, book:4 };
+  var tabMap = { home:0, announce:1, leave:2, event:3, duty:4 };
   var tabs = document.querySelectorAll('.tab-btn');
   tabs.forEach(function(t){ t.classList.remove('active'); });
   if (tabMap[name] !== undefined) tabs[tabMap[name]].classList.add('active');
@@ -92,7 +92,7 @@ function switchNav(name) {
 
 function switchTabByName(name) {
   var tabs = document.querySelectorAll('.tab-btn');
-  var map = { home:0, announce:1, leave:2, duty:3, book:4 };
+  var map = { home:0, announce:1, leave:2, event:3, duty:4 };
   tabs.forEach(function(t){ t.classList.remove('active'); });
   if (map[name] !== undefined) tabs[map[name]].classList.add('active');
   document.querySelectorAll('.screen-section').forEach(function(s){ s.classList.remove('active'); });
@@ -134,6 +134,7 @@ window.addEventListener('DOMContentLoaded', function() {
     loadLeave();
     loadDuty();
     loadStaffEvents();
+    if (typeof loadEstateTrips === 'function') loadEstateTrips();
     if (typeof loadNotifications === 'function') loadNotifications();
   }
   // Always init calendar

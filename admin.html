@@ -596,6 +596,7 @@ html, body {
     <button class="tab-btn" onclick="switchTab(this,'leave')">Leave</button>
     <button class="tab-btn" onclick="switchTab(this,'event')">Event</button>
     <button class="tab-btn" onclick="switchTab(this,'duty')">Duty</button>
+    <button class="tab-btn" onclick="switchTab(this,'estatetrip')">Estate Trip</button>
   </div>
 
   <!-- SCREEN BODY -->
@@ -649,12 +650,12 @@ html, body {
         <div style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0;">Loading...</div>
       </div>
 
-      <!-- This week duty -->
+      <!-- Today's Estate Trip -->
       <div class="sec-hdr">
-        <div class="sec-title">This Week's Duty</div>
-        <button class="sec-action" onclick="switchTabByName('duty')">See all</button>
+        <div class="sec-title">Today's Estate Trip</div>
+        <button class="sec-action" onclick="switchTabByName('estatetrip')">See all</button>
       </div>
-      <div class="card" id="admin-duty-today">
+      <div class="card" id="admin-estatetrip-today">
         <div style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0;">Loading...</div>
       </div>
 
@@ -969,6 +970,73 @@ html, body {
     </div><!-- /duty -->
 
     <!-- ═══════════════════════════
+         ESTATE TRIP
+    ═══════════════════════════ -->
+    <div class="screen-section" id="screen-estatetrip">
+
+      <div class="alert alert-success" id="estatetrip-success">
+        <i class="ti ti-circle-check"></i>
+        <span>Estate trip saved successfully.</span>
+      </div>
+
+      <button class="btn-primary" onclick="showEstateTripForm()">
+        <i class="ti ti-plus"></i> Add Estate Trip
+      </button>
+
+      <!-- Add/Edit estate trip inline form -->
+      <div class="inline-form" id="estatetrip-form">
+        <div class="inline-form-title">
+          <span><i class="ti ti-map-pin"></i> &nbsp;<span id="estatetrip-form-title">New Estate Trip</span></span>
+          <button class="close-btn" onclick="hideEstateTripForm()">&times;</button>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Staff Name</label>
+          <div class="input-wrap">
+            <i class="ti ti-user input-icon"></i>
+            <input class="form-input" type="text" id="estatetrip-name" placeholder="Full name">
+          </div>
+          <div class="field-error" id="estatetrip-name-error">
+            <i class="ti ti-alert-circle"></i> Name is required.
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Going To</label>
+          <div class="input-wrap">
+            <i class="ti ti-map-pin input-icon"></i>
+            <input class="form-input" type="text" id="estatetrip-going-to" placeholder="Estate name">
+          </div>
+          <div class="field-error" id="estatetrip-going-to-error">
+            <i class="ti ti-alert-circle"></i> Estate name is required.
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Date</label>
+          <div class="input-wrap">
+            <i class="ti ti-calendar input-icon"></i>
+            <input class="form-input" type="date" id="estatetrip-date">
+          </div>
+          <div class="field-error" id="estatetrip-date-error">
+            <i class="ti ti-alert-circle"></i> Please select a date.
+          </div>
+        </div>
+        <button class="btn-primary" onclick="saveEstateTripDb()">
+          <span id="estatetrip-save-label">Save Estate Trip</span>
+          <div class="spinner" id="estatetrip-spinner"></div>
+        </button>
+        <button class="btn-ghost" onclick="hideEstateTripForm()">Cancel</button>
+      </div>
+
+      <!-- Estate trip list -->
+      <div class="sec-hdr">
+        <div class="sec-title">Today &amp; Upcoming Estate Trips</div>
+      </div>
+
+      <div id="estatetrip-list">
+      </div>
+
+    </div><!-- /estatetrip -->
+
+    <!-- ═══════════════════════════
          EVENT
     ═══════════════════════════ -->
     <div class="screen-section" id="screen-event">
@@ -1232,11 +1300,12 @@ html, body {
     if (name === 'settings') renderSettingsPage();
     if (name === 'invite')   loadInviteLog();
     if (name === 'event')    loadDbEvents();
+    if (name === 'estatetrip') loadDbEstateTrips();
   }
   // ── BOTTOM NAV ──
   function switchNav(name) {
     var tabs = document.querySelectorAll('.tab-btn');
-    var map  = { dashboard:0, announce:1, leave:2, event:3, duty:4 };
+    var map  = { dashboard:0, announce:1, leave:2, event:3, duty:4, estatetrip:5 };
     tabs.forEach(function(t){ t.classList.remove('active'); });
     if (map[name] !== undefined) tabs[map[name]].classList.add('active');
     document.querySelectorAll('.screen-section').forEach(function(s){ s.classList.remove('active'); });
@@ -1248,10 +1317,11 @@ html, body {
     if (name === 'settings') renderSettingsPage();
     if (name === 'invite')   loadInviteLog();
     if (name === 'event')    loadDbEvents();
+    if (name === 'estatetrip') loadDbEstateTrips();
   }
   function switchTabByName(name) {
     var tabs = document.querySelectorAll('.tab-btn');
-    var map  = { dashboard:0, announce:1, leave:2, event:3, duty:4 };
+    var map  = { dashboard:0, announce:1, leave:2, event:3, duty:4, estatetrip:5 };
     tabs.forEach(function(t){ t.classList.remove('active'); });
     if (map[name] !== undefined) tabs[map[name]].classList.add('active');
     document.querySelectorAll('.screen-section').forEach(function(s){ s.classList.remove('active'); });
@@ -1261,6 +1331,7 @@ html, body {
     if (name === 'settings') renderSettingsPage();
     if (name === 'invite')   loadInviteLog();
     if (name === 'event')    loadDbEvents();
+    if (name === 'estatetrip') loadDbEstateTrips();
   }
   function syncNav(name) {
     document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
@@ -1386,6 +1457,64 @@ html, body {
     } catch(e) {
       setLoading('leave-save', false);
       alert('Could not save leave record. Please try again.');
+    }
+  }
+
+  // ── ESTATE TRIP FORM ──
+  var editingEstateTripId = null;
+  function showEstateTripForm() {
+    editingEstateTripId = null;
+    document.getElementById('estatetrip-form-title').textContent = 'New Estate Trip';
+    document.getElementById('estatetrip-form').classList.add('visible');
+    document.getElementById('estatetrip-form').scrollIntoView({ behavior:'smooth', block:'start' });
+  }
+  function hideEstateTripForm() {
+    document.getElementById('estatetrip-form').classList.remove('visible');
+    document.getElementById('estatetrip-name').value = '';
+    document.getElementById('estatetrip-going-to').value = '';
+    document.getElementById('estatetrip-date').value = '';
+    editingEstateTripId = null;
+    clearFormErrors();
+  }
+  async function saveEstateTripDb() {
+    clearFormErrors();
+    var name    = document.getElementById('estatetrip-name').value.trim();
+    var goingTo = document.getElementById('estatetrip-going-to').value.trim();
+    var date    = document.getElementById('estatetrip-date').value;
+    var valid   = true;
+    if (!name) {
+      document.getElementById('estatetrip-name').classList.add('error');
+      document.getElementById('estatetrip-name-error').classList.add('visible');
+      valid = false;
+    }
+    if (!goingTo) {
+      document.getElementById('estatetrip-going-to').classList.add('error');
+      document.getElementById('estatetrip-going-to-error').classList.add('visible');
+      valid = false;
+    }
+    if (!date) {
+      document.getElementById('estatetrip-date').classList.add('error');
+      document.getElementById('estatetrip-date-error').classList.add('visible');
+      valid = false;
+    }
+    if (!valid) return;
+
+    setLoading('estatetrip-save', true);
+    try {
+      if (editingEstateTripId) {
+        await sbFetch('PATCH', '/rest/v1/estate_trips?id=eq.' + editingEstateTripId, { staff_name: name, estate_name: goingTo, trip_date: date }, { 'Prefer': '' });
+        editingEstateTripId = null;
+      } else {
+        await sbFetch('POST', '/rest/v1/estate_trips', { staff_name: name, estate_name: goingTo, trip_date: date });
+      }
+      setLoading('estatetrip-save', false);
+      hideEstateTripForm();
+      await loadDbEstateTrips();
+      document.getElementById('estatetrip-success').classList.add('visible');
+      setTimeout(() => document.getElementById('estatetrip-success').classList.remove('visible'), 3500);
+    } catch(e) {
+      setLoading('estatetrip-save', false);
+      alert('Could not save estate trip. Please try again.');
     }
   }
 
@@ -1712,6 +1841,7 @@ html, body {
       'pub':       ['pub-label',       'pub-spinner'],
       'leave-save':['leave-save-label','leave-spinner'],
       'duty-save': ['duty-save-label', 'duty-spinner'],
+      'estatetrip-save': ['estatetrip-save-label', 'estatetrip-spinner'],
     };
     if (!map[which]) return;
     var [labelId, spinnerId] = map[which];
@@ -2181,6 +2311,69 @@ html, body {
     setTimeout(function(){ row.remove(); }, 220);
   }
 
+  // ── LOAD ESTATE TRIPS FROM SUPABASE ──
+  async function loadDbEstateTrips() {
+    var card = document.getElementById('estatetrip-list');
+    if (!card) return;
+    var today = new Date().toISOString().split('T')[0];
+    try {
+      var data = await sbFetch('GET', '/rest/v1/estate_trips?trip_date=gte.' + today + '&order=trip_date.asc&limit=200');
+      if (!data) return;
+      if (!data.length) {
+        card.innerHTML = '<div class="card"><div class="card-label">Estate Trips</div>'
+          + '<div style="font-size:12px;color:var(--text3);text-align:center;padding:14px 0;">No estate trips scheduled.</div></div>';
+        return;
+      }
+      var todays   = data.filter(function(r){ return r.trip_date === today; });
+      var upcoming = data.filter(function(r){ return r.trip_date > today; });
+
+      function renderEstateTripGroup(label, items) {
+        if (!items.length) return '';
+        return '<div class="card"><div class="card-label">' + label + '</div>' +
+          items.map(function(r) {
+            var ini = r.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
+            var d = new Date(r.trip_date + 'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'});
+            return '<div class="person-row" data-trip-id="' + r.id + '">'
+              + '<div class="av av-g">' + ini + '</div>'
+              + '<div style="flex:1;"><div class="p-name">' + escHtml(r.staff_name) + '</div><div class="p-sub">Going to ' + escHtml(r.estate_name) + ' · ' + d + '</div></div>'
+              + '<div style="display:flex;gap:6px;">'
+              + '<div class="btn-icon" onclick="editEstateTripDb(this)" title="Edit"><i class="ti ti-pencil"></i></div>'
+              + '<div class="btn-icon danger" onclick="deleteEstateTripDb(this)" title="Delete"><i class="ti ti-trash"></i></div></div>'
+              + '</div>';
+          }).join('') + '</div>';
+      }
+
+      card.innerHTML = renderEstateTripGroup('Today', todays) + renderEstateTripGroup('Upcoming', upcoming);
+    } catch(e) { /* Supabase not reachable */ }
+  }
+
+  function editEstateTripDb(btn) {
+    var row = btn.closest('.person-row'), id = row ? row.getAttribute('data-trip-id') : null;
+    if (!id) return;
+    editingEstateTripId = id;
+    sbFetch('GET', '/rest/v1/estate_trips?id=eq.' + id + '&select=*').then(function(data) {
+      if (!data || !data.length) return;
+      var trip = data[0];
+      document.getElementById('estatetrip-form-title').textContent = 'Edit Estate Trip';
+      document.getElementById('estatetrip-name').value = trip.staff_name || '';
+      document.getElementById('estatetrip-going-to').value = trip.estate_name || '';
+      document.getElementById('estatetrip-date').value = trip.trip_date || '';
+      document.getElementById('estatetrip-form').classList.add('visible');
+      document.getElementById('estatetrip-form').scrollIntoView({ behavior:'smooth', block:'start' });
+    });
+  }
+
+  async function deleteEstateTripDb(btn) {
+    var row = btn.closest('.person-row'), id = row ? row.getAttribute('data-trip-id') : null;
+    if (!id) return;
+    if (!confirm('Delete this estate trip?')) return;
+    try {
+      await sbFetch('DELETE', '/rest/v1/estate_trips?id=eq.' + id, null, { 'Prefer': '' });
+    } catch(e) { alert('Could not delete estate trip. Please try again.'); return; }
+    row.style.transition = 'opacity 0.2s'; row.style.opacity = '0';
+    setTimeout(function(){ row.remove(); }, 220);
+  }
+
   // ── LOAD DUTY FROM SUPABASE ──
   async function loadDbDuty() {
     var el = document.getElementById('duty-db-list');
@@ -2567,38 +2760,21 @@ html, body {
       }
     } catch(e) {}
     try {
-      var dutyEl = document.getElementById('admin-duty-today');
-      if (dutyEl && window.location.protocol !== 'file:') {
-        var duties = await sbFetch('GET', '/rest/v1/duty_roster?date_from=lte.' + today + '&date_to=gte.' + today + '&order=duty_role.asc,staff_name.asc&limit=50');
-        if (duties && duties.length) {
-          // Group by duty role
-          var roleGroups = {};
-          duties.forEach(function(r) {
-            var role = r.duty_role || 'General Duty';
-            if (!roleGroups[role]) roleGroups[role] = { members: [], date_from: r.date_from, date_to: r.date_to };
-            roleGroups[role].members.push(r);
+      var tripEl = document.getElementById('admin-estatetrip-today');
+      if (tripEl && window.location.protocol !== 'file:') {
+        var trips = await sbFetch('GET', '/rest/v1/estate_trips?trip_date=eq.' + today + '&order=staff_name.asc&limit=50');
+        if (trips && trips.length) {
+          var thtml = '';
+          trips.forEach(function(r) {
+            var ini = r.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
+            thtml += '<div class="person-row" style="padding:4px 0;">'
+              + '<div class="av av-g" style="width:28px;height:28px;font-size:10px;">' + ini + '</div>'
+              + '<div style="flex:1;"><div class="p-name" style="font-size:12px;">' + escHtml(r.staff_name) + '</div>'
+              + '<div class="p-sub">Going to ' + escHtml(r.estate_name) + '</div></div></div>';
           });
-          var dhtml = '';
-          Object.keys(roleGroups).forEach(function(role) {
-            var g    = roleGroups[role];
-            var from = g.date_from ? new Date(g.date_from+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'}) : '';
-            var to   = g.date_to   ? new Date(g.date_to+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'}) : '';
-            var period = from === to ? from : from + ' – ' + to;
-            dhtml += '<div style="margin-bottom:10px;">'
-              + '<div style="font-weight:600;font-size:12px;color:var(--text);margin-bottom:4px;">' + escHtml(role) + '</div>'
-              + '<div style="font-size:10px;color:var(--text3);margin-bottom:5px;">' + period + '</div>';
-            g.members.forEach(function(r) {
-              var ini = r.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
-              dhtml += '<div class="person-row" style="padding:4px 0;">'
-                + '<div class="av av-g" style="width:28px;height:28px;font-size:10px;">' + ini + '</div>'
-                + '<div style="flex:1;"><div class="p-name" style="font-size:12px;">' + escHtml(r.staff_name) + '</div></div>'
-                + '<span class="badge b-green">On duty</span></div>';
-            });
-            dhtml += '</div>';
-          });
-          dutyEl.innerHTML = dhtml;
+          tripEl.innerHTML = thtml;
         } else {
-          dutyEl.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0;">No one on duty today.</div>';
+          tripEl.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0;">No estate trips today.</div>';
         }
       }
     } catch(e) {}
