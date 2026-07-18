@@ -26,7 +26,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <title>MJMConnect</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -128,7 +128,7 @@
     display: flex; align-items: center; justify-content: center;
   }
   .wordmark-icon i { font-size: 24px; color: #fff; }
-  .app-name { font-size: 22px; font-weight: 700; color: #fff; letter-spacing: 0.01em; }
+  .app-name { font-family: 'Poppins', sans-serif; font-size: 26px; font-weight: 800; color: #fff; letter-spacing: 0; }
   .app-name span { color: var(--green-light); font-weight: 500; }
   .top-bar-actions { display: flex; align-items: center; gap: 20px; }
   .top-bar-actions i { font-size: 28px; color: #fff; }
@@ -148,7 +148,7 @@
     margin: -12px -12px -24px; padding: 20px 20px 20px;
   }
   .greet-hi { font-size: 19px; font-weight: 400; color: #fff; margin-bottom: 6px; }
-  .greet-name { font-size: 32px; font-weight: 700; line-height: 1.1; color: #fff; margin-bottom: 9px; }
+  .greet-name { font-size: 27px; font-weight: 700; line-height: 1.1; color: #fff; margin-bottom: 9px; }
   .greet-sub { font-size: 17px; font-weight: 400; color: rgba(255,255,255,0.9); margin-bottom: 20px; }
   .home-summary-card {
     background: var(--surface); border-radius: 19px; border: 0.5px solid var(--border);
@@ -568,7 +568,7 @@
     <div class="top-bar">
       <div class="wordmark">
         <div class="wordmark-icon"><i class="ti ti-building-community"></i></div>
-        <div class="app-name">MJM<span>connect</span></div>
+        <div class="app-name">MJM<span>Connect</span></div>
       </div>
       <div class="top-bar-actions">
         <div class="nav-badge" id="notif-bell" onclick="toggleNotifDropdown()">
