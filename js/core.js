@@ -127,10 +127,6 @@ window.addEventListener('DOMContentLoaded', function() {
     var initials = parts.filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
     var el = document.getElementById('top-av-initials');
     if (el) el.textContent = initials || 'ST';
-    var el2 = document.getElementById('menu-av-initials');
-    if (el2) el2.textContent = initials || 'ST';
-    var greetEl = document.getElementById('greet-name-text');
-    if (greetEl && (u.name || u.email)) greetEl.textContent = u.name || u.email;
   }
   // Load live data
   if (window.location.protocol !== 'file:') {

@@ -30,56 +30,35 @@
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    /* Brand navy (formerly "green" tokens -- names kept so every existing
-       class and inline style across the app repaints automatically) */
-    --green-dark:   #00245D;  /* Primary navy */
-    --green-mid:    #00377E;  /* Secondary navy */
-    --green-light:  #7FA8DD;  /* light accent, e.g. wordmark */
-    --green-bg:     #E8FAF3;  /* Leave light bg */
-    --green-text:   #10C497;  /* Leave icon/accent */
-    --red-bg:       #FEEDF2;  /* Event light bg */
-    --red-text:     #F42A45;  /* Event icon/accent */
-    --red-dot:      #F42A45;
-    --amber-bg:     #FEF2E7;  /* Duty light bg */
-    --amber-text:   #FC8110;  /* Duty icon/accent */
-    --blue-bg:      #E8F5FE;  /* Time Off light bg */
-    --blue-text:    #0A90FA;  /* Time Off icon/accent */
-    --purple-bg:    #F2EAFE;  /* Announcement light bg */
-    --purple-text:  #7B3FF2;  /* Announcement icon/accent */
-    --coral-bg:     #FEEDEC;  /* Faulty Complain light bg */
-    --coral-text:   #EF3D38;  /* Faulty Complain icon/accent */
-
-    /* Additional feature-colour tokens */
-    --estate-bg:    #E5F9F6; --estate-text: #08B9AF;
-    --booking-bg:   #EEEFFE; --booking-text: #4C50ED;
-    --profile-bg:   #EEF0F4; --profile-text: #8B909F;
-
-    /* Calendar dot indicators (distinct from module colours) */
-    --cal-event-dot:  #20B24B;
-    --cal-leave-dot:  #684DD6;
-    --cal-estate-dot: #FF2840;
-    --cal-orange-dot: #FF9400;
-
-    --navy-deep:    #011E53;
-    --nav-gradient: linear-gradient(90deg, #00235C 0%, #00377E 50%, #00235A 100%);
-    --home-gradient: linear-gradient(180deg, #011E53 0%, #00245D 48%, #001C4C 100%);
-
-    --bg:           #FAFBFD;
+    --green-dark:   #0F6E56;
+    --green-mid:    #1D9E75;
+    --green-light:  #5DCAA5;
+    --green-bg:     #E1F5EE;
+    --green-text:   #085041;
+    --red-bg:       #FCEBEB;
+    --red-text:     #A32D2D;
+    --red-dot:      #E24B4A;
+    --amber-bg:     #FAEEDA;
+    --amber-text:   #854F0B;
+    --blue-bg:      #E6F1FB;
+    --blue-text:    #185FA5;
+    --purple-bg:    #EEEDFE;
+    --purple-text:  #534AB7;
+    --coral-bg:     #FAECE7;
+    --coral-text:   #993C1D;
+    --bg:           #F4F6F5;
     --surface:      #FFFFFF;
-    --border:       #ECEEF2;
-    --text-primary: #111111;
-    --navy-text:    #08275D;
-    --text-secondary: #7F8593;
-    --text-light:   #A4A8B1;
-    --icon-inactive: #8C9BB1;
-    --nav-active:   #55B5FF;
-    --radius-sm:    8px;
-    --radius-md:    14px;
-    --radius-lg:    22px;
+    --border:       #E2E8E5;
+    --text-primary: #111C18;
+    --text-secondary: #6B7A73;
+    --text-light:   #9AABA3;
+    --radius-sm:    6px;
+    --radius-md:    10px;
+    --radius-lg:    14px;
   }
   html, body {
     height: 100%;
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", "Segoe UI", sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 14px;
     background: #1a1a1a;
     color: var(--text-primary);
@@ -105,7 +84,7 @@
     }
   }
   .status-bar {
-    background: var(--green-dark); color: #fff;
+    background: var(--green-dark); color: #E1F5EE;
     font-size: 11px; font-weight: 500;
     padding: 10px 20px 6px;
     display: flex; justify-content: space-between; align-items: center;
@@ -115,114 +94,74 @@
   .status-bar .status-icons i { font-size: 13px; }
   .top-bar {
     background: var(--green-dark);
-    padding: 10px 20px 18px;
+    padding: 6px 16px 14px;
     display: flex; justify-content: space-between; align-items: center;
     flex-shrink: 0;
   }
-  .wordmark { display: flex; align-items: center; gap: 11px; }
+  .wordmark { display: flex; align-items: center; gap: 9px; }
   .wordmark-icon {
-    width: 48px; height: 48px; border-radius: 13px;
+    width: 32px; height: 32px; border-radius: 9px;
     background: var(--green-mid);
     display: flex; align-items: center; justify-content: center;
   }
-  .wordmark-icon i { font-size: 24px; color: #fff; }
-  .app-name { font-size: 22px; font-weight: 700; color: #fff; letter-spacing: 0.01em; }
-  .app-name span { color: var(--green-light); font-weight: 500; }
-  .top-bar-actions { display: flex; align-items: center; gap: 20px; }
-  .top-bar-actions i { font-size: 28px; color: #fff; }
+  .wordmark-icon i { font-size: 17px; color: #E1F5EE; }
+  .app-name { font-size: 17px; font-weight: 600; color: #E1F5EE; letter-spacing: 0.01em; }
+  .app-name span { color: var(--green-light); font-weight: 400; }
+  .top-bar-actions { display: flex; align-items: center; gap: 10px; }
+  .top-bar-actions i { font-size: 21px; color: #E1F5EE; }
   .top-avatar {
-    width: 48px; height: 48px; border-radius: 50%;
+    width: 30px; height: 30px; border-radius: 50%;
     background: var(--green-mid);
     display: flex; align-items: center; justify-content: center;
-    font-size: 15px; font-weight: 700; color: #fff;
+    font-size: 11px; font-weight: 600; color: #E1F5EE;
     cursor: pointer;
   }
   .tab-nav {
-    display: none;
+    background: var(--surface);
+    border-bottom: 0.5px solid var(--border);
+    padding: 10px 14px 0;
+    display: flex; gap: 4px;
+    overflow-x: auto; scrollbar-width: none; flex-shrink: 0;
+  }
+  .tab-nav::-webkit-scrollbar { display: none; }
+  .tab-btn {
+    flex-shrink: 0; font-size: 12px; font-weight: 500;
+    color: var(--text-secondary);
+    padding: 6px 13px 8px;
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    cursor: pointer; border-bottom: 2px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
+    white-space: nowrap; background: none;
+    border-top: none; border-left: none; border-right: none;
+    font-family: inherit;
   }
   .tab-btn.active { color: var(--green-dark); border-bottom-color: var(--green-dark); font-weight: 600; }
-  .home-hero {
-    background: var(--home-gradient);
-    margin: -12px -12px -24px; padding: 20px 20px 28px;
-  }
-  .greet-hi { font-size: 19px; font-weight: 400; color: #fff; margin-bottom: 6px; }
-  .greet-name { font-size: 32px; font-weight: 700; line-height: 1.1; color: #fff; margin-bottom: 9px; }
-  .greet-sub { font-size: 17px; font-weight: 400; color: rgba(255,255,255,0.9); margin-bottom: 20px; }
-  .home-summary-card {
-    background: var(--surface); border-radius: 19px; border: 0.5px solid var(--border);
-    padding: 14px 16px; margin-bottom: 11px; min-height: 80px;
-    display: flex; align-items: center; gap: 14px; cursor: pointer;
-    box-shadow: 0 6px 20px rgba(0,25,70,0.08);
-  }
-  .home-summary-ic {
-    width: 54px; height: 54px; border-radius: 15px; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center; font-size: 24px;
-  }
-  .home-summary-title { font-size: 15px; font-weight: 700; color: var(--navy-text); }
-  .home-summary-sub { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
-  .home-summary-count { font-size: 19px; font-weight: 700; color: var(--navy-text); flex-shrink: 0; margin-left: auto; }
-  .home-summary-chev { color: var(--icon-inactive); font-size: 20px; flex-shrink: 0; }
-
-  /* ── MENU ── */
-  .menu-header {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 8px 4px 18px;
-  }
-  .menu-header h1 { font-size: 29px; font-weight: 700; color: var(--text-primary); }
-  .menu-row {
-    display: flex; align-items: center; gap: 14px;
-    min-height: 76px; padding: 12px 4px;
-    border-bottom: 0.5px solid var(--border);
-    cursor: pointer;
-  }
-  .menu-row:last-child { border-bottom: none; }
-  .menu-ic {
-    width: 50px; height: 50px; border-radius: 14px; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center; font-size: 22px;
-  }
-  .menu-label { flex: 1; font-size: 17px; font-weight: 600; color: var(--text-primary); }
-  .menu-chev { color: var(--icon-inactive); font-size: 20px; flex-shrink: 0; }
-  .qa-title { font-size: 17px; font-weight: 700; color: #fff; margin: 24px 0 14px; }
-  .qa-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-  .qa-item { display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; }
-  .qa-ic {
-    width: 60px; height: 60px; border-radius: 18px;
-    display: flex; align-items: center; justify-content: center; font-size: 26px;
-  }
-  .qa-label { font-size: 11px; font-weight: 600; color: #fff; text-align: center; line-height: 1.3; }
   .screen-body {
     background: var(--bg); flex: 1; overflow-y: auto;
-    padding: 12px; padding-bottom: 24px; -webkit-overflow-scrolling: touch;
+    padding: 12px; -webkit-overflow-scrolling: touch;
   }
   .screen-section { display: none; }
   .screen-section.active { display: block; }
   .alert-banner {
-    background: var(--surface); border: 0.5px solid var(--border);
-    border-radius: 20px;
-    padding: 16px; margin-bottom: 12px;
-    display: flex; gap: 12px; align-items: flex-start;
-    box-shadow: 0 6px 20px rgba(0,25,70,0.06);
+    background: #FFFBEB; border: 0.5px solid #F5D78A;
+    border-left: 3px solid #F0A500;
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    padding: 10px 12px; margin-bottom: 10px;
+    display: flex; gap: 8px; align-items: flex-start;
   }
-  .alert-banner .alert-icon-box {
-    width: 36px; height: 36px; border-radius: 12px; flex-shrink: 0;
-    background: var(--purple-bg); color: var(--purple-text);
-    display: flex; align-items: center; justify-content: center; font-size: 18px;
-  }
-  .alert-banner .alert-chev { color: var(--icon-inactive); font-size: 18px; align-self: center; flex-shrink: 0; }
-  .alert-text { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
-  .alert-text > div:first-child { font-size: 15px; font-weight: 700; color: var(--navy-text); margin-bottom: 2px; }
+  .alert-banner i { font-size: 15px; color: #F0A500; margin-top: 1px; flex-shrink: 0; }
+  .alert-text { font-size: 12px; color: #7A5800; line-height: 1.5; }
   .alert-text strong { font-weight: 600; }
   .card {
     background: var(--surface); border-radius: var(--radius-lg);
-    border: 0.5px solid var(--border); padding: 16px; margin-bottom: 12px;
-    box-shadow: 0 6px 20px rgba(0,25,70,0.06);
+    border: 0.5px solid var(--border); padding: 12px; margin-bottom: 10px;
   }
   .card-label {
     font-size: 10px; font-weight: 600; color: var(--text-secondary);
     letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 8px;
   }
-  .card-title { font-size: 16px; font-weight: 700; color: var(--navy-text); margin-bottom: 4px; line-height: 1.35; }
-  .card-body { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+  .card-title { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; line-height: 1.35; }
+  .card-body { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
   .card-meta { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
   .card-time { font-size: 10px; color: var(--text-light); }
   .card-urgent { border-left: 3px solid var(--red-dot); border-radius: 0 var(--radius-lg) var(--radius-lg) 0; }
@@ -264,59 +203,60 @@
     margin-bottom: 8px; margin-top: 4px;
   }
   .section-title {
-    font-size: 17px; font-weight: 700; color: var(--navy-text);
+    font-size: 11px; font-weight: 600; color: var(--text-secondary);
+    text-transform: uppercase; letter-spacing: 0.05em;
   }
-  .see-all { font-size: 12px; font-weight: 500; color: var(--green-dark); cursor: pointer; }
+  .see-all { font-size: 11px; font-weight: 500; color: var(--green-dark); cursor: pointer; }
 
   /* ── CALENDAR ── */
   .cal-card {
-    background: var(--surface); border-radius: 24px;
-    border: 0.5px solid var(--border); overflow: hidden; margin-bottom: 12px;
-    box-shadow: 0 6px 20px rgba(0,25,70,0.06);
+    background: var(--surface); border-radius: var(--radius-lg);
+    border: 0.5px solid var(--border); overflow: hidden; margin-bottom: 10px;
   }
   .cal-header {
-    background: var(--surface); padding: 18px 18px 4px;
+    background: var(--green-dark); padding: 11px 14px;
     display: flex; justify-content: space-between; align-items: center;
   }
   .cal-nav-btn {
     width: 28px; height: 28px;
     display: flex; align-items: center; justify-content: center;
-    cursor: pointer; color: var(--icon-inactive);
-    background: none; border-radius: var(--radius-sm);
+    cursor: pointer; color: #E1F5EE;
+    background: rgba(255,255,255,0.15); border-radius: var(--radius-sm);
     border: none;
   }
-  .cal-nav-btn i { font-size: 18px; }
-  .cal-month-label { font-size: 21px; font-weight: 700; color: var(--navy-text); }
-  .cal-body { padding: 8px 14px 18px; }
+  .cal-nav-btn i { font-size: 15px; }
+  .cal-month-label { font-size: 13px; font-weight: 600; color: #E1F5EE; }
+  .cal-body { padding: 10px 10px 12px; }
   .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; }
-  .cal-dow { font-size: 13px; font-weight: 500; color: var(--text-secondary); padding: 2px 0 8px; }
+  .cal-dow { font-size: 10px; font-weight: 600; color: var(--text-light); padding: 2px 0 6px; text-transform: uppercase; }
   .cal-day {
-    font-size: 15px; color: var(--text-primary); cursor: pointer;
-    display: flex; flex-direction: column; align-items: center; padding: 4px 1px; gap: 3px;
+    font-size: 11px; color: var(--text-primary); cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; padding: 3px 1px; gap: 2px;
   }
   .cal-day span { line-height: 1; }
   .cal-day.today span {
     background: var(--green-dark); color: #fff; font-weight: 600;
-    border-radius: 50%; width: 28px; height: 28px;
+    border-radius: 50%; width: 22px; height: 22px;
     display: flex; align-items: center; justify-content: center;
   }
-  .cal-day-dots { display: flex; gap: 3px; height: 5px; }
-  .cal-underline { width: 5px; height: 5px; border-radius: 50%; }
-  .cal-underline.leave { background: var(--cal-leave-dot); }
-  .cal-underline.event { background: var(--cal-event-dot); }
-  .cal-underline.estate { background: var(--cal-estate-dot); }
-  .cal-day.has-event span, .cal-day.holiday span {
-    background: none; color: var(--text-primary); font-weight: 500;
-    border-radius: 50%; width: 28px; height: 28px;
+  .cal-underline { width: 16px; height: 3px; border-radius: 2px; }
+  .cal-underline.leave { background: #EF9F27; }
+  .cal-day.has-event span {
+    background: #CECBF6; color: #3C3489; font-weight: 500;
+    border-radius: 5px; width: 22px; height: 22px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .cal-day.holiday span {
+    background: #FCEBEB; color: #A32D2D; font-weight: 500;
+    border-radius: 5px; width: 22px; height: 22px;
     display: flex; align-items: center; justify-content: center;
   }
   .legend-row {
-    display: flex; gap: 16px; margin-top: 6px; flex-wrap: wrap;
-    justify-content: center;
-    border-top: 0.5px solid var(--border); padding-top: 12px;
+    display: flex; gap: 12px; margin-top: 10px; flex-wrap: wrap;
+    border-top: 0.5px solid var(--border); padding-top: 10px;
   }
-  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-secondary); }
-  .legend-line { width: 8px; height: 8px; border-radius: 50%; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--text-secondary); }
+  .legend-line { width: 14px; height: 3px; border-radius: 2px; }
 
   /* ── ANNOUNCEMENTS ── */
   .ann-badge { display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px; }
@@ -362,18 +302,17 @@
 
   /* ── BOTTOM NAV ── */
   .nav-bar {
-    background: var(--nav-gradient); border-top: none;
-    border-radius: 28px 28px 0 0;
+    background: var(--surface); border-top: 0.5px solid var(--border);
     display: flex; justify-content: space-around;
-    padding: 12px 0 24px; flex-shrink: 0;
+    padding: 8px 0 18px; flex-shrink: 0;
   }
   .nav-item {
-    display: flex; flex-direction: column; align-items: center; gap: 5px;
-    font-size: 12px; font-weight: 400; color: var(--icon-inactive);
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    font-size: 10px; font-weight: 500; color: var(--text-secondary);
     cursor: pointer; padding: 0 12px; transition: color 0.15s;
   }
-  .nav-item i { font-size: 26px; }
-  .nav-item.active { color: var(--nav-active); font-weight: 600; }
+  .nav-item i { font-size: 22px; }
+  .nav-item.active { color: var(--green-dark); }
   .nav-badge { position: relative; display: inline-block; cursor: pointer; }
   .notif-count {
     display: none; position: absolute; top: -6px; right: -8px;
@@ -544,35 +483,32 @@
 <div class="phone-wrap">
 <div class="phone">
 
-  <!-- APP HEADER (hidden on the Menu screen; see showMenuScreen()/showMainScreen() below) -->
-  <div id="app-top-header">
-    <!-- STATUS BAR -->
-    <div class="status-bar">
-      <span id="js-clock">9:41</span>
-      <div class="status-icons">
-        <i class="ti ti-wifi"></i>
-        <i class="ti ti-signal-4g"></i>
-        <i class="ti ti-battery-3"></i>
-      </div>
+  <!-- STATUS BAR -->
+  <div class="status-bar">
+    <span id="js-clock">9:41</span>
+    <div class="status-icons">
+      <i class="ti ti-wifi"></i>
+      <i class="ti ti-signal-4g"></i>
+      <i class="ti ti-battery-3"></i>
     </div>
+  </div>
 
-    <!-- TOP BAR -->
-    <div class="top-bar">
-      <div class="wordmark">
-        <div class="wordmark-icon"><i class="ti ti-building-community"></i></div>
-        <div class="app-name">MJM<span>Connect</span></div>
-      </div>
-      <div class="top-bar-actions">
-        <div class="nav-badge" id="notif-bell" onclick="toggleNotifDropdown()">
-          <i class="ti ti-bell"></i>
-          <span class="notif-count" id="notif-count">0</span>
-          <div class="notif-dropdown" id="notif-dropdown">
-            <div class="notif-header">Notifications</div>
-            <div id="notif-list"><div class="notif-empty">No new notifications.</div></div>
-          </div>
+  <!-- TOP BAR -->
+  <div class="top-bar">
+    <div class="wordmark">
+      <div class="wordmark-icon"><i class="ti ti-building-community"></i></div>
+      <div class="app-name">MJM<span>Connect</span></div>
+    </div>
+    <div class="top-bar-actions">
+      <div class="nav-badge" id="notif-bell" onclick="toggleNotifDropdown()">
+        <i class="ti ti-bell"></i>
+        <span class="notif-count" id="notif-count">0</span>
+        <div class="notif-dropdown" id="notif-dropdown">
+          <div class="notif-header">Notifications</div>
+          <div id="notif-list"><div class="notif-empty">No new notifications.</div></div>
         </div>
-        <div class="top-avatar" id="top-av-initials" onclick="window.location.href='profile.html'" title="My Profile">ST</div>
       </div>
+      <div class="top-avatar" id="top-av-initials" onclick="window.location.href='profile.html'" title="My Profile">ST</div>
     </div>
   </div>
 
@@ -590,11 +526,6 @@
 
     <!-- ── HOME ── -->
     <div class="screen-section active" id="screen-home">
-    <div class="home-hero">
-
-      <div class="greet-hi">Hi,</div>
-      <div class="greet-name"><span id="greet-name-text">there</span> 👋</div>
-      <div class="greet-sub">Here's what's happening today.</div>
 
       <!-- Announcement banner (populated by tab-announcements.js) -->
       <div id="home-ann-banner" style="display:none;"></div>
@@ -612,47 +543,34 @@
             <div class="cal-dow">W</div><div class="cal-dow">T</div><div class="cal-dow">F</div><div class="cal-dow">S</div>
           </div>
           <div class="legend-row">
-            <div class="legend-item"><div class="legend-line" style="background:var(--cal-event-dot);"></div>Event</div>
-            <div class="legend-item"><div class="legend-line" style="background:var(--cal-leave-dot);"></div>Leave</div>
-            <div class="legend-item"><div class="legend-line" style="background:var(--cal-estate-dot);"></div>Estate Trip</div>
+            <div class="legend-item"><div style="width:14px;height:14px;border-radius:50%;background:var(--green-dark);"></div>Today</div>
+            <div class="legend-item"><div class="legend-line" style="background:#EF9F27;"></div>Leave</div>
+            <div class="legend-item"><div style="width:14px;height:14px;border-radius:4px;background:#CECBF6;"></div>Event</div>
+            <div class="legend-item"><div style="width:14px;height:14px;border-radius:4px;background:#FCEBEB;border:1px solid #F09595;"></div>Holiday</div>
           </div>
         </div>
       </div>
 
       <!-- Today on leave -->
-      <div id="home-leave-today" style="margin-top:12px;">
+      <div class="section-row">
+        <div class="section-title">Today on Leave</div>
+        <div class="see-all" onclick="switchTabByName('leave')">See all</div>
+      </div>
+      <div id="home-leave-today">
         <div class="card"><div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:8px 0;">Loading...</div></div>
       </div>
 
       <!-- Today's Estate Trip -->
+      <div class="section-row">
+        <div class="section-title">Today's Estate Trip</div>
+        <div class="see-all" onclick="switchNav('estatetrip');loadEstateTrips()">See all</div>
+      </div>
       <div id="home-estatetrip-today">
         <div class="card">
           <div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:8px 0;">Loading...</div>
         </div>
       </div>
 
-      <!-- Quick Access -->
-      <div class="qa-title">Quick Access</div>
-      <div class="qa-grid">
-        <div class="qa-item" onclick="switchTabByName('leave')">
-          <div class="qa-ic" style="background:var(--green-bg);color:var(--green-text);"><i class="ti ti-calendar-check"></i></div>
-          <div class="qa-label">Leave</div>
-        </div>
-        <div class="qa-item" onclick="window.open('https://docs.google.com/forms/d/e/1FAIpQLScxTncnL4ekGi6qmxw6mEXsu4cS-n_c9Z6s5IDLUptJf0L09Q/viewform','_blank')">
-          <div class="qa-ic" style="background:var(--blue-bg);color:var(--blue-text);"><i class="ti ti-clock"></i></div>
-          <div class="qa-label">Time Off</div>
-        </div>
-        <div class="qa-item" onclick="switchNav('book');initBookTab()">
-          <div class="qa-ic" style="background:var(--booking-bg);color:var(--booking-text);"><i class="ti ti-calendar-event"></i></div>
-          <div class="qa-label">Booking</div>
-        </div>
-        <div class="qa-item" id="qa-faulty-complain" onclick="alert('Faulty Complain form link coming soon.')">
-          <div class="qa-ic" style="background:var(--coral-bg);color:var(--coral-text);"><i class="ti ti-clipboard-x"></i></div>
-          <div class="qa-label">Faulty Complain</div>
-        </div>
-      </div>
-
-    </div><!-- /home-hero -->
     </div><!-- /home -->
 
     <!-- ── ANNOUNCEMENTS ── -->
@@ -1029,59 +947,6 @@
 
     </div><!-- /book -->
 
-    <!-- ── MENU ── -->
-    <div class="screen-section" id="screen-menu">
-      <div class="menu-header">
-        <h1>Menu</h1>
-        <div class="top-avatar" style="width:44px;height:44px;" onclick="window.location.href='profile.html'" title="My Profile" id="menu-av-initials">ST</div>
-      </div>
-      <div class="menu-row" onclick="document.getElementById('app-top-header').style.display=''; switchTabByName('announce')">
-        <div class="menu-ic" style="background:var(--purple-bg);color:var(--purple-text);"><i class="ti ti-speakerphone"></i></div>
-        <div class="menu-label">Announcement</div>
-        <i class="ti ti-chevron-right menu-chev"></i>
-      </div>
-      <div class="menu-row" onclick="document.getElementById('app-top-header').style.display=''; switchTabByName('leave')">
-        <div class="menu-ic" style="background:var(--green-bg);color:var(--green-text);"><i class="ti ti-calendar-check"></i></div>
-        <div class="menu-label">Leave</div>
-        <i class="ti ti-chevron-right menu-chev"></i>
-      </div>
-      <div class="menu-row" onclick="document.getElementById('app-top-header').style.display=''; switchTabByName('event'); loadStaffEvents()">
-        <div class="menu-ic" style="background:var(--red-bg);color:var(--red-text);"><i class="ti ti-calendar"></i></div>
-        <div class="menu-label">Event</div>
-        <i class="ti ti-chevron-right menu-chev"></i>
-      </div>
-      <div class="menu-row" onclick="document.getElementById('app-top-header').style.display=''; switchTabByName('duty')">
-        <div class="menu-ic" style="background:var(--amber-bg);color:var(--amber-text);"><i class="ti ti-users"></i></div>
-        <div class="menu-label">Duty</div>
-        <i class="ti ti-chevron-right menu-chev"></i>
-      </div>
-      <div class="menu-row" onclick="document.getElementById('app-top-header').style.display=''; switchNav('estatetrip'); loadEstateTrips()">
-        <div class="menu-ic" style="background:var(--estate-bg);color:var(--estate-text);"><i class="ti ti-car"></i></div>
-        <div class="menu-label">Estate Trip</div>
-        <i class="ti ti-chevron-right menu-chev"></i>
-      </div>
-      <div class="menu-row" onclick="window.open('https://docs.google.com/forms/d/e/1FAIpQLScxTncnL4ekGi6qmxw6mEXsu4cS-n_c9Z6s5IDLUptJf0L09Q/viewform','_blank')">
-        <div class="menu-ic" style="background:var(--blue-bg);color:var(--blue-text);"><i class="ti ti-clock"></i></div>
-        <div class="menu-label">Time Off</div>
-        <i class="ti ti-chevron-right menu-chev"></i>
-      </div>
-      <div class="menu-row" onclick="alert('Faulty Complain form link coming soon.')">
-        <div class="menu-ic" style="background:var(--coral-bg);color:var(--coral-text);"><i class="ti ti-clipboard-x"></i></div>
-        <div class="menu-label">Faulty Complain</div>
-        <i class="ti ti-chevron-right menu-chev"></i>
-      </div>
-      <div class="menu-row" onclick="document.getElementById('app-top-header').style.display=''; switchNav('book'); initBookTab()">
-        <div class="menu-ic" style="background:var(--booking-bg);color:var(--booking-text);"><i class="ti ti-calendar-event"></i></div>
-        <div class="menu-label">Booking</div>
-        <i class="ti ti-chevron-right menu-chev"></i>
-      </div>
-      <div class="menu-row" onclick="window.location.href='profile.html'">
-        <div class="menu-ic" style="background:var(--profile-bg);color:var(--profile-text);"><i class="ti ti-user"></i></div>
-        <div class="menu-label">Profile Settings</div>
-        <i class="ti ti-chevron-right menu-chev"></i>
-      </div>
-    </div><!-- /menu -->
-
   </div><!-- /screen-body -->
 
   <!-- ── DAY DETAIL MODAL (shared) ── -->
@@ -1097,22 +962,16 @@
 
   <!-- BOTTOM NAV -->
   <div class="nav-bar">
-    <div class="nav-item active" id="nav-home" onclick="document.getElementById('app-top-header').style.display=''; switchTabByName('home')">
-      <i class="ti ti-home"></i><span>Home</span>
+    <div class="nav-item active" id="nav-book" onclick="switchNav('book');initBookTab()">
+      <i class="ti ti-calendar-event"></i><span>Booking</span>
     </div>
-    <div class="nav-item" id="nav-announce" onclick="document.getElementById('app-top-header').style.display=''; switchTabByName('announce')">
-      <i class="ti ti-speakerphone"></i><span>Announcement</span>
+    <div class="nav-item" id="nav-estatetrip" onclick="switchNav('estatetrip');loadEstateTrips()">
+      <i class="ti ti-map-pin"></i><span>Estate Trip</span>
     </div>
-    <div class="nav-item" id="nav-event" onclick="document.getElementById('app-top-header').style.display=''; switchTabByName('event'); loadStaffEvents()">
-      <i class="ti ti-calendar"></i><span>Event</span>
-    </div>
-    <div class="nav-item" id="nav-menu" onclick="document.getElementById('app-top-header').style.display='none'; switchTabByName('menu')">
-      <i class="ti ti-menu-2"></i><span>More</span>
+    <div class="nav-item" id="nav-timeoff" onclick="window.open('https://docs.google.com/forms/d/e/1FAIpQLScxTncnL4ekGi6qmxw6mEXsu4cS-n_c9Z6s5IDLUptJf0L09Q/viewform','_blank')">
+      <i class="ti ti-clock-off"></i><span>Time Off</span>
     </div>
   </div>
-  <!-- Booking, Estate Trip and Time Off (previously bottom-nav icons) are
-       now reached via the Menu screen's rows, which call the exact same
-       switchNav()/window.open() calls that used to live here. -->
 
 </div><!-- /phone -->
 </div><!-- /phone-wrap -->

@@ -13,14 +13,22 @@ async function loadLeave() {
       var res  = await fetch(url, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
       var data = await res.json();
       if (data && data.length) {
-        var names = data.map(function(r){ return r.staff_name; }).join(', ');
-        homeEl.innerHTML = '<div class="home-summary-card" onclick="switchTabByName(\'leave\')">'
-          + '<div class="home-summary-ic" style="background:var(--green-bg);color:var(--green-text);"><i class="ti ti-leaf"></i></div>'
-          + '<div style="flex:1;min-width:0;"><div class="home-summary-title">On Leave Today</div>'
-          + '<div class="home-summary-sub" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escHtml(names) + '</div></div>'
-          + '<div class="home-summary-count">' + data.length + '</div>'
-          + '<i class="ti ti-chevron-right home-summary-chev"></i>'
-          + '</div>';
+        var html = '<div class="card">';
+        data.forEach(function(r, i) {
+          var ini = r.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
+          var avCls = avColors[i % avColors.length];
+          var shortType = r.leave_type === 'Annual Leave' ? 'AL' : r.leave_type === 'Medical Leave' ? 'MC' : 'CL';
+          var badgeCls  = r.leave_type === 'Medical Leave' ? 'badge-urgent' : 'badge-amber';
+          var from = new Date(r.date_from+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'});
+          var to   = new Date(r.date_to+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'});
+          html += '<div class="person-row">'
+            + '<div class="avatar ' + avCls + '">' + ini + '</div>'
+            + '<div style="flex:1;"><div class="person-name">' + escHtml(r.staff_name) + '</div>'
+            + '<div class="person-sub">' + escHtml(r.leave_type) + ' · ' + from + (from !== to ? '–' + to : '') + '</div></div>'
+            + '<span class="badge ' + badgeCls + '">' + shortType + '</span></div>';
+        });
+        html += '</div>';
+        homeEl.innerHTML = html;
       } else {
         homeEl.innerHTML = '<div class="card"><div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:8px 0;">No one on leave today.</div></div>';
       }

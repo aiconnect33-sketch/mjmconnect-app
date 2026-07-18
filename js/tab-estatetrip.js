@@ -18,14 +18,18 @@ async function loadEstateTrips() {
       var res  = await fetch(url, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
       var data = await res.json();
       if (data && data.length) {
-        var names = data.map(function(r){ return r.staff_name; }).join(', ');
-        homeEl.innerHTML = '<div class="home-summary-card" onclick="switchNav(\'estatetrip\');loadEstateTrips()">'
-          + '<div class="home-summary-ic" style="background:var(--estate-bg);color:var(--estate-text);"><i class="ti ti-car"></i></div>'
-          + '<div style="flex:1;min-width:0;"><div class="home-summary-title">Going to Estate Today</div>'
-          + '<div class="home-summary-sub" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escHtml(names) + '</div></div>'
-          + '<div class="home-summary-count">' + data.length + '</div>'
-          + '<i class="ti ti-chevron-right home-summary-chev"></i>'
-          + '</div>';
+        var html = '<div class="card">';
+        data.forEach(function(r, i) {
+          var ini = r.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
+          var avCls = avColors[i % avColors.length];
+          html += '<div class="person-row">'
+            + '<div class="avatar ' + avCls + '">' + ini + '</div>'
+            + '<div style="flex:1;"><div class="person-name">' + escHtml(r.staff_name) + '</div>'
+            + '<div class="person-sub">Going to ' + escHtml(r.estate_name) + '</div></div>'
+            + '</div>';
+        });
+        html += '</div>';
+        homeEl.innerHTML = html;
       } else {
         homeEl.innerHTML = '<div class="card"><div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:8px 0;">No estate trips today.</div></div>';
       }

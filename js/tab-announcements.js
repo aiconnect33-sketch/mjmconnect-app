@@ -2,7 +2,7 @@
 
 // ── STAFF CALENDAR ──
 var staffCalYear, staffCalMonth;
-var staffCalLeave = {}, staffCalEvents = {}, staffCalEstate = {};
+var staffCalLeave = {}, staffCalEvents = {};
 var STAFF_MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
 function initStaffCalendar() {
@@ -12,7 +12,7 @@ function initStaffCalendar() {
 }
 
 async function loadStaffCalendar() {
-  staffCalLeave = {}; staffCalEvents = {}; staffCalEstate = {};
+  staffCalLeave = {}; staffCalEvents = {};
   if (window.location.protocol === 'file:') { renderStaffCalendar(); return; }
   try {
     var leaveData = await sbGet('leave_records', 'select=date_from,date_to&limit=200');
@@ -31,10 +31,6 @@ async function loadStaffCalendar() {
     if (evData && evData.length) {
       evData.forEach(function(e){ staffCalEvents[e.event_date] = true; });
     }
-    var estateData = await sbGet('estate_trips', 'select=trip_date&limit=200');
-    if (estateData && estateData.length) {
-      estateData.forEach(function(t){ staffCalEstate[t.trip_date] = true; });
-    }
   } catch(e) {}
   renderStaffCalendar();
 }
@@ -50,20 +46,21 @@ function renderStaffCalendar() {
   var today = new Date();
   for (var i = 0; i < firstDay; i++) { grid.appendChild(document.createElement('div')); }
   for (var d = 1; d <= daysInMonth; d++) {
-    var cell     = document.createElement('div');
-    var dateStr  = staffCalYear + '-' + String(staffCalMonth+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    var cell    = document.createElement('div');
+    var dateStr = staffCalYear + '-' + String(staffCalMonth+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
     var isToday  = (d === today.getDate() && staffCalMonth === today.getMonth() && staffCalYear === today.getFullYear());
     var hasLeave = staffCalLeave[dateStr];
     var hasEvent = staffCalEvents[dateStr];
-    var hasEstate = staffCalEstate[dateStr];
     var cls = 'cal-day';
-    if (isToday) cls += ' today';
+    if (isToday)  cls += ' today';
+    if (hasEvent && !isToday) cls += ' has-event';
     cell.className = cls;
-    var dots = (hasEvent ? '<div class="cal-underline event"></div>' : '')
-      + (hasLeave ? '<div class="cal-underline leave"></div>' : '')
-      + (hasEstate ? '<div class="cal-underline estate"></div>' : '');
-    cell.innerHTML = '<span>' + d + '</span>'
-      + (dots ? '<div class="cal-day-dots">' + dots + '</div>' : '');
+    // When today also has an event, wrap the number in a purple ring
+    var spanStyle = (isToday && hasEvent)
+      ? ' style="outline:2.5px solid #534AB7;outline-offset:2px;"'
+      : '';
+    cell.innerHTML = '<span' + spanStyle + '>' + d + '</span>'
+      + (hasLeave ? '<div class="cal-underline leave"></div>' : '');
     if (hasLeave || hasEvent) {
       cell.style.cursor = 'pointer';
       (function(ds, hl, he){ cell.onclick = function(){ showStaffDayDetail(ds, hl, he); }; })(dateStr, hasLeave, hasEvent);
@@ -148,15 +145,13 @@ async function loadAnnouncements() {
         bannerEl.innerHTML = bannerItems.map(function(a) {
           var d = new Date(a.created_at).toLocaleDateString('en-MY', { day:'numeric', month:'short', year:'numeric' });
           var t = new Date(a.created_at).toLocaleTimeString('en-MY', { hour:'numeric', minute:'2-digit', hour12:true });
-          return '<div class="alert-banner">'
-            + '<div class="alert-icon-box"><i class="ti ti-speakerphone"></i></div>'
-            + '<div class="alert-text" style="flex:1;">'
-            + '<div>' + escHtml(a.title) + '</div>'
+          return '<div class="alert-banner" style="margin-bottom:6px;">'
+            + '<i class="ti ti-alert-circle"></i>'
+            + '<div class="alert-text">'
+            + '<div style="font-weight:700;">' + escHtml(a.title) + '</div>'
             + '<div>' + escHtml(a.body) + '</div>'
             + '<div style="font-size:10px;opacity:0.7;margin-top:2px;">' + d + ' · ' + t + '</div>'
-            + '</div>'
-            + '<i class="ti ti-chevron-right alert-chev"></i>'
-            + '</div>';
+            + '</div></div>';
         }).join('');
         bannerEl.style.display = 'block';
       } else {
