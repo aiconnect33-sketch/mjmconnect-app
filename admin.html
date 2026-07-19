@@ -1646,6 +1646,7 @@ html, body {
       setLoading('estatetrip-save', false);
       hideEstateTripForm();
       await loadDbEstateTrips();
+      if (typeof loadAdminCalendar === 'function') loadAdminCalendar();
       document.getElementById('estatetrip-success').classList.add('visible');
       setTimeout(() => document.getElementById('estatetrip-success').classList.remove('visible'), 3500);
     } catch(e) {
@@ -2516,6 +2517,7 @@ html, body {
     } catch(e) { alert('Could not delete estate trip. Please try again.'); return; }
     row.style.transition = 'opacity 0.2s'; row.style.opacity = '0';
     setTimeout(function(){ row.remove(); }, 220);
+    if (typeof loadAdminCalendar === 'function') loadAdminCalendar();
   }
 
   // ── LOAD DUTY FROM SUPABASE ──
