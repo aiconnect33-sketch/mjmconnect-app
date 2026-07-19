@@ -489,7 +489,9 @@ html, body {
   position: sticky; bottom: 0;
   width: 100%; z-index: 100; flex-shrink: 0;
   background: linear-gradient(90deg, var(--green) 0%, var(--green-mid) 50%, var(--green) 100%);
+  transition: transform 0.25s ease;
 }
+.nav-bar-wrap.nav-hidden { transform: translateY(100%); }
 .nav-bar {
   background: linear-gradient(90deg, var(--green) 0%, var(--green-mid) 50%, var(--green) 100%);
   border-top: none;
@@ -2303,7 +2305,24 @@ html, body {
   (function(){ var n = new Date(); calYear = n.getFullYear(); calMonth = n.getMonth(); })();
   var MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
+  // Hide the bottom nav while scrolling down, reveal it again on scroll up
+  // (or once back near the top), so it doesn't permanently eat screen space
+  // on long lists. The page itself scrolls (not .screen-body, which sizes
+  // to its content), so this listens on window rather than any inner element.
+  function initScrollHideNav() {
+    var nav = document.querySelector('.nav-bar-wrap');
+    if (!nav) return;
+    var lastTop = 0;
+    window.addEventListener('scroll', function() {
+      var top = window.scrollY || window.pageYOffset || 0;
+      if (top <= 10 || top < lastTop) nav.classList.remove('nav-hidden');
+      else if (top > lastTop) nav.classList.add('nav-hidden');
+      lastTop = top;
+    }, { passive: true });
+  }
+
   document.addEventListener('DOMContentLoaded', function() {
+    initScrollHideNav();
     // Set top avatar initials and role from session
     var raw = sessionStorage.getItem('mjm_user');
     if (raw) {
