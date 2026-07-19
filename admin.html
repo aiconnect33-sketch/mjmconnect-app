@@ -2809,9 +2809,8 @@ html, body {
       var hasLeave  = leaveDates && leaveDates[dateStr];
       var hasEvent  = eventDates && eventDates[dateStr];
       var hasEstate = estateDates && estateDates[dateStr];
-      var spanStyle = isToday
-        ? 'display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--green);color:#fff;font-weight:600;line-height:1;'
-        : 'line-height:1;';
+      var spanStyle = 'display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;line-height:1;'
+        + (isToday ? 'background:var(--green);color:#fff;font-weight:600;' : '');
       var dots = (hasEvent ? '<div class="cal-underline event"></div>' : '')
         + (hasLeave ? '<div class="cal-underline leave"></div>' : '')
         + (hasEstate ? '<div class="cal-underline estate"></div>' : '');
