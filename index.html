@@ -379,7 +379,12 @@
      gradient exactly at the very edges (0%/100%), so the corner clip (which
      cuts into the last few percent) would reveal a visibly different shade
      right at the curve. */
-  .nav-bar-wrap { background: var(--nav-gradient); flex-shrink: 0; }
+  .nav-bar-wrap {
+    background: var(--nav-gradient); flex-shrink: 0;
+    position: sticky; bottom: 0; z-index: 100;
+    transition: transform 0.25s ease;
+  }
+  .nav-bar-wrap.nav-hidden { transform: translateY(100%); }
   .nav-bar {
     background: var(--nav-gradient); border-top: none;
     border-radius: 28px 28px 0 0;

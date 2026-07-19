@@ -94,6 +94,22 @@ function switchNav(name) {
   if (tabMap[name] !== undefined) tabs[tabMap[name]].classList.add('active');
 }
 
+// Hide the bottom nav while scrolling down, reveal it again on scroll up
+// (or once back near the top), so it doesn't permanently eat screen space
+// on long lists. The page itself scrolls (not .screen-body, which sizes to
+// its content), so this listens on window rather than any inner element.
+function initScrollHideNav() {
+  var nav = document.querySelector('.nav-bar-wrap');
+  if (!nav) return;
+  var lastTop = 0;
+  window.addEventListener('scroll', function() {
+    var top = window.scrollY || window.pageYOffset || 0;
+    if (top <= 10 || top < lastTop) nav.classList.remove('nav-hidden');
+    else if (top > lastTop) nav.classList.add('nav-hidden');
+    lastTop = top;
+  }, { passive: true });
+}
+
 function switchTabByName(name) {
   var tabs = document.querySelectorAll('.tab-btn');
   var map = { home:0, announce:1, leave:2, event:3, duty:4 };
@@ -123,6 +139,7 @@ function getCurrentUserName() {
 
 // ── DOMContentLoaded bootstrap ──
 window.addEventListener('DOMContentLoaded', function() {
+  initScrollHideNav();
   // Set top avatar initials
   var raw = sessionStorage.getItem('mjm_user');
   if (raw) {
