@@ -373,11 +373,14 @@
   .upcoming-name { font-size: 12px; color: var(--text-primary); font-weight: 500; }
 
   /* ── BOTTOM NAV ── */
-  /* Flat backing colour behind .nav-bar: since border-radius clips .nav-bar's
-     own gradient at its rounded top corners, without a matching-colour
-     ancestor behind it, the phone's white background shows through those
-     clipped corners instead. */
-  .nav-bar-wrap { background: var(--green-dark); flex-shrink: 0; }
+  /* Backing behind .nav-bar: border-radius clips .nav-bar's own gradient at
+     its rounded top corners, so without a matching ancestor behind it, a
+     mismatched colour shows through those clipped corners instead. Must be
+     the SAME gradient (not a flat colour) -- a flat colour only matches the
+     gradient exactly at the very edges (0%/100%), so the corner clip (which
+     cuts into the last few percent) would reveal a visibly different shade
+     right at the curve. */
+  .nav-bar-wrap { background: var(--nav-gradient); flex-shrink: 0; }
   .nav-bar {
     background: var(--nav-gradient); border-top: none;
     border-radius: 28px 28px 0 0;
@@ -385,11 +388,11 @@
     padding: 12px 0 24px;
   }
   .nav-item {
-    display: flex; flex-direction: column; align-items: center; gap: 5px;
-    font-size: 12px; font-weight: 400; color: var(--icon-inactive);
-    cursor: pointer; padding: 0 12px; transition: color 0.15s;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    font-size: 10px; font-weight: 400; color: var(--icon-inactive);
+    cursor: pointer; padding: 0 10px; transition: color 0.15s;
   }
-  .nav-item i { font-size: 26px; }
+  .nav-item i { font-size: 22px; }
   .nav-item.active { color: var(--nav-active); font-weight: 600; }
   .nav-badge { position: relative; display: inline-block; cursor: pointer; }
   .notif-count {
