@@ -63,7 +63,7 @@ function renderStaffCalendar() {
       + (hasLeave ? '<div class="cal-underline leave"></div>' : '')
       + (hasEstate ? '<div class="cal-underline estate"></div>' : '');
     cell.innerHTML = '<span>' + d + '</span>'
-      + (dots ? '<div class="cal-day-dots">' + dots + '</div>' : '');
+      + '<div class="cal-day-dots">' + dots + '</div>';
     if (hasLeave || hasEvent) {
       cell.style.cursor = 'pointer';
       (function(ds, hl, he){ cell.onclick = function(){ showStaffDayDetail(ds, hl, he); }; })(dateStr, hasLeave, hasEvent);

@@ -57,7 +57,7 @@
 
     /* Calendar dot indicators, reusing the palette above */
     --cal-event-dot:  var(--green-mid);
-    --cal-leave-dot:  var(--amber-text);
+    --cal-leave-dot:  var(--purple-text);
     --cal-estate-dot: var(--red-dot);
     --cal-orange-dot: var(--amber-text);
     --cal-selected-date: #087864;
@@ -130,6 +130,13 @@
   .wordmark-icon i { font-size: 24px; color: #fff; }
   .app-name { font-family: 'Poppins', sans-serif; font-size: 26px; font-weight: 800; color: #fff; letter-spacing: 0; }
   .app-name span { color: var(--green-light); font-weight: 500; }
+  .wm-badge {
+    font-size: 9px; font-weight: 700;
+    background: rgba(255,255,255,0.2);
+    color: #fff; padding: 3px 8px;
+    border-radius: 20px; margin-left: 4px;
+    letter-spacing: 0.05em; text-transform: uppercase;
+  }
   .top-bar-actions { display: flex; align-items: center; gap: 20px; }
   .top-bar-actions i { font-size: 28px; color: #fff; }
   .top-avatar {
@@ -200,7 +207,7 @@
   .screen-section { display: none; }
   .screen-section.active { display: block; }
   .alert-banner {
-    background: var(--surface); border: 0.5px solid var(--border);
+    background: #FFFBEB; border: 0.5px solid #F5D78A;
     border-radius: 20px;
     padding: 16px; margin-bottom: 12px;
     display: flex; gap: 12px; align-items: flex-start;
@@ -278,18 +285,18 @@
     box-shadow: 0 6px 20px rgba(15,110,86,0.07);
   }
   .cal-header {
-    background: var(--surface); padding: 18px 18px 4px;
+    background: var(--green-dark); padding: 16px 18px;
     display: flex; justify-content: space-between; align-items: center;
   }
   .cal-nav-btn {
     width: 28px; height: 28px;
     display: flex; align-items: center; justify-content: center;
-    cursor: pointer; color: var(--icon-inactive);
-    background: none; border-radius: var(--radius-sm);
+    cursor: pointer; color: #fff;
+    background: rgba(255,255,255,0.15); border-radius: var(--radius-sm);
     border: none;
   }
   .cal-nav-btn i { font-size: 18px; }
-  .cal-month-label { font-size: 21px; font-weight: 700; color: var(--navy-text); }
+  .cal-month-label { font-size: 19px; font-weight: 700; color: #fff; }
   .cal-body { padding: 8px 14px 18px; }
   .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; }
   .cal-dow { font-size: 13px; font-weight: 500; color: var(--text-secondary); padding: 2px 0 8px; }
@@ -569,6 +576,7 @@
       <div class="wordmark">
         <div class="wordmark-icon"><i class="ti ti-building-community"></i></div>
         <div class="app-name">MJM<span>Connect</span></div>
+        <div class="wm-badge">Staff</div>
       </div>
       <div class="top-bar-actions">
         <div class="nav-badge" id="notif-bell" onclick="toggleNotifDropdown()">
