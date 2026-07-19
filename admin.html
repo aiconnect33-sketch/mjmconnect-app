@@ -1650,7 +1650,7 @@ html, body {
       setTimeout(() => document.getElementById('estatetrip-success').classList.remove('visible'), 3500);
     } catch(e) {
       setLoading('estatetrip-save', false);
-      alert('Could not save estate trip. Please try again.');
+      alert('Could not save estate trip. ' + (e.message || 'Please try again.'));
     }
   }
 
@@ -2342,7 +2342,11 @@ html, body {
     var headers = { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
     if (extra_headers) Object.assign(headers, extra_headers);
     var res = await fetch(SURL + path, { method: method, headers: headers, body: body ? JSON.stringify(body) : undefined });
-    if (!res.ok) throw new Error('Request failed: ' + res.status);
+    if (!res.ok) {
+      var detail = '';
+      try { var errBody = await res.json(); detail = errBody.message || errBody.hint || errBody.error_description || ''; } catch(e) {}
+      throw new Error('Request failed: ' + res.status + (detail ? ' - ' + detail : ''));
+    }
     try { return await res.json(); } catch(e) { return null; }
   }
 

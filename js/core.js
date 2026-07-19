@@ -25,7 +25,11 @@ async function sbWrite(method, table, body, filter) {
     },
     body: body ? JSON.stringify(body) : undefined
   });
-  if (!res.ok) throw new Error('Request failed: ' + res.status);
+  if (!res.ok) {
+    var detail = '';
+    try { var errBody = await res.json(); detail = errBody.message || errBody.hint || errBody.error_description || ''; } catch(e) {}
+    throw new Error('Request failed: ' + res.status + (detail ? ' - ' + detail : ''));
+  }
   try { return await res.json(); } catch(e) { return null; }
 }
 
