@@ -476,6 +476,14 @@
   }
   .book-alert.visible { display: flex; }
   .book-alert i { font-size: 15px; flex-shrink: 0; }
+  .room-picker-card {
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: var(--radius-lg); padding: 10px 12px; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 10px; cursor: pointer; transition: border-color 0.15s, background 0.15s;
+  }
+  .room-picker-card.selected { border-color: var(--green-mid); background: var(--green-bg); }
+  .room-picker-card-check { font-size: 18px; color: var(--green-mid); visibility: hidden; }
+  .room-picker-card.selected .room-picker-card-check { visibility: visible; }
   .book-alert-success { background: var(--green-bg); color: var(--green-text); }
   .book-alert-error   { background: var(--red-bg);   color: var(--red-text); }
   .book-spinner { width: 15px; height: 15px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; display: none; }
@@ -849,7 +857,7 @@
         </button>
         <button id="book-pill-room" onclick="switchBookPill('room')"
           style="flex:1;padding:7px;border-radius:var(--radius-md);border:none;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:var(--text-secondary);transition:all 0.15s;">
-          <i class="ti ti-door"></i> Conference Room
+          <i class="ti ti-door"></i> Room
         </button>
       </div>
 
@@ -862,7 +870,7 @@
               <i class="ti ti-car" style="font-size:20px;color:var(--green-dark);"></i>
             </div>
             <div>
-              <div style="font-size:13px;font-weight:600;color:var(--text-primary);">Company Vehicle</div>
+              <div style="font-size:13px;font-weight:600;color:var(--text-primary);">Vehicle Booking (QPA1234)</div>
               <div style="font-size:11px;color:var(--text-secondary);">Full day or time-slot · First-come, first-served</div>
             </div>
           </div>
@@ -960,14 +968,17 @@
       <!-- ── ROOM PANEL ── -->
       <div id="book-panel-room" style="display:none;">
 
+        <div class="section-row"><div class="section-title">Select a Room</div></div>
+        <div id="room-picker-list" style="margin-bottom:12px;"></div>
+
         <div class="card" style="margin-bottom:10px;">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-            <div style="width:40px;height:40px;border-radius:var(--radius-md);background:var(--blue-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-              <i class="ti ti-door" style="font-size:20px;color:var(--blue-text);"></i>
+            <div style="width:40px;height:40px;border-radius:var(--radius-md);background:var(--purple-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;" id="room-card-ic-wrap">
+              <i class="ti ti-presentation" style="font-size:20px;color:var(--purple-text);" id="room-card-ic"></i>
             </div>
             <div>
-              <div style="font-size:13px;font-weight:600;color:var(--text-primary);">Conference Room</div>
-              <div style="font-size:11px;color:var(--text-secondary);">Time-slot booking · First-come, first-served</div>
+              <div style="font-size:13px;font-weight:600;color:var(--text-primary);" id="room-card-title">1st Floor Event Hall (A)</div>
+              <div style="font-size:11px;color:var(--text-secondary);" id="room-card-sub">With interactive board · Time-slot booking</div>
             </div>
           </div>
           <button class="book-btn-primary" onclick="showRoomForm()">
@@ -978,7 +989,7 @@
         <!-- Room booking form -->
         <div class="book-inline-form" id="room-form" style="display:none;">
           <div class="book-form-title">
-            <span><i class="ti ti-door"></i> &nbsp;Book Conference Room</span>
+            <span><i class="ti ti-door"></i> &nbsp;Book <span id="room-form-room-name">Room</span></span>
             <button class="book-close-btn" onclick="hideRoomForm()">&times;</button>
           </div>
           <div class="book-form-group">
@@ -1023,7 +1034,7 @@
         <div class="book-alert book-alert-error" id="r-error"><i class="ti ti-alert-circle"></i><span id="r-error-msg">Could not save booking.</span></div>
 
         <!-- Room calendar -->
-        <div class="section-row"><div class="section-title">Availability</div></div>
+        <div class="section-row"><div class="section-title" id="room-cal-section-title">Availability</div></div>
         <div class="cal-card" style="margin-bottom:10px;">
           <div class="cal-header">
             <button class="cal-nav-btn" onclick="rCalPrev()"><i class="ti ti-chevron-left"></i></button>

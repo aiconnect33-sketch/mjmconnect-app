@@ -1,4 +1,4 @@
-// ── tab-book.js — Book tab (Vehicle + Conference Room) ──
+// ── tab-book.js — Book tab (Vehicle + Room: Event Hall A/B, Conference Room) ──
 
 var bookTabInited = false;
 var vCalYear, vCalMonth, rCalYear, rCalMonth;
@@ -110,6 +110,8 @@ function initBookTab() {
   var now = new Date();
   if (vCalYear === undefined) { vCalYear = now.getFullYear(); vCalMonth = now.getMonth(); }
   if (rCalYear === undefined) { rCalYear = now.getFullYear(); rCalMonth = now.getMonth(); }
+  renderRoomPicker();
+  updateRoomCardInfo();
   if (window.location.protocol !== 'file:') {
     loadVehicleCalendar();
     loadRoomCalendar();
@@ -395,10 +397,58 @@ async function cancelMyVehicleBooking(id) {
 }
 
 // ════════════════════════════
-//  CONFERENCE ROOM
+//  ROOM (Event Hall A / B / Conference Room)
 // ════════════════════════════
 
+var ROOMS = [
+  { name: '1st Floor Event Hall (A)', sub: 'With interactive board', icon: 'ti-presentation', bg: 'var(--purple-bg)', color: 'var(--purple-text)' },
+  { name: '1st Floor Event Hall (B)', sub: 'Standard event hall',    icon: 'ti-building',      bg: 'var(--blue-bg)',   color: 'var(--blue-text)' },
+  { name: '2nd Floor Conference Room', sub: 'Meetings · Small groups', icon: 'ti-door',        bg: 'var(--coral-bg)',  color: 'var(--coral-text)' }
+];
+var rSelectedRoom = ROOMS[0].name;
 var rSelectedDates = [];
+
+function renderRoomPicker() {
+  var el = document.getElementById('room-picker-list');
+  if (!el) return;
+  el.innerHTML = ROOMS.map(function(r) {
+    var sel = r.name === rSelectedRoom;
+    return '<div class="room-picker-card' + (sel ? ' selected' : '') + '" onclick="selectRoom(\'' + escJsAttr(r.name) + '\')">'
+      + '<div style="width:36px;height:36px;border-radius:var(--radius-md);background:' + r.bg + ';color:' + r.color + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:17px;"><i class="ti ' + r.icon + '"></i></div>'
+      + '<div style="flex:1;min-width:0;">'
+      + '<div style="font-size:13px;font-weight:600;color:var(--text-primary);">' + escHtml(r.name) + '</div>'
+      + '<div style="font-size:10.5px;color:var(--text-secondary);margin-top:1px;">' + escHtml(r.sub) + '</div>'
+      + '</div>'
+      + '<i class="ti ti-circle-check room-picker-card-check"></i>'
+      + '</div>';
+  }).join('');
+}
+
+function selectRoom(name) {
+  if (name === rSelectedRoom) return;
+  rSelectedRoom = name;
+  renderRoomPicker();
+  updateRoomCardInfo();
+  hideRoomForm();
+  loadRoomCalendar();
+  loadMyRoomBookings();
+}
+
+function updateRoomCardInfo() {
+  var room = ROOMS.find(function(r){ return r.name === rSelectedRoom; }) || ROOMS[0];
+  var icWrap = document.getElementById('room-card-ic-wrap');
+  var ic     = document.getElementById('room-card-ic');
+  var title  = document.getElementById('room-card-title');
+  var sub    = document.getElementById('room-card-sub');
+  var formName = document.getElementById('room-form-room-name');
+  var calTitle = document.getElementById('room-cal-section-title');
+  if (icWrap) icWrap.style.background = room.bg;
+  if (ic)     { ic.className = 'ti ' + room.icon; ic.style.color = room.color; }
+  if (title)  title.textContent = room.name;
+  if (sub)    sub.textContent = room.sub + ' · Time-slot booking';
+  if (formName) formName.textContent = room.name;
+  if (calTitle) calTitle.textContent = room.name + ' — Availability';
+}
 
 function showRoomForm() {
   rSelectedDates = [];
@@ -466,7 +516,7 @@ async function loadRoomSlots() {
   var date = rSelectedDates.length ? rSelectedDates[0] : document.getElementById('r-date').value;
   if (!date) return;
   try {
-    var data = await sbGet('room_bookings', 'booking_date=eq.' + date + '&order=time_from.asc');
+    var data = await sbGet('room_bookings', 'booking_date=eq.' + date + '&room_name=eq.' + encodeURIComponent(rSelectedRoom) + '&order=time_from.asc');
     roomBookingsCache = data || [];
   } catch(e) { roomBookingsCache = []; }
   checkRoomClash();
@@ -510,7 +560,7 @@ async function submitRoomBooking() {
         headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY,
                    'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
         body: JSON.stringify({
-          booked_by: bookedBy, booking_date: d,
+          booked_by: bookedBy, booking_date: d, room_name: rSelectedRoom,
           time_from: to24h(tfrom), time_to: to24h(tto), purpose: purpose || null
         })
       });
@@ -535,7 +585,7 @@ async function submitRoomBooking() {
 async function loadRoomCalendar() {
   var bookedDates = {};
   try {
-    var data = await sbGet('room_bookings', 'select=booking_date');
+    var data = await sbGet('room_bookings', 'room_name=eq.' + encodeURIComponent(rSelectedRoom) + '&select=booking_date');
     if (data && data.length) {
       data.forEach(function(b) { bookedDates[b.booking_date] = true; });
     }
@@ -595,6 +645,7 @@ async function loadMyRoomBookings() {
   try {
     var url  = SURL + '/rest/v1/room_bookings?booking_date=gte.' + monthStart
              + '&booking_date=lte.' + monthEnd
+             + '&room_name=eq.' + encodeURIComponent(rSelectedRoom)
              + '&order=booking_date.asc,time_from.asc&limit=200';
     var res  = await fetch(url, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
     var data = await res.json();
@@ -650,7 +701,7 @@ async function showDayDetail(type, dateStr) {
     var u2   = raw2 ? JSON.parse(raw2) : {};
     var data = type === 'vehicle'
       ? await sbGet('vehicle_bookings', 'booking_date=eq.' + dateStr + '&order=time_from.asc')
-      : await sbGet('room_bookings',    'booking_date=eq.' + dateStr + '&order=time_from.asc');
+      : await sbGet('room_bookings',    'booking_date=eq.' + dateStr + '&room_name=eq.' + encodeURIComponent(rSelectedRoom) + '&order=time_from.asc');
     if (!data || data.length === 0) {
       body.innerHTML = '<div class="book-empty">No bookings found.</div>'; return;
     }
