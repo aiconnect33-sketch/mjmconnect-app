@@ -1198,7 +1198,7 @@ html, body {
     <!-- ═══════════════════════════
          SETTINGS
     ═══════════════════════════ -->
-    <div class="screen-section" id="screen-settings">
+    <div class="screen-section" id="screen-menu">
 
       <div class="menu-header">
         <h1>Menu</h1>
@@ -1225,8 +1225,12 @@ html, body {
         <i class="ti ti-chevron-right menu-chev"></i>
       </div>
 
+    </div><!-- /menu -->
+
+    <div class="screen-section" id="screen-settings">
+
       <!-- Current user info -->
-      <div class="card" style="margin-bottom:10px;margin-top:14px;">
+      <div class="card" style="margin-bottom:10px;">
         <div class="card-label">Signed In As</div>
         <div style="display:flex;align-items:center;gap:10px;">
           <div class="av av-g" id="settings-av" style="width:38px;height:38px;font-size:13px;">SA</div>
@@ -1345,6 +1349,9 @@ html, body {
     </div>
     <div class="nav-item" id="nav-settings" onclick="switchNav('settings')">
       <i class="ti ti-settings"></i><span>Setting</span>
+    </div>
+    <div class="nav-item" id="nav-menu" onclick="switchNav('menu')">
+      <i class="ti ti-menu-2"></i><span>More</span>
     </div>
   </div>
   </div>
