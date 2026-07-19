@@ -95,14 +95,15 @@ html, body {
   display: flex; justify-content: space-between; align-items: center;
   flex-shrink: 0;
 }
-.wordmark { display: flex; align-items: center; gap: 9px; }
+.wordmark { display: flex; align-items: center; gap: 9px; min-width: 0; overflow: hidden; flex-shrink: 1; }
 .wm-icon {
   width: 32px; height: 32px; border-radius: 9px;
   background: var(--green-mid);
   display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
 }
 .wm-icon i { font-size: 17px; color: #E1F5EE; }
-.wm-name { font-size: 16px; font-weight: 700; color: #E1F5EE; }
+.wm-name { font-size: 16px; font-weight: 700; color: #E1F5EE; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .wm-name span { color: var(--green-lite); font-weight: 400; }
 .wm-badge {
   font-size: 9px; font-weight: 700;
@@ -110,8 +111,9 @@ html, body {
   color: #E1F5EE; padding: 2px 7px;
   border-radius: 20px; margin-left: 2px;
   letter-spacing: 0.05em; text-transform: uppercase;
+  flex-shrink: 0; white-space: nowrap;
 }
-.topbar-right { display: flex; align-items: center; gap: 10px; }
+.topbar-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 .topbar-right i { font-size: 21px; color: #E1F5EE; cursor: pointer; }
 .top-av {
   width: 30px; height: 30px; border-radius: 50%;
