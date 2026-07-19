@@ -262,7 +262,7 @@ async function submitVehicleBooking() {
   try {
     var raw = sessionStorage.getItem('mjm_user');
     var u   = raw ? JSON.parse(raw) : {};
-    var bookedBy = u.email || u.name || 'Unknown';
+    var bookedBy = u.name || u.email || 'Unknown';
     var posts = vSelectedDates.map(function(d) {
       return fetch(SURL + '/rest/v1/vehicle_bookings', {
         method: 'POST',
@@ -553,7 +553,7 @@ async function submitRoomBooking() {
   try {
     var raw = sessionStorage.getItem('mjm_user');
     var u   = raw ? JSON.parse(raw) : {};
-    var bookedBy = u.email || u.name || 'Unknown';
+    var bookedBy = u.name || u.email || 'Unknown';
     var posts = rSelectedDates.map(function(d) {
       return fetch(SURL + '/rest/v1/room_bookings', {
         method: 'POST',
