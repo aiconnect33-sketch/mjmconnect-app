@@ -481,10 +481,14 @@ html, body {
 .modal-actions button { flex: 1; }
 
 /* ── BOTTOM NAV (same gradient/rounded treatment as the staff app) ── */
+/* Backing must be the SAME gradient as .nav-bar, not a flat colour -- a flat
+   colour only matches the gradient exactly at the very edges (0%/100%), so
+   the rounded corner clip (which cuts into the last few percent) reveals a
+   visibly different shade right at the curve otherwise. */
 .nav-bar-wrap {
   position: sticky; bottom: 0;
   width: 100%; z-index: 100; flex-shrink: 0;
-  background: var(--green);
+  background: linear-gradient(90deg, var(--green) 0%, var(--green-mid) 50%, var(--green) 100%);
 }
 .nav-bar {
   background: linear-gradient(90deg, var(--green) 0%, var(--green-mid) 50%, var(--green) 100%);

@@ -373,11 +373,14 @@
   .upcoming-name { font-size: 12px; color: var(--text-primary); font-weight: 500; }
 
   /* ── BOTTOM NAV ── */
-  /* Flat backing colour behind .nav-bar: since border-radius clips .nav-bar's
-     own gradient at its rounded top corners, without a matching-colour
-     ancestor behind it, the phone's white background shows through those
-     clipped corners instead. */
-  .nav-bar-wrap { background: var(--green-dark); flex-shrink: 0; }
+  /* Backing behind .nav-bar: border-radius clips .nav-bar's own gradient at
+     its rounded top corners, so without a matching ancestor behind it, a
+     mismatched colour shows through those clipped corners instead. Must be
+     the SAME gradient (not a flat colour) -- a flat colour only matches the
+     gradient exactly at the very edges (0%/100%), so the corner clip (which
+     cuts into the last few percent) would reveal a visibly different shade
+     right at the curve. */
+  .nav-bar-wrap { background: var(--nav-gradient); flex-shrink: 0; }
   .nav-bar {
     background: var(--nav-gradient); border-top: none;
     border-radius: 28px 28px 0 0;
@@ -385,11 +388,11 @@
     padding: 12px 0 24px;
   }
   .nav-item {
-    display: flex; flex-direction: column; align-items: center; gap: 5px;
-    font-size: 12px; font-weight: 400; color: var(--icon-inactive);
-    cursor: pointer; padding: 0 12px; transition: color 0.15s;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    font-size: 10px; font-weight: 400; color: var(--icon-inactive);
+    cursor: pointer; padding: 0 10px; transition: color 0.15s;
   }
-  .nav-item i { font-size: 26px; }
+  .nav-item i { font-size: 22px; }
   .nav-item.active { color: var(--nav-active); font-weight: 600; }
   .nav-badge { position: relative; display: inline-block; cursor: pointer; }
   .notif-count {
@@ -1058,11 +1061,6 @@
         <div class="menu-label">Announcement</div>
         <i class="ti ti-chevron-right menu-chev"></i>
       </div>
-      <div class="menu-row" onclick="document.getElementById('app-top-header').style.display=''; switchTabByName('leave')">
-        <div class="menu-ic" style="background:var(--green-bg);color:var(--green-text);"><i class="ti ti-calendar-check"></i></div>
-        <div class="menu-label">Leave</div>
-        <i class="ti ti-chevron-right menu-chev"></i>
-      </div>
       <div class="menu-row" onclick="document.getElementById('app-top-header').style.display=''; switchTabByName('event'); loadStaffEvents()">
         <div class="menu-ic" style="background:var(--red-bg);color:var(--red-text);"><i class="ti ti-calendar"></i></div>
         <div class="menu-label">Event</div>
@@ -1070,32 +1068,12 @@
       </div>
       <div class="menu-row" onclick="document.getElementById('app-top-header').style.display=''; switchTabByName('duty')">
         <div class="menu-ic" style="background:var(--amber-bg);color:var(--amber-text);"><i class="ti ti-users"></i></div>
-        <div class="menu-label">Duty</div>
+        <div class="menu-label">On Duty</div>
         <i class="ti ti-chevron-right menu-chev"></i>
       </div>
       <div class="menu-row" onclick="document.getElementById('app-top-header').style.display=''; switchNav('estatetrip'); loadEstateTrips()">
         <div class="menu-ic" style="background:var(--estate-bg);color:var(--estate-text);"><i class="ti ti-car"></i></div>
         <div class="menu-label">Estate Trip</div>
-        <i class="ti ti-chevron-right menu-chev"></i>
-      </div>
-      <div class="menu-row" onclick="window.open('https://docs.google.com/forms/d/e/1FAIpQLScxTncnL4ekGi6qmxw6mEXsu4cS-n_c9Z6s5IDLUptJf0L09Q/viewform','_blank')">
-        <div class="menu-ic" style="background:var(--blue-bg);color:var(--blue-text);"><i class="ti ti-clock"></i></div>
-        <div class="menu-label">Time Off</div>
-        <i class="ti ti-chevron-right menu-chev"></i>
-      </div>
-      <div class="menu-row" onclick="alert('Faulty Complain form link coming soon.')">
-        <div class="menu-ic" style="background:var(--coral-bg);color:var(--coral-text);"><i class="ti ti-clipboard-x"></i></div>
-        <div class="menu-label">Faulty Complain</div>
-        <i class="ti ti-chevron-right menu-chev"></i>
-      </div>
-      <div class="menu-row" onclick="document.getElementById('app-top-header').style.display=''; switchNav('book'); initBookTab()">
-        <div class="menu-ic" style="background:var(--booking-bg);color:var(--booking-text);"><i class="ti ti-calendar-event"></i></div>
-        <div class="menu-label">Booking</div>
-        <i class="ti ti-chevron-right menu-chev"></i>
-      </div>
-      <div class="menu-row" onclick="window.location.href='profile.html'">
-        <div class="menu-ic" style="background:var(--profile-bg);color:var(--profile-text);"><i class="ti ti-user"></i></div>
-        <div class="menu-label">Profile Settings</div>
         <i class="ti ti-chevron-right menu-chev"></i>
       </div>
     </div><!-- /menu -->
@@ -1119,18 +1097,19 @@
     <div class="nav-item active" id="nav-home" onclick="document.getElementById('app-top-header').style.display=''; switchTabByName('home')">
       <i class="ti ti-home"></i><span>Home</span>
     </div>
-    <div class="nav-item" id="nav-announce" onclick="document.getElementById('app-top-header').style.display=''; switchTabByName('announce')">
-      <i class="ti ti-speakerphone"></i><span>Announcement</span>
-    </div>
-    <div class="nav-item" id="nav-event" onclick="document.getElementById('app-top-header').style.display=''; switchTabByName('event'); loadStaffEvents()">
-      <i class="ti ti-calendar"></i><span>Event</span>
+    <div class="nav-item" id="nav-settings" onclick="window.location.href='profile.html'">
+      <i class="ti ti-settings"></i><span>Setting</span>
     </div>
     <div class="nav-item" id="nav-menu" onclick="document.getElementById('app-top-header').style.display='none'; switchTabByName('menu')">
       <i class="ti ti-menu-2"></i><span>More</span>
     </div>
   </div>
   </div>
-  <!-- Booking, Estate Trip and Time Off (previously bottom-nav icons) are
+  <!-- Announcement/Event (previous bottom-nav icons) are now reached via
+       the Menu screen's rows, calling the exact same switchTabByName()
+       used here. Setting reuses the existing profile.html link (same
+       destination the top avatar and old "Profile Settings" menu row
+       already used). Booking, Estate Trip and Time Off (previously bottom-nav icons) are
        now reached via the Menu screen's rows, which call the exact same
        switchNav()/window.open() calls that used to live here. -->
 
