@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#0F6E56">
+<meta name="theme-color" content="#075E54">
 <link rel="manifest" href="manifest.json">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="#0F6E56">
+<meta name="apple-mobile-web-app-status-bar-style" content="#075E54">
 <meta name="apple-mobile-web-app-title" content="MJMConnect">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <title>MJMConnect — HR Admin</title>
@@ -18,9 +18,9 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --green:       #0F6E56;
-  --green-mid:   #1D9E75;
-  --green-lite:  #5DCAA5;
+  --green:       #075E54;
+  --green-mid:   #16B890;
+  --green-lite:  #8EF0CF;
   --green-bg:    #E1F5EE;
   --green-text:  #085041;
   --red-bg:      #FCEBEB;
@@ -474,23 +474,26 @@ html, body {
 .modal-actions { display: flex; gap: 8px; }
 .modal-actions button { flex: 1; }
 
-/* ── BOTTOM NAV ── */
-.nav-bar {
+/* ── BOTTOM NAV (same gradient/rounded treatment as the staff app) ── */
+.nav-bar-wrap {
   position: sticky; bottom: 0;
-  width: 100%;
-  background: var(--surface);
-  border-top: 0.5px solid var(--border);
+  width: 100%; z-index: 100; flex-shrink: 0;
+  background: var(--green);
+}
+.nav-bar {
+  background: linear-gradient(90deg, var(--green) 0%, var(--green-mid) 50%, var(--green) 100%);
+  border-top: none;
+  border-radius: 24px 24px 0 0;
   display: flex; justify-content: space-around;
-  padding: 8px 0 20px; z-index: 100;
-  flex-shrink: 0;
+  padding: 10px 0 20px;
 }
 .nav-item {
   display: flex; flex-direction: column; align-items: center; gap: 3px;
-  font-size: 10px; font-weight: 500; color: var(--text2);
-  cursor: pointer; padding: 0 10px;
+  font-size: 10px; font-weight: 500; color: rgba(255,255,255,0.65);
+  cursor: pointer; padding: 0 10px; transition: color 0.15s;
 }
 .nav-item i { font-size: 22px; }
-.nav-item.active { color: var(--green); }
+.nav-item.active { color: #fff; font-weight: 600; }
 .nav-dot {
   position: relative; display: inline-block;
 }
@@ -526,6 +529,73 @@ html, body {
   .notif-row-title { font-size: 12px; font-weight: 600; color: var(--text); }
   .notif-row-sub { font-size: 11px; color: var(--text2); margin-top: 2px; }
   .notif-empty-msg { padding: 16px 14px; font-size: 12px; color: var(--text3); text-align: center; }
+
+  /* ── HOME HERO (Dashboard only, mirrors staff app's design system) ── */
+  .tab-nav { display: none; }
+  /* Dashboard content can be shorter than the viewport, so colour the whole
+     scrollable area whenever it's active rather than relying only on
+     .home-hero's own bleed -- keeps the green flush with the bottom nav
+     even when there's little data to show. */
+  .screen-body:has(#screen-dashboard.active) { background: linear-gradient(180deg, #0B7A63 0%, #08705C 55%, var(--green) 100%); }
+  .home-hero {
+    margin: -14px -14px 0; padding: 18px 16px 4px;
+  }
+  .greet-hi { font-size: 19px; font-weight: 400; color: #fff; margin-bottom: 6px; }
+  .greet-name { font-size: 27px; font-weight: 700; line-height: 1.1; color: #fff; margin-bottom: 9px; }
+  .greet-sub { font-size: 17px; font-weight: 400; color: rgba(255,255,255,0.9); margin-bottom: 20px; }
+  .home-alert-banner {
+    background: var(--surface); border-radius: var(--r-xl);
+    padding: 16px; margin-bottom: 12px;
+    display: flex; gap: 12px; align-items: flex-start;
+    box-shadow: 0 6px 20px rgba(15,110,86,0.10);
+  }
+  .home-alert-icon-box {
+    width: 36px; height: 36px; border-radius: var(--r-md); flex-shrink: 0;
+    background: var(--purple-bg); color: var(--purple-text);
+    display: flex; align-items: center; justify-content: center; font-size: 18px;
+  }
+  .home-alert-text { flex: 1; min-width: 0; }
+  .home-alert-title { font-size: 15px; font-weight: 700; color: var(--green-text); margin-bottom: 1px; }
+  .home-alert-body { font-size: 13px; color: var(--text2); line-height: 1.5; }
+  .home-alert-chev { color: var(--text3); font-size: 20px; flex-shrink: 0; margin-top: 2px; }
+  .home-summary-card {
+    background: var(--surface); border-radius: var(--r-xl);
+    padding: 14px 16px; margin-bottom: 11px; min-height: 80px;
+    display: flex; align-items: center; gap: 14px; cursor: pointer;
+    box-shadow: 0 6px 20px rgba(15,110,86,0.10);
+  }
+  .home-summary-ic {
+    width: 54px; height: 54px; border-radius: 15px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 24px;
+  }
+  .home-summary-title { font-size: 15px; font-weight: 700; color: var(--green-text); }
+  .home-summary-sub { font-size: 12px; color: var(--text2); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .home-summary-count { font-size: 19px; font-weight: 700; color: var(--green-text); flex-shrink: 0; margin-left: auto; }
+  .home-summary-chev { color: var(--text3); font-size: 20px; flex-shrink: 0; }
+  .qa-title { font-size: 17px; font-weight: 700; color: #fff; margin: 24px 0 14px; }
+  .qa-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .qa-item { display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; }
+  .qa-ic {
+    width: 60px; height: 60px; border-radius: 18px;
+    display: flex; align-items: center; justify-content: center; font-size: 26px;
+  }
+  .qa-label { font-size: 11px; font-weight: 600; color: #fff; text-align: center; line-height: 1.3; }
+
+  /* ── MENU ROWS (top of Settings screen, mirrors staff app's Menu screen) ── */
+  .menu-header { display: flex; justify-content: space-between; align-items: center; padding: 4px 2px 14px; }
+  .menu-header h1 { font-size: 22px; font-weight: 700; color: var(--text); }
+  .menu-row {
+    display: flex; align-items: center; gap: 12px;
+    min-height: 60px; padding: 10px 2px;
+    border-bottom: 0.5px solid var(--border);
+    cursor: pointer;
+  }
+  .menu-ic {
+    width: 40px; height: 40px; border-radius: var(--r-md); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 18px;
+  }
+  .menu-label { flex: 1; font-size: 14px; font-weight: 600; color: var(--text); }
+  .menu-chev { color: var(--text3); font-size: 18px; flex-shrink: 0; }
 
 </style>
 </head>
@@ -609,14 +679,21 @@ html, body {
          DASHBOARD
     ═══════════════════════════ -->
     <div class="screen-section active" id="screen-dashboard">
+    <div class="home-hero">
+
+      <div class="greet-hi">Hi,</div>
+      <div class="greet-name"><span id="greet-name-text">Super Admin</span> 👋</div>
+      <div class="greet-sub">Here's what's happening today.</div>
 
       <!-- Urgent banner — shows ALL urgent announcements -->
-      <div id="admin-urgent-banner" style="display:none;background:#FFFBEB;border:0.5px solid #F5D78A;border-left:3px solid #F0A500;border-radius:0 var(--r-md) var(--r-md) 0;padding:10px 12px;margin-bottom:10px;">
-        <div id="admin-urgent-text" style="font-size:12px;color:#7A5800;line-height:1.6;"></div>
+      <div id="admin-urgent-banner" class="home-alert-banner" style="display:none;">
+        <div class="home-alert-icon-box"><i class="ti ti-speakerphone"></i></div>
+        <div id="admin-urgent-text" class="home-alert-text"></div>
+        <i class="ti ti-chevron-right home-alert-chev"></i>
       </div>
 
       <!-- Calendar -->
-      <div style="background:var(--surface);border-radius:var(--r-lg);border:0.5px solid var(--border);overflow:hidden;margin-bottom:10px;">
+      <div style="background:var(--surface);border-radius:var(--r-xl);border:0.5px solid var(--border);overflow:hidden;margin-bottom:10px;">
         <div style="background:var(--green);padding:11px 14px;display:flex;justify-content:space-between;align-items:center;">
           <button onclick="calPrev()" style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:#E1F5EE;background:rgba(255,255,255,0.15);border-radius:var(--r-sm);border:none;cursor:pointer;"><i class="ti ti-chevron-left" style="font-size:15px;"></i></button>
           <div id="cal-month-label" style="font-size:13px;font-weight:600;color:#E1F5EE;">June 2026</div>
@@ -642,23 +719,37 @@ html, body {
       </div>
 
       <!-- Today on Leave -->
-      <div class="sec-hdr">
-        <div class="sec-title">Today on Leave</div>
-        <button class="sec-action" onclick="switchTabByName('leave')">See all</button>
-      </div>
-      <div class="card" id="admin-leave-today">
-        <div style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0;">Loading...</div>
+      <div id="admin-leave-today">
+        <div class="home-summary-card"><div style="font-size:12px;color:var(--text3);text-align:center;flex:1;">Loading...</div></div>
       </div>
 
       <!-- Today's Estate Trip -->
-      <div class="sec-hdr">
-        <div class="sec-title">Today's Estate Trip</div>
-        <button class="sec-action" onclick="switchTabByName('estatetrip')">See all</button>
-      </div>
-      <div class="card" id="admin-estatetrip-today">
-        <div style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0;">Loading...</div>
+      <div id="admin-estatetrip-today">
+        <div class="home-summary-card"><div style="font-size:12px;color:var(--text3);text-align:center;flex:1;">Loading...</div></div>
       </div>
 
+      <!-- Quick Access -->
+      <div class="qa-title">Quick Access</div>
+      <div class="qa-grid">
+        <div class="qa-item" onclick="switchTabByName('leave')">
+          <div class="qa-ic" style="background:var(--green-bg);color:var(--green-text);"><i class="ti ti-calendar-check"></i></div>
+          <div class="qa-label">Leave</div>
+        </div>
+        <div class="qa-item" onclick="window.open('https://docs.google.com/forms/d/e/1FAIpQLScxTncnL4ekGi6qmxw6mEXsu4cS-n_c9Z6s5IDLUptJf0L09Q/viewform','_blank')">
+          <div class="qa-ic" style="background:var(--blue-bg);color:var(--blue-text);"><i class="ti ti-clock"></i></div>
+          <div class="qa-label">Time Off</div>
+        </div>
+        <div class="qa-item" onclick="window.location.href='index.html#book'">
+          <div class="qa-ic" style="background:var(--purple-bg);color:var(--purple-text);"><i class="ti ti-calendar-event"></i></div>
+          <div class="qa-label">Booking</div>
+        </div>
+        <div class="qa-item" onclick="alert('Faulty Complain form link coming soon.')">
+          <div class="qa-ic" style="background:var(--coral-bg);color:var(--coral-text);"><i class="ti ti-clipboard-x"></i></div>
+          <div class="qa-label">Faulty Complain</div>
+        </div>
+      </div>
+
+    </div><!-- /home-hero -->
     </div><!-- /dashboard -->
 
     <!-- ═══════════════════════════
@@ -1107,6 +1198,35 @@ html, body {
     <!-- ═══════════════════════════
          SETTINGS
     ═══════════════════════════ -->
+    <div class="screen-section" id="screen-menu">
+
+      <div class="menu-header">
+        <h1>Menu</h1>
+        <div class="top-av" id="menu-av-initials" onclick="window.location.href='profile.html'" title="My Profile" style="cursor:pointer;background:var(--green);color:#fff;">SA</div>
+      </div>
+      <div class="menu-row" onclick="switchTabByName('announce')">
+        <div class="menu-ic" style="background:var(--purple-bg);color:var(--purple-text);"><i class="ti ti-speakerphone"></i></div>
+        <div class="menu-label">Announcement</div>
+        <i class="ti ti-chevron-right menu-chev"></i>
+      </div>
+      <div class="menu-row" onclick="switchTabByName('event')">
+        <div class="menu-ic" style="background:var(--red-bg);color:var(--red-text);"><i class="ti ti-calendar-star"></i></div>
+        <div class="menu-label">Event</div>
+        <i class="ti ti-chevron-right menu-chev"></i>
+      </div>
+      <div class="menu-row" onclick="switchTabByName('duty')">
+        <div class="menu-ic" style="background:var(--amber-bg);color:var(--amber-text);"><i class="ti ti-users"></i></div>
+        <div class="menu-label">On Duty</div>
+        <i class="ti ti-chevron-right menu-chev"></i>
+      </div>
+      <div class="menu-row" onclick="switchTabByName('estatetrip')">
+        <div class="menu-ic" style="background:var(--green-bg);color:var(--green-text);"><i class="ti ti-car"></i></div>
+        <div class="menu-label">Estate Trip</div>
+        <i class="ti ti-chevron-right menu-chev"></i>
+      </div>
+
+    </div><!-- /menu -->
+
     <div class="screen-section" id="screen-settings">
 
       <!-- Current user info -->
@@ -1219,23 +1339,26 @@ html, body {
   </div><!-- /screen-body -->
 
   <!-- BOTTOM NAV -->
+  <div class="nav-bar-wrap">
   <div class="nav-bar">
-    <div class="nav-item active" id="nav-booking" onclick="window.location.href='index.html#book'">
-      <i class="ti ti-calendar-event"></i><span>Booking</span>
-    </div>
-    <div class="nav-item" id="nav-timeoff" onclick="window.open('https://docs.google.com/forms/d/e/1FAIpQLScxTncnL4ekGi6qmxw6mEXsu4cS-n_c9Z6s5IDLUptJf0L09Q/viewform','_blank')">
-      <i class="ti ti-clock-off"></i><span>Time Off</span>
+    <div class="nav-item active" id="nav-dashboard" onclick="switchNav('dashboard')">
+      <i class="ti ti-home"></i><span>Home</span>
     </div>
     <div class="nav-item" id="nav-invite" onclick="switchNav('invite')">
       <i class="ti ti-user-plus"></i><span>Invite</span>
     </div>
-    <div class="nav-item" id="nav-profile" onclick="window.location.href='profile.html'">
-      <i class="ti ti-user-circle"></i><span>Profile</span>
-    </div>
     <div class="nav-item" id="nav-settings" onclick="switchNav('settings')">
-      <i class="ti ti-settings"></i><span>Settings</span>
+      <i class="ti ti-settings"></i><span>Setting</span>
+    </div>
+    <div class="nav-item" id="nav-menu" onclick="switchNav('menu')">
+      <i class="ti ti-menu-2"></i><span>More</span>
     </div>
   </div>
+  </div>
+  <!-- Booking, Time Off and Profile (previously bottom-nav icons) are now
+       reached via the Home screen's Quick Access grid / top avatar, which
+       call the exact same window.location.href / window.open calls that
+       used to live here. -->
 
 </div><!-- /phone -->
 </div><!-- /phone-wrap -->
@@ -2175,6 +2298,10 @@ html, body {
       var initials  = nameParts.slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('') || 'SA';
       var topAv = document.getElementById('top-av-initials');
       if (topAv) topAv.textContent = initials;
+      var menuAv = document.getElementById('menu-av-initials');
+      if (menuAv) menuAv.textContent = initials;
+      var greetEl = document.getElementById('greet-name-text');
+      if (greetEl && (u.name || u.email)) greetEl.textContent = u.name || u.email;
     }
     renderSettingsPage();
     if (window.location.protocol !== 'file:') {
@@ -2722,14 +2849,11 @@ html, body {
     if (data) { data.forEach(function(a){ if (new Date(a.created_at) >= cut7) recent.push(a); }); }
     if (recent.length) {
       bannerText.innerHTML = recent.map(function(a){
-        return '<div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:6px;">'
-          + '<i class="ti ti-alert-circle" style="font-size:13px;color:#F0A500;flex-shrink:0;margin-top:2px;"></i>'
-          + '<div><div style="font-weight:700;font-size:12px;color:#7A5800;margin-bottom:2px;">' + escHtml(a.title) + '</div>'
-          + '<div style="font-size:12px;color:#7A5800;line-height:1.5;">' + escHtml(a.body) + '</div>'
-          + '<div style="font-size:10px;color:#A07000;margin-top:3px;">' + new Date(a.created_at).toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'}) + ' · ' + new Date(a.created_at).toLocaleTimeString('en-MY',{hour:'numeric',minute:'2-digit',hour12:true}) + '</div>'
-          + '</div></div>';
-      }).join('');
-      banner.style.display = 'block';
+        return '<div class="home-alert-title">' + escHtml(a.title) + '</div>'
+          + '<div class="home-alert-body">' + escHtml(a.body) + '</div>'
+          + '<div style="font-size:10px;color:var(--text3);margin-top:3px;">' + new Date(a.created_at).toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'}) + ' · ' + new Date(a.created_at).toLocaleTimeString('en-MY',{hour:'numeric',minute:'2-digit',hour12:true}) + '</div>';
+      }).join('<div style="height:10px;"></div>');
+      banner.style.display = 'flex';
     } else {
       banner.style.display = 'none';
     }
@@ -2742,20 +2866,16 @@ html, body {
       if (leaveEl && window.location.protocol !== 'file:') {
         var leaves = await sbFetch('GET', '/rest/v1/leave_records?date_from=lte.' + today + '&date_to=gte.' + today + '&select=*&limit=10');
         if (leaves && leaves.length) {
-          var html = '';
-          leaves.forEach(function(r) {
-            var ini = r.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
-            var from = new Date(r.date_from+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'});
-            var to   = new Date(r.date_to+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'});
-            var type = r.leave_type === 'Annual Leave' ? 'AL' : 'MC';
-            html += '<div class="person-row"><div class="av av-a" style="width:32px;height:32px;font-size:11px;">' + ini + '</div>'
-              + '<div style="flex:1;"><div class="p-name">' + escHtml(r.staff_name) + '</div>'
-              + '<div class="p-sub">' + escHtml(r.leave_type) + ' · ' + from + '–' + to + '</div></div>'
-              + '<span class="badge b-amber">' + type + '</span></div>';
-          });
-          leaveEl.innerHTML = html;
+          var names = leaves.map(function(r){ return r.staff_name; }).join(', ');
+          leaveEl.innerHTML = '<div class="home-summary-card" onclick="switchTabByName(\'leave\')">'
+            + '<div class="home-summary-ic" style="background:var(--green-bg);color:var(--green-text);"><i class="ti ti-leaf"></i></div>'
+            + '<div style="flex:1;min-width:0;"><div class="home-summary-title">Today on Leave</div>'
+            + '<div class="home-summary-sub">' + escHtml(names) + '</div></div>'
+            + '<div class="home-summary-count">' + leaves.length + '</div>'
+            + '<i class="ti ti-chevron-right home-summary-chev"></i>'
+            + '</div>';
         } else {
-          leaveEl.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0;">No one on leave today.</div>';
+          leaveEl.innerHTML = '<div class="card"><div style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0;">No one on leave today.</div></div>';
         }
       }
     } catch(e) {}
@@ -2764,17 +2884,16 @@ html, body {
       if (tripEl && window.location.protocol !== 'file:') {
         var trips = await sbFetch('GET', '/rest/v1/estate_trips?trip_date=eq.' + today + '&order=staff_name.asc&limit=50');
         if (trips && trips.length) {
-          var thtml = '';
-          trips.forEach(function(r) {
-            var ini = r.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
-            thtml += '<div class="person-row" style="padding:4px 0;">'
-              + '<div class="av av-g" style="width:28px;height:28px;font-size:10px;">' + ini + '</div>'
-              + '<div style="flex:1;"><div class="p-name" style="font-size:12px;">' + escHtml(r.staff_name) + '</div>'
-              + '<div class="p-sub">Going to ' + escHtml(r.estate_name) + '</div></div></div>';
-          });
-          tripEl.innerHTML = thtml;
+          var tnames = trips.map(function(r){ return r.staff_name; }).join(', ');
+          tripEl.innerHTML = '<div class="home-summary-card" onclick="switchTabByName(\'estatetrip\')">'
+            + '<div class="home-summary-ic" style="background:var(--blue-bg);color:var(--blue-text);"><i class="ti ti-car"></i></div>'
+            + '<div style="flex:1;min-width:0;"><div class="home-summary-title">Today\'s Estate Trip</div>'
+            + '<div class="home-summary-sub">' + escHtml(tnames) + '</div></div>'
+            + '<div class="home-summary-count">' + trips.length + '</div>'
+            + '<i class="ti ti-chevron-right home-summary-chev"></i>'
+            + '</div>';
         } else {
-          tripEl.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0;">No estate trips today.</div>';
+          tripEl.innerHTML = '<div class="card"><div style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0;">No estate trips today.</div></div>';
         }
       }
     } catch(e) {}
