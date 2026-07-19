@@ -136,7 +136,7 @@ async function saveEstateTrip() {
     }
     hideEstateTripForm();
     loadEstateTrips();
-  } catch(e) { alert('Could not save estate trip. Please try again.'); }
+  } catch(e) { alert('Could not save estate trip. ' + (e.message || 'Please try again.')); }
 }
 
 async function deleteEstateTrip(id) {
