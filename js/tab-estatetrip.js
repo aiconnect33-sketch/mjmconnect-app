@@ -136,6 +136,7 @@ async function saveEstateTrip() {
     }
     hideEstateTripForm();
     loadEstateTrips();
+    if (typeof loadStaffCalendar === 'function') loadStaffCalendar();
   } catch(e) { alert('Could not save estate trip. ' + (e.message || 'Please try again.')); }
 }
 
@@ -145,5 +146,6 @@ async function deleteEstateTrip(id) {
   try {
     await sbWrite('DELETE', 'estate_trips', null, 'id=eq.' + id);
     loadEstateTrips();
+    if (typeof loadStaffCalendar === 'function') loadStaffCalendar();
   } catch(e) { alert('Could not delete estate trip. Please try again.'); }
 }
