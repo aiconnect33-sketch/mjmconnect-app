@@ -40,6 +40,10 @@
   --text:        #111C18;
   --text2:       #6B7A73;
   --text3:       #9AABA3;
+  /* Calendar dot indicators, matching the staff app's calendar exactly */
+  --cal-event-dot:  var(--green-mid);
+  --cal-leave-dot:  var(--purple-text);
+  --cal-estate-dot: var(--red-dot);
   --r-sm:        6px;
   --r-md:        10px;
   --r-lg:        14px;
@@ -580,6 +584,11 @@ html, body {
     display: flex; align-items: center; justify-content: center; font-size: 26px;
   }
   .qa-label { font-size: 11px; font-weight: 600; color: #fff; text-align: center; line-height: 1.3; }
+  .cal-day-dots { display: flex; gap: 3px; height: 5px; justify-content: center; margin-top: 2px; }
+  .cal-underline { width: 5px; height: 5px; border-radius: 50%; }
+  .cal-underline.leave  { background: var(--cal-leave-dot); }
+  .cal-underline.event  { background: var(--cal-event-dot); }
+  .cal-underline.estate { background: var(--cal-estate-dot); }
 
   /* ── MENU ROWS (top of Settings screen, mirrors staff app's Menu screen) ── */
   .menu-header { display: flex; justify-content: space-between; align-items: center; padding: 4px 2px 14px; }
@@ -709,11 +718,10 @@ html, body {
             <div style="font-size:10px;font-weight:600;color:var(--text3);padding:2px 0 6px;">F</div>
             <div style="font-size:10px;font-weight:600;color:var(--text3);padding:2px 0 6px;">S</div>
           </div>
-          <div style="display:flex;gap:12px;margin-top:10px;flex-wrap:wrap;border-top:0.5px solid var(--border);padding-top:10px;">
-            <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text2);"><div style="width:14px;height:14px;border-radius:50%;background:var(--green);"></div>Today</div>
-            <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text2);"><div style="width:14px;height:3px;border-radius:2px;background:#EF9F27;"></div>Leave</div>
-            <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text2);"><div style="width:14px;height:14px;border-radius:4px;background:#CECBF6;"></div>Event</div>
-            <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text2);"><div style="width:14px;height:14px;border-radius:4px;background:#FCEBEB;border:1px solid #F09595;"></div>Holiday</div>
+          <div style="display:flex;gap:14px;margin-top:10px;flex-wrap:wrap;border-top:0.5px solid var(--border);padding-top:10px;justify-content:center;">
+            <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);"><div style="width:7px;height:7px;border-radius:50%;background:var(--cal-event-dot);"></div>Event</div>
+            <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);"><div style="width:7px;height:7px;border-radius:50%;background:var(--cal-leave-dot);"></div>Leave</div>
+            <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);"><div style="width:7px;height:7px;border-radius:50%;background:var(--cal-estate-dot);"></div>Estate Trip</div>
           </div>
         </div>
       </div>
@@ -2772,7 +2780,7 @@ html, body {
   }
 
   // ── ADMIN DASHBOARD ──
-  function renderAdminCalendar(leaveDates, eventDates) {
+  function renderAdminCalendar(leaveDates, eventDates, estateDates) {
     var grid = document.getElementById('cal-grid');
     var label = document.getElementById('cal-month-label');
     if (!grid || !label) return;
@@ -2785,22 +2793,19 @@ html, body {
     for (var d = 1; d <= daysInMonth; d++) {
       var cell = document.createElement('div');
       cell.style.cssText = 'font-size:11px;color:var(--text);display:flex;flex-direction:column;align-items:center;padding:3px 1px;gap:2px;';
-      var isToday  = (d === today.getDate() && calMonth === today.getMonth() && calYear === today.getFullYear());
-      var dateStr  = calYear + '-' + String(calMonth+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
-      var hasLeave = leaveDates && leaveDates[dateStr];
-      var hasEvent = eventDates && eventDates[dateStr];
-      var spanStyle;
-      if (isToday && hasEvent) {
-        spanStyle = 'display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--green);color:#fff;font-weight:600;line-height:1;outline:2.5px solid #534AB7;outline-offset:2px;cursor:pointer;';
-      } else if (isToday) {
-        spanStyle = 'display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--green);color:#fff;font-weight:600;line-height:1;';
-      } else if (hasEvent) {
-        spanStyle = 'display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:4px;background:#CECBF6;color:#3C3489;font-weight:500;line-height:1;cursor:pointer;';
-      } else {
-        spanStyle = 'line-height:1;';
-      }
+      var isToday   = (d === today.getDate() && calMonth === today.getMonth() && calYear === today.getFullYear());
+      var dateStr   = calYear + '-' + String(calMonth+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+      var hasLeave  = leaveDates && leaveDates[dateStr];
+      var hasEvent  = eventDates && eventDates[dateStr];
+      var hasEstate = estateDates && estateDates[dateStr];
+      var spanStyle = isToday
+        ? 'display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--green);color:#fff;font-weight:600;line-height:1;'
+        : 'line-height:1;';
+      var dots = (hasEvent ? '<div class="cal-underline event"></div>' : '')
+        + (hasLeave ? '<div class="cal-underline leave"></div>' : '')
+        + (hasEstate ? '<div class="cal-underline estate"></div>' : '');
       cell.innerHTML = '<span style="' + spanStyle + '">' + d + '</span>'
-        + (hasLeave ? '<div style="width:16px;height:3px;border-radius:2px;background:#EF9F27;cursor:pointer;"></div>' : '');
+        + (dots ? '<div class="cal-day-dots">' + dots + '</div>' : '');
       if (hasLeave || hasEvent) {
         cell.style.cursor = 'pointer';
         (function(ds, hl, he){ cell.onclick = function(){ showCalDayDetail(ds, hl, he); }; })(dateStr, hasLeave, hasEvent);
@@ -2815,6 +2820,7 @@ html, body {
   async function loadAdminCalendar() {
     var leaveDates = {};
     var eventDates = {};
+    var estateDates = {};
     try {
       if (window.location.protocol !== 'file:') {
         var leaveData = await sbFetch('GET', '/rest/v1/leave_records?select=date_from,date_to&limit=200');
@@ -2833,9 +2839,13 @@ html, body {
         if (evData && evData.length) {
           evData.forEach(function(e){ eventDates[e.event_date] = true; });
         }
+        var estData = await sbFetch('GET', '/rest/v1/estate_trips?select=trip_date&limit=200');
+        if (estData && estData.length) {
+          estData.forEach(function(t){ estateDates[t.trip_date] = true; });
+        }
       }
     } catch(e) {}
-    renderAdminCalendar(leaveDates, eventDates);
+    renderAdminCalendar(leaveDates, eventDates, estateDates);
   }
 
   // Matches the staff app's Home banner: any announcement (not just a tagged
