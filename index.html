@@ -306,11 +306,12 @@
     font-size: 15px; color: var(--text-primary); cursor: pointer;
     display: flex; flex-direction: column; align-items: center; padding: 4px 1px; gap: 3px;
   }
-  .cal-day span { line-height: 1; }
+  .cal-day span {
+    line-height: 1; width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+  }
   .cal-day.today span {
     background: var(--cal-selected-date); color: #fff; font-weight: 600;
-    border-radius: 50%; width: 28px; height: 28px;
-    display: flex; align-items: center; justify-content: center;
   }
   .cal-day-dots { display: flex; gap: 3px; height: 5px; }
   .cal-underline { width: 5px; height: 5px; border-radius: 50%; }
@@ -319,8 +320,6 @@
   .cal-underline.estate { background: var(--cal-estate-dot); }
   .cal-day.has-event span, .cal-day.holiday span {
     background: none; color: var(--text-primary); font-weight: 500;
-    border-radius: 50%; width: 28px; height: 28px;
-    display: flex; align-items: center; justify-content: center;
   }
   .legend-row {
     display: flex; gap: 16px; margin-top: 6px; flex-wrap: wrap;
@@ -530,8 +529,7 @@
   /* Booked day highlight in calendar */
   .cal-day.booked span {
     background: #FCEBEB; color: var(--red-text); font-weight: 500;
-    border-radius: 5px; width: 22px; height: 22px;
-    display: flex; align-items: center; justify-content: center;
+    border-radius: 5px;
   }
 
   /* ── Custom Date Picker ── */
