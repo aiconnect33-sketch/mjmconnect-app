@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="color-scheme" content="light">
 <meta name="theme-color" content="#075E54">
 <link rel="manifest" href="manifest.json">
 <meta name="mobile-web-app-capable" content="yes">
@@ -17,7 +18,7 @@
 /* ── RESET ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-:root {
+:root {color-scheme:light;
   --green:       #075E54;
   --green-mid:   #16B890;
   --green-lite:  #8EF0CF;
@@ -1217,7 +1218,6 @@ html, body {
 
       <div class="menu-header">
         <h1>Menu</h1>
-        <div class="top-av" id="menu-av-initials" onclick="window.location.href='profile.html'" title="My Profile" style="cursor:pointer;background:var(--green);color:#fff;">SA</div>
       </div>
       <div class="menu-row" onclick="switchTabByName('announce')">
         <div class="menu-ic" style="background:var(--purple-bg);color:var(--purple-text);"><i class="ti ti-speakerphone"></i></div>
