@@ -702,7 +702,7 @@ html, body {
       <div class="greet-sub">Here's what's happening today.</div>
 
       <!-- Urgent banner — shows ALL urgent announcements -->
-      <div id="admin-urgent-banner" class="home-alert-banner" style="display:none;">
+      <div id="admin-urgent-banner" class="home-alert-banner" style="display:none;cursor:pointer;" onclick="switchTabByName('announce')">
         <div class="home-alert-icon-box"><i class="ti ti-speakerphone"></i></div>
         <div id="admin-urgent-text" class="home-alert-text"></div>
         <i class="ti ti-chevron-right home-alert-chev"></i>
@@ -2371,15 +2371,15 @@ html, body {
   }
 
   // ── LOAD ANNOUNCEMENTS FROM SUPABASE ──
-  // Matches the staff app's Announcements tab: items drop off after 14 days.
+  // Matches the staff app's Announcements tab: items drop off after 5 days.
   async function loadDbAnnouncements() {
     try {
       var data = await sbFetch('GET', '/rest/v1/announcements?order=created_at.desc&limit=200');
       if (!data) return;
       var list = document.getElementById('ann-list');
       if (!list) return;
-      var cut14 = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
-      var tabItems = data.filter(function(a){ return new Date(a.created_at) >= cut14; });
+      var cut5 = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
+      var tabItems = data.filter(function(a){ return new Date(a.created_at) >= cut5; });
       var countEl = document.getElementById('ann-count');
       if (countEl) countEl.textContent = '(' + tabItems.length + ')';
       if (!tabItems.length) {
@@ -2438,9 +2438,12 @@ html, body {
           + '<div style="font-size:12px;color:var(--text3);text-align:center;padding:14px 0;">No current or upcoming leave.</div></div>';
         return;
       }
-      // Matches the staff app's Leave tab: split into Currently on Leave / Upcoming Leave.
+      // Matches the staff app's Leave tab: split into Currently on Leave / Upcoming Leave
+      // (capped to the next month out).
+      var oneMonthOut = new Date(); oneMonthOut.setMonth(oneMonthOut.getMonth() + 1);
+      var oneMonthStr = oneMonthOut.toISOString().split('T')[0];
       var current  = data.filter(function(r){ return r.date_from <= today && today <= r.date_to; });
-      var upcoming = data.filter(function(r){ return r.date_from > today; });
+      var upcoming = data.filter(function(r){ return r.date_from > today && r.date_from <= oneMonthStr; });
 
       function renderLeaveGroup(label, items) {
         if (!items.length) return '';
@@ -2835,9 +2838,9 @@ html, body {
         + (hasEstate ? '<div class="cal-underline estate"></div>' : '');
       cell.innerHTML = '<span style="' + spanStyle + '">' + d + '</span>'
         + '<div class="cal-day-dots">' + dots + '</div>';
-      if (hasLeave || hasEvent) {
+      if (hasLeave || hasEvent || hasEstate) {
         cell.style.cursor = 'pointer';
-        (function(ds, hl, he){ cell.onclick = function(){ showCalDayDetail(ds, hl, he); }; })(dateStr, hasLeave, hasEvent);
+        (function(ds, hl, he, hes){ cell.onclick = function(){ showCalDayDetail(ds, hl, he, hes); }; })(dateStr, hasLeave, hasEvent, hasEstate);
       }
       grid.appendChild(cell);
     }
@@ -2883,9 +2886,9 @@ html, body {
     var banner = document.getElementById('admin-urgent-banner');
     var bannerText = document.getElementById('admin-urgent-text');
     if (!banner || !bannerText) return;
-    var cut7 = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    var cut2 = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
     var recent = [];
-    if (data) { data.forEach(function(a){ if (new Date(a.created_at) >= cut7) recent.push(a); }); }
+    if (data) { data.forEach(function(a){ if (new Date(a.created_at) >= cut2) recent.push(a); }); }
     if (recent.length) {
       bannerText.innerHTML = recent.map(function(a){
         return '<div class="home-alert-title">' + escHtml(a.title) + '</div>'
@@ -3078,7 +3081,7 @@ html, body {
   }
 
   // ── CALENDAR DAY DETAIL MODAL ──
-  async function showCalDayDetail(dateStr, hasLeave, hasEvent) {
+  async function showCalDayDetail(dateStr, hasLeave, hasEvent, hasEstate) {
     var modal = document.getElementById('cal-day-modal');
     var title = document.getElementById('cal-day-modal-title');
     var body  = document.getElementById('cal-day-modal-body');
@@ -3117,6 +3120,21 @@ html, body {
               + '<div style="font-size:12px;font-weight:600;color:var(--text);">' + escHtml(ev.title) + '</div>'
               + '<span class="badge b-purple">' + t + '</span></div>'
               + (ev.description ? '<div style="font-size:11px;color:var(--text2);margin-top:3px;">' + escHtml(ev.description) + '</div>' : '')
+              + '</div>';
+          }).join('');
+        }
+      }
+      if (hasEstate) {
+        var trips = await sbFetch('GET', '/rest/v1/estate_trips?trip_date=eq.' + dateStr + '&order=staff_name.asc');
+        if (trips && trips.length) {
+          if (html) html += '<div style="height:1px;background:var(--border);margin:8px 0;"></div>';
+          html += '<div style="font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Estate Trip</div>';
+          html += trips.map(function(t) {
+            var ini = t.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
+            return '<div class="person-row" style="padding:7px 0;">'
+              + '<div class="av av-a" style="width:30px;height:30px;font-size:10px;background:var(--blue-bg);color:var(--blue-text);">' + ini + '</div>'
+              + '<div style="flex:1;"><div class="p-name">' + escHtml(t.staff_name) + '</div>'
+              + '<div class="p-sub">Going to ' + escHtml(t.estate_name) + '</div></div>'
               + '</div>';
           }).join('');
         }
