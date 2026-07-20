@@ -45,8 +45,10 @@ async function loadLeave() {
         tabEl.innerHTML = '<div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">No leave records.</div>';
         return;
       }
+      var oneMonthOut = new Date(); oneMonthOut.setMonth(oneMonthOut.getMonth() + 1);
+      var oneMonthStr = oneMonthOut.toISOString().split('T')[0];
       var current  = data2.filter(function(r){ return r.date_from <= today && today <= r.date_to; });
-      var upcoming = data2.filter(function(r){ return r.date_from > today; });
+      var upcoming = data2.filter(function(r){ return r.date_from > today && r.date_from <= oneMonthStr; });
       var html2 = '';
       function renderGroup(title, items) {
         if (!items.length) return '';

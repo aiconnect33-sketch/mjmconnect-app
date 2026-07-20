@@ -64,9 +64,9 @@ function renderStaffCalendar() {
       + (hasEstate ? '<div class="cal-underline estate"></div>' : '');
     cell.innerHTML = '<span>' + d + '</span>'
       + '<div class="cal-day-dots">' + dots + '</div>';
-    if (hasLeave || hasEvent) {
+    if (hasLeave || hasEvent || hasEstate) {
       cell.style.cursor = 'pointer';
-      (function(ds, hl, he){ cell.onclick = function(){ showStaffDayDetail(ds, hl, he); }; })(dateStr, hasLeave, hasEvent);
+      (function(ds, hl, he, hes){ cell.onclick = function(){ showStaffDayDetail(ds, hl, he, hes); }; })(dateStr, hasLeave, hasEvent, hasEstate);
     }
     grid.appendChild(cell);
   }
@@ -76,7 +76,7 @@ function staffCalPrev() { staffCalMonth--; if (staffCalMonth < 0)  { staffCalMon
 function staffCalNext() { staffCalMonth++; if (staffCalMonth > 11) { staffCalMonth = 0;  staffCalYear++; } loadStaffCalendar(); }
 
 // ── DAY DETAIL MODAL ──
-async function showStaffDayDetail(dateStr, hasLeave, hasEvent) {
+async function showStaffDayDetail(dateStr, hasLeave, hasEvent, hasEstate) {
   var modal = document.getElementById('staff-day-modal');
   var title = document.getElementById('staff-day-modal-title');
   var body  = document.getElementById('staff-day-modal-body');
@@ -121,6 +121,23 @@ async function showStaffDayDetail(dateStr, hasLeave, hasEvent) {
         }).join('');
       }
     }
+    if (hasEstate) {
+      var tripUrl = SURL + '/rest/v1/estate_trips?trip_date=eq.' + dateStr + '&order=staff_name.asc&limit=50';
+      var tripRes = await fetch(tripUrl, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
+      var trips = await tripRes.json();
+      if (trips && trips.length) {
+        if (html) html += '<div style="height:1px;background:#E2E8E5;margin:8px 0;"></div>';
+        html += '<div style="font-size:10px;font-weight:600;color:#6B7A73;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Estate Trip</div>';
+        html += trips.map(function(t) {
+          var ini = t.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
+          return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:0.5px solid #E2E8E5;">'
+            + '<div style="width:30px;height:30px;border-radius:50%;background:var(--estate-bg);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:var(--estate-text);flex-shrink:0;">' + ini + '</div>'
+            + '<div style="flex:1;"><div style="font-size:12px;font-weight:500;color:#111C18;">' + escHtml(t.staff_name) + '</div>'
+            + '<div style="font-size:11px;color:#6B7A73;">Going to ' + escHtml(t.estate_name) + '</div></div>'
+            + '</div>';
+        }).join('');
+      }
+    }
     body.innerHTML = html || '<div style="font-size:12px;color:#9AABA3;text-align:center;padding:10px 0;">No details found.</div>';
   } catch(e) { body.innerHTML = '<div style="font-size:12px;color:#9AABA3;text-align:center;padding:10px 0;">Could not load details.</div>'; }
 }
@@ -136,10 +153,10 @@ async function loadAnnouncements() {
     var data = await sbGet('announcements', 'limit=200');
     if (!data) return;
     var now   = Date.now();
-    var cut7  = new Date(now - 7  * 24 * 60 * 60 * 1000);
-    var cut14 = new Date(now - 14 * 24 * 60 * 60 * 1000);
-    var bannerItems = data.filter(function(a){ return new Date(a.created_at) >= cut7; });
-    var tabItems    = data.filter(function(a){ return new Date(a.created_at) >= cut14; });
+    var cut2  = new Date(now - 2  * 24 * 60 * 60 * 1000);
+    var cut5  = new Date(now - 5 * 24 * 60 * 60 * 1000);
+    var bannerItems = data.filter(function(a){ return new Date(a.created_at) >= cut2; });
+    var tabItems    = data.filter(function(a){ return new Date(a.created_at) >= cut5; });
 
     // Banner
     var bannerEl = document.getElementById('home-ann-banner');
@@ -148,7 +165,7 @@ async function loadAnnouncements() {
         bannerEl.innerHTML = bannerItems.map(function(a) {
           var d = new Date(a.created_at).toLocaleDateString('en-MY', { day:'numeric', month:'short', year:'numeric' });
           var t = new Date(a.created_at).toLocaleTimeString('en-MY', { hour:'numeric', minute:'2-digit', hour12:true });
-          return '<div class="alert-banner">'
+          return '<div class="alert-banner" style="cursor:pointer;" onclick="switchNav(\'announce\')">'
             + '<div class="alert-icon-box"><i class="ti ti-speakerphone"></i></div>'
             + '<div class="alert-text" style="flex:1;">'
             + '<div>' + escHtml(a.title) + '</div>'
