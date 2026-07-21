@@ -48,10 +48,15 @@ async function loadDuty() {
           + g.members.map(function(r, mi) {
             var ini    = r.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
             var avCls  = avColors[(gi + mi) % avColors.length];
+            var editBtn = canEdit
+              ? '<div style="cursor:pointer;color:var(--text-secondary);margin-left:6px;" onclick="editDutyAssignment(\'' + escJsAttr(r.id) + '\',\'' + escJsAttr(r.staff_name) + '\',\'' + escJsAttr(r.duty_role || '') + '\',\'' + escJsAttr(r.date_from) + '\',\'' + escJsAttr(r.date_to) + '\')"><i class="ti ti-pencil"></i></div>'
+              : '';
             return '<div class="person-row" style="padding:5px 0;">'
               + '<div class="avatar ' + avCls + '" style="font-size:10px;">' + ini + '</div>'
               + '<div style="flex:1;"><div class="person-name" style="font-size:12px;">' + escHtml(r.staff_name) + '</div></div>'
-              + '<span class="badge ' + badgeCls + '">' + badgeLabel + '</span></div>';
+              + '<span class="badge ' + badgeCls + '">' + badgeLabel + '</span>'
+              + editBtn
+              + '</div>';
           }).join('')
           + '</div>';
       }).join('');
@@ -62,7 +67,11 @@ async function loadDuty() {
 }
 
 // ── DUTY — STAFF EDIT (Duty module permission) ──
+var editingDutyId = null;
+
 function showDutyForm() {
+  editingDutyId = null;
+  document.getElementById('duty-form-title').textContent = 'New Duty Assignment';
   document.getElementById('duty-form-name').value = '';
   document.getElementById('duty-form-role').value = '';
   document.getElementById('duty-form-from').value = '';
@@ -73,6 +82,19 @@ function showDutyForm() {
 
 function hideDutyForm() {
   document.getElementById('duty-form').style.display = 'none';
+  editingDutyId = null;
+}
+
+function editDutyAssignment(id, name, role, from, to) {
+  if (!hasEditPermission('duty')) return;
+  editingDutyId = id;
+  document.getElementById('duty-form-title').textContent = 'Edit Duty Assignment';
+  document.getElementById('duty-form-name').value = name;
+  document.getElementById('duty-form-role').value = role;
+  document.getElementById('duty-form-from').value = from;
+  document.getElementById('duty-form-to').value   = to;
+  document.getElementById('duty-form').style.display = 'block';
+  document.getElementById('duty-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 async function saveDutyAssignment() {
@@ -84,7 +106,12 @@ async function saveDutyAssignment() {
   if (!name || !from || !to) { alert('Please fill in staff name and dates.'); return; }
   if (from > to) { alert('The "From" date must be before the "To" date.'); return; }
   try {
-    await sbWrite('POST', 'duty_roster', { staff_name: name, duty_role: role || 'General Duty', date_from: from, date_to: to, period: from + ' to ' + to });
+    if (editingDutyId) {
+      await sbWrite('PATCH', 'duty_roster', { staff_name: name, duty_role: role || 'General Duty', date_from: from, date_to: to, period: from + ' to ' + to }, 'id=eq.' + editingDutyId);
+      editingDutyId = null;
+    } else {
+      await sbWrite('POST', 'duty_roster', { staff_name: name, duty_role: role || 'General Duty', date_from: from, date_to: to, period: from + ' to ' + to });
+    }
     hideDutyForm();
     loadDuty();
   } catch(e) { alert('Could not save duty assignment. Please try again.'); }
