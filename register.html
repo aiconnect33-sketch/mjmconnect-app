@@ -159,11 +159,12 @@ html,body{min-height:100%;font-family:'Inter',-apple-system,sans-serif;backgroun
       <div class="alert alert-error" id="p1-alert">
         <i class="ti ti-alert-circle"></i><span id="p1-alert-msg">Please fill in all required fields.</span>
       </div>
+      <form autocomplete="on" onsubmit="return false;">
       <div class="form-group">
         <label class="form-label">Work Email</label>
         <div class="input-wrap">
           <i class="ti ti-mail input-icon"></i>
-          <input class="form-input locked" type="email" id="reg-email" readonly>
+          <input class="form-input locked" type="email" id="reg-email" name="email" readonly autocomplete="email">
           <i class="ti ti-lock input-icon-right" style="cursor:default;"></i>
         </div>
         <div class="field-hint">Set by HR · cannot be changed</div>
@@ -172,7 +173,7 @@ html,body{min-height:100%;font-family:'Inter',-apple-system,sans-serif;backgroun
         <label class="form-label">Full Name</label>
         <div class="input-wrap">
           <i class="ti ti-user input-icon"></i>
-          <input class="form-input" type="text" id="reg-name" placeholder="As per your ID" oninput="updateAvatar()">
+          <input class="form-input" type="text" id="reg-name" name="name" placeholder="As per your ID" oninput="updateAvatar()" autocomplete="name">
         </div>
         <div class="field-error" id="name-error"><i class="ti ti-alert-circle"></i><span>Full name is required.</span></div>
       </div>
@@ -180,12 +181,13 @@ html,body{min-height:100%;font-family:'Inter',-apple-system,sans-serif;backgroun
         <label class="form-label">Phone Number <span class="optional-tag">(optional)</span></label>
         <div class="input-wrap">
           <i class="ti ti-phone input-icon"></i>
-          <input class="form-input" type="tel" id="reg-phone" placeholder="e.g. 019-3456789" inputmode="tel">
+          <input class="form-input" type="tel" id="reg-phone" name="phone" placeholder="e.g. 019-3456789" inputmode="tel" autocomplete="tel">
         </div>
       </div>
+      </form>
     </div>
     <div class="card-footer">
-      <button class="btn-primary" onclick="goStep(2)">Continue <i class="ti ti-arrow-right"></i></button>
+      <button class="btn-primary" type="button" onclick="goStep(2)">Continue <i class="ti ti-arrow-right"></i></button>
       <div class="hdivider"></div>
       <div class="footer-note">Wrong details? <a href="login.html">Contact HR</a> to update your invite.</div>
     </div>
