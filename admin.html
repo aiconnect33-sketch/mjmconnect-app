@@ -2773,18 +2773,54 @@ html, body {
           statusBadge = 'b-red'; statusText = 'Unknown';
         }
         var date = u.created_at ? new Date(u.created_at).toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'}) : '';
+        var delBtn = u.role === 'pending'
+          ? '<div class="btn-icon danger" onclick="deleteInvite(\'' + escJsAttr(u.email) + '\')" title="Delete invite"><i class="ti ti-trash"></i></div>'
+          : '';
         return '<div class="person-row">'
           + '<div class="av ' + avCls + '">' + ini + '</div>'
           + '<div style="flex:1;">'
           + '<div class="p-name">' + escHtml(u.full_name || '') + '</div>'
           + '<div class="p-sub">' + escHtml(u.email) + (date ? ' · ' + date : '') + '</div>'
           + '</div>'
+          + '<div style="display:flex;align-items:center;gap:6px;">'
           + '<span class="badge ' + statusBadge + '">' + statusText + '</span>'
+          + delBtn
+          + '</div>'
           + '</div>';
       }).join('');
     } catch(e) {
       document.getElementById('invite-log-list').innerHTML =
         '<div style="text-align:center;padding:12px 0;font-size:12px;color:var(--text3);">Could not load invite log.</div>';
+    }
+  }
+
+  // Delete a pending invite (e.g. sent to a mistyped email) so the address
+  // is freed up to be re-invited. Best-effort revokes the underlying
+  // Supabase Auth invited user too, but the profiles row -- what actually
+  // shows in the Invite Log -- is always removed regardless.
+  async function deleteInvite(email) {
+    if (!confirm('Delete this invite? ' + email + ' will need to be re-invited to join.')) return;
+    try {
+      var lookup = await fetch(SURL + '/auth/v1/admin/users?email=' + encodeURIComponent(email), {
+        headers: { 'apikey': SVCKEY, 'Authorization': 'Bearer ' + SVCKEY }
+      });
+      if (lookup.ok) {
+        var lookupData = await lookup.json();
+        var users = Array.isArray(lookupData) ? lookupData : (lookupData.users || []);
+        var authUser = users.find(function(u){ return (u.email || '').toLowerCase() === email.toLowerCase(); });
+        if (authUser && authUser.id) {
+          await fetch(SURL + '/auth/v1/admin/users/' + authUser.id, {
+            method: 'DELETE',
+            headers: { 'apikey': SVCKEY, 'Authorization': 'Bearer ' + SVCKEY }
+          });
+        }
+      }
+    } catch(e) { /* best-effort only -- profiles row deletion below is what matters */ }
+    try {
+      await sbFetch('DELETE', '/rest/v1/profiles?email=eq.' + encodeURIComponent(email), null, { 'Prefer': '' });
+      loadInviteLog();
+    } catch(e) {
+      alert('Could not delete invite. Please try again.');
     }
   }
 
