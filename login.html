@@ -85,11 +85,12 @@ html,body{min-height:100%;font-family:'Inter',-apple-system,sans-serif;backgroun
     <div class="card-body">
       <div class="section-label">Sign in to your account</div>
       <div class="alert alert-error" id="login-alert"><i class="ti ti-alert-circle"></i><span id="login-alert-msg">Incorrect email or password.</span></div>
+      <form autocomplete="on" onsubmit="return false;">
       <div class="form-group">
         <label class="form-label">Work Email</label>
         <div class="input-wrap">
           <i class="ti ti-mail input-icon"></i>
-          <input class="form-input" type="email" id="email" placeholder="Enter your work email" autocomplete="email">
+          <input class="form-input" type="email" id="email" name="email" placeholder="Enter your work email" autocomplete="email">
         </div>
         <div class="field-error" id="email-error"><i class="ti ti-alert-circle"></i><span>Please enter a valid email.</span></div>
       </div>
@@ -97,15 +98,16 @@ html,body{min-height:100%;font-family:'Inter',-apple-system,sans-serif;backgroun
         <label class="form-label">Password</label>
         <div class="input-wrap">
           <i class="ti ti-lock input-icon"></i>
-          <input class="form-input" type="password" id="password" placeholder="Enter your password" autocomplete="current-password">
+          <input class="form-input" type="password" id="password" name="password" placeholder="Enter your password" autocomplete="current-password">
           <button class="input-icon-right" type="button" onclick="togglePassword()"><i class="ti ti-eye" id="pw-icon"></i></button>
         </div>
         <div class="field-error" id="pw-error"><i class="ti ti-alert-circle"></i><span>Password cannot be empty.</span></div>
       </div>
-      <div class="forgot-row"><button class="link-btn" onclick="showPanel('forgot')">Forgot password?</button></div>
-      <button class="btn-primary" id="signin-btn" onclick="handleSignIn()">
+      <div class="forgot-row"><button class="link-btn" type="button" onclick="showPanel('forgot')">Forgot password?</button></div>
+      <button class="btn-primary" id="signin-btn" type="button" onclick="handleSignIn()">
         <span id="signin-label">Sign In</span><div class="spinner" id="signin-spinner"></div>
       </button>
+      </form>
     </div>
     <div class="hdivider"></div>
     <div class="card-footer">
@@ -120,16 +122,18 @@ html,body{min-height:100%;font-family:'Inter',-apple-system,sans-serif;backgroun
       <p style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:16px;">Enter your work email and we'll send a reset link. Expires in 30 minutes.</p>
       <div class="alert alert-success" id="reset-success"><i class="ti ti-circle-check"></i><span>Reset link sent to <strong id="reset-email-shown"></strong>. Check your inbox.</span></div>
       <div class="alert alert-error" id="reset-error"><i class="ti ti-alert-circle"></i><span>No account found with that email.</span></div>
+      <form autocomplete="on" onsubmit="return false;">
       <div class="form-group" id="reset-form-group">
         <label class="form-label">Work Email</label>
         <div class="input-wrap">
           <i class="ti ti-mail input-icon"></i>
-          <input class="form-input" type="email" id="reset-email" placeholder="Enter your work email">
+          <input class="form-input" type="email" id="reset-email" name="email" placeholder="Enter your work email" autocomplete="email">
         </div>
       </div>
-      <button class="btn-primary" id="reset-btn" onclick="handleReset()">
+      <button class="btn-primary" id="reset-btn" type="button" onclick="handleReset()">
         <span id="reset-label">Send Reset Link</span><div class="spinner" id="reset-spinner"></div>
       </button>
+      </form>
     </div>
     <div class="hdivider"></div>
     <div class="card-footer">
