@@ -342,6 +342,15 @@ html, body {
   transition: background 0.15s; margin-bottom: 8px;
 }
 .btn-ghost:hover { background: var(--green-bg); }
+.duration-row {
+  display: flex; background: var(--bg); border-radius: var(--r-md);
+  border: 1px solid var(--border); padding: 3px; gap: 3px;
+}
+.duration-pill {
+  flex: 1; padding: 8px 4px; border-radius: 8px; font-size: 11px;
+  font-weight: 600; text-align: center; cursor: pointer; color: var(--text2);
+}
+.duration-pill.active { background: var(--green); color: #fff; }
 .btn-danger {
   background: none; border: none;
   color: var(--red-text); font-size: 12px; font-weight: 500;
@@ -952,19 +961,27 @@ html, body {
             <label class="form-label">From</label>
             <div class="input-wrap">
               <i class="ti ti-calendar input-icon"></i>
-              <input class="form-input" type="date" id="leave-from">
+              <input class="form-input" type="date" id="leave-from" onchange="updateLeaveDurationVisibility()">
             </div>
           </div>
           <div class="form-group">
             <label class="form-label">To</label>
             <div class="input-wrap">
               <i class="ti ti-calendar input-icon"></i>
-              <input class="form-input" type="date" id="leave-to">
+              <input class="form-input" type="date" id="leave-to" onchange="updateLeaveDurationVisibility()">
             </div>
           </div>
         </div>
         <div class="field-error" id="leave-date-error" style="margin-top:-8px;margin-bottom:8px;">
           <i class="ti ti-alert-circle"></i> Please select valid dates.
+        </div>
+        <div class="form-group" id="leave-duration-group" style="display:none;">
+          <label class="form-label">Duration</label>
+          <div class="duration-row">
+            <div class="duration-pill active" id="leave-duration-full" onclick="setLeaveDuration('full')">Full Day</div>
+            <div class="duration-pill" id="leave-duration-am" onclick="setLeaveDuration('am')">Morning (AM)</div>
+            <div class="duration-pill" id="leave-duration-pm" onclick="setLeaveDuration('pm')">Afternoon (PM)</div>
+          </div>
         </div>
         <button class="btn-primary" onclick="saveLeave()">
           <span id="leave-save-label">Save Leave Entry</span>
@@ -1554,6 +1571,26 @@ html, body {
   }
 
   // ── LEAVE FORM ──
+  var leaveDuration = 'full';
+  function setLeaveDuration(val) {
+    leaveDuration = val;
+    document.getElementById('leave-duration-full').className = 'duration-pill' + (val === 'full' ? ' active' : '');
+    document.getElementById('leave-duration-am').className   = 'duration-pill' + (val === 'am'   ? ' active' : '');
+    document.getElementById('leave-duration-pm').className   = 'duration-pill' + (val === 'pm'   ? ' active' : '');
+  }
+  // Half-day only makes sense for a single-day leave, so the Duration
+  // picker only shows once From and To match.
+  function updateLeaveDurationVisibility() {
+    var from = document.getElementById('leave-from').value;
+    var to   = document.getElementById('leave-to').value;
+    var group = document.getElementById('leave-duration-group');
+    if (from && to && from === to) {
+      group.style.display = 'block';
+    } else {
+      group.style.display = 'none';
+      setLeaveDuration('full');
+    }
+  }
   function showLeaveForm() {
     document.getElementById('leave-form').classList.add('visible');
     document.getElementById('leave-form').scrollIntoView({ behavior:'smooth', block:'start' });
@@ -1564,6 +1601,8 @@ html, body {
     document.getElementById('leave-type').value = '';
     document.getElementById('leave-from').value = '';
     document.getElementById('leave-to').value   = '';
+    setLeaveDuration('full');
+    document.getElementById('leave-duration-group').style.display = 'none';
     clearFormErrors();
   }
   async function saveLeave() {
@@ -1584,9 +1623,10 @@ html, body {
     }
     if (!valid) return;
 
+    var dayPeriod = (from === to) ? leaveDuration : 'full';
     setLoading('leave-save', true);
     try {
-      await sbFetch('POST', '/rest/v1/leave_records', { staff_name: name, leave_type: type || 'Annual Leave', date_from: from, date_to: to });
+      await sbFetch('POST', '/rest/v1/leave_records', { staff_name: name, leave_type: type || 'Annual Leave', date_from: from, date_to: to, day_period: dayPeriod });
       setLoading('leave-save', false);
       hideLeaveForm();
       await loadDbLeave();
@@ -2451,6 +2491,8 @@ html, body {
           items.map(function(r) {
             var ini = r.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
             var shortType = r.leave_type === 'Annual Leave' ? 'AL' : r.leave_type === 'Medical Leave' ? 'MC' : r.leave_type === 'Paternity Leave' ? 'PL' : r.leave_type === 'Maternity Leave' ? 'ML' : 'CL';
+            if (r.day_period === 'am') shortType += ' · AM';
+            else if (r.day_period === 'pm') shortType += ' · PM';
             var bCls = r.leave_type === 'Medical Leave' ? 'b-red' : (r.leave_type.includes('Paternity') || r.leave_type.includes('Maternity')) ? 'b-blue' : 'b-amber';
             var from = new Date(r.date_from + 'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'});
             var to   = new Date(r.date_to + 'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'});
@@ -3135,6 +3177,8 @@ html, body {
             var from = new Date(r.date_from+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'});
             var to   = new Date(r.date_to+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'});
             var shortType = r.leave_type === 'Annual Leave' ? 'AL' : r.leave_type === 'Medical Leave' ? 'MC' : 'CL';
+            if (r.day_period === 'am') shortType += ' · AM';
+            else if (r.day_period === 'pm') shortType += ' · PM';
             var bCls = r.leave_type === 'Medical Leave' ? 'b-red' : 'b-amber';
             return '<div class="person-row" style="padding:7px 0;">'
               + '<div class="av av-a" style="width:30px;height:30px;font-size:10px;">' + ini + '</div>'
