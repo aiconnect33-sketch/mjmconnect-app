@@ -57,12 +57,14 @@ async function loadLeave() {
           var ini = r.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
           var avCls = avColors[i % avColors.length];
           var shortType = r.leave_type === 'Annual Leave' ? 'AL' : r.leave_type === 'Medical Leave' ? 'MC' : 'CL';
+          if (r.day_period === 'am') shortType += ' · AM';
+          else if (r.day_period === 'pm') shortType += ' · PM';
           var badgeCls  = r.leave_type === 'Medical Leave' ? 'badge-urgent' : 'badge-amber';
           var from = new Date(r.date_from+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'});
           var to   = new Date(r.date_to+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'});
           var canManage = isAdminUser || (myName && r.staff_name.toLowerCase() === myName.toLowerCase());
           var editBtn = canManage
-            ? '<div style="cursor:pointer;color:var(--text-secondary);margin-left:6px;" onclick="editLeaveRequest(\'' + escJsAttr(r.id) + '\',\'' + escJsAttr(r.leave_type) + '\',\'' + escJsAttr(r.date_from) + '\',\'' + escJsAttr(r.date_to) + '\')"><i class="ti ti-pencil"></i></div>'
+            ? '<div style="cursor:pointer;color:var(--text-secondary);margin-left:6px;" onclick="editLeaveRequest(\'' + escJsAttr(r.id) + '\',\'' + escJsAttr(r.leave_type) + '\',\'' + escJsAttr(r.date_from) + '\',\'' + escJsAttr(r.date_to) + '\',\'' + escJsAttr(r.day_period || 'full') + '\')"><i class="ti ti-pencil"></i></div>'
             : '';
           var delBtn = canManage
             ? '<div style="cursor:pointer;color:var(--red-text);margin-left:6px;" onclick="deleteLeaveRequest(\'' + escJsAttr(r.id) + '\')"><i class="ti ti-trash"></i></div>'
@@ -90,6 +92,28 @@ async function loadLeave() {
 
 // ── LEAVE — STAFF SELF-SERVICE (open to all staff) ──
 var editingLeaveId = null;
+var leaveDuration = 'full';
+
+function setLeaveDuration(val) {
+  leaveDuration = val;
+  document.getElementById('leave-duration-full').className = 'duration-pill' + (val === 'full' ? ' active' : '');
+  document.getElementById('leave-duration-am').className   = 'duration-pill' + (val === 'am'   ? ' active' : '');
+  document.getElementById('leave-duration-pm').className   = 'duration-pill' + (val === 'pm'   ? ' active' : '');
+}
+
+// Half-day only makes sense for a single-day leave, so the Duration picker
+// only shows once From and To match.
+function updateLeaveDurationVisibility() {
+  var from = document.getElementById('leave-form-from').value;
+  var to   = document.getElementById('leave-form-to').value;
+  var group = document.getElementById('leave-duration-group');
+  if (from && to && from === to) {
+    group.style.display = 'block';
+  } else {
+    group.style.display = 'none';
+    setLeaveDuration('full');
+  }
+}
 
 function showLeaveForm() {
   var raw = sessionStorage.getItem('mjm_user');
@@ -100,6 +124,8 @@ function showLeaveForm() {
   document.getElementById('leave-form-type').value = 'Annual Leave';
   document.getElementById('leave-form-from').value = '';
   document.getElementById('leave-form-to').value   = '';
+  setLeaveDuration('full');
+  document.getElementById('leave-duration-group').style.display = 'none';
   document.getElementById('leave-form').style.display = 'block';
   document.getElementById('leave-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -122,7 +148,7 @@ function canManageLeave(id) {
   return !!(me.name && ownerName && me.name.toLowerCase() === ownerName.toLowerCase());
 }
 
-function editLeaveRequest(id, type, from, to) {
+function editLeaveRequest(id, type, from, to, dayPeriod) {
   if (!canManageLeave(id)) return;
   var raw = sessionStorage.getItem('mjm_user');
   var user = raw ? JSON.parse(raw) : {};
@@ -134,6 +160,8 @@ function editLeaveRequest(id, type, from, to) {
   document.getElementById('leave-form-type').value = type;
   document.getElementById('leave-form-from').value = from;
   document.getElementById('leave-form-to').value   = to;
+  setLeaveDuration(dayPeriod === 'am' || dayPeriod === 'pm' ? dayPeriod : 'full');
+  updateLeaveDurationVisibility();
   document.getElementById('leave-form').style.display = 'block';
   document.getElementById('leave-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -146,12 +174,13 @@ async function saveLeaveRequest() {
   var to   = document.getElementById('leave-form-to').value;
   if (!name || !from || !to) { alert('Please fill in the leave dates.'); return; }
   if (from > to) { alert('The "From" date must be before the "To" date.'); return; }
+  var dayPeriod = (from === to) ? leaveDuration : 'full';
   try {
     if (editingLeaveId) {
-      await sbWrite('PATCH', 'leave_records', { leave_type: type, date_from: from, date_to: to }, 'id=eq.' + editingLeaveId);
+      await sbWrite('PATCH', 'leave_records', { leave_type: type, date_from: from, date_to: to, day_period: dayPeriod }, 'id=eq.' + editingLeaveId);
       editingLeaveId = null;
     } else {
-      await sbWrite('POST', 'leave_records', { staff_name: name, leave_type: type, date_from: from, date_to: to });
+      await sbWrite('POST', 'leave_records', { staff_name: name, leave_type: type, date_from: from, date_to: to, day_period: dayPeriod });
     }
     hideLeaveForm();
     loadLeave();
