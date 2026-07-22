@@ -166,8 +166,8 @@ window.addEventListener('DOMContentLoaded', function() {
   if (typeof initStaffCalendar === 'function') initStaffCalendar();
   // Auto-switch to tab based on URL hash
   if (window.location.hash === '#book') {
-    var bookBtn = document.querySelector('.tab-btn[onclick*="book"]');
-    if (bookBtn) { bookBtn.click(); }
+    switchNav('book');
+    if (typeof initBookTab === 'function') initBookTab();
     window.location.hash = '';
   }
 });
