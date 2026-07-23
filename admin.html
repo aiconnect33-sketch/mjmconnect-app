@@ -2859,10 +2859,14 @@ html, body {
       }
     } catch(e) { /* best-effort only -- profiles row deletion below is what matters */ }
     try {
-      await sbFetch('DELETE', '/rest/v1/profiles?email=eq.' + encodeURIComponent(email), null, { 'Prefer': '' });
+      var deleted = await sbFetch('DELETE', '/rest/v1/profiles?email=eq.' + encodeURIComponent(email));
+      if (!deleted || deleted.length === 0) {
+        alert('Could not delete invite: no matching record was removed. This is usually a database permissions (RLS) issue on the profiles table.');
+        return;
+      }
       loadInviteLog();
     } catch(e) {
-      alert('Could not delete invite. Please try again.');
+      alert('Could not delete invite. ' + (e.message || 'Please try again.'));
     }
   }
 
