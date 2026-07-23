@@ -351,6 +351,176 @@ html, body {
   font-weight: 600; text-align: center; cursor: pointer; color: var(--text2);
 }
 .duration-pill.active { background: var(--green); color: #fff; }
+
+/* ── BOOKING TAB (native to Admin) ── */
+.book-inline-form {
+  background: var(--green-bg); border: 1px solid #C2E6D8;
+  border-radius: var(--r-lg); padding: 12px 14px; margin-bottom: 10px;
+}
+.book-form-title {
+  font-size: 12px; font-weight: 700; color: var(--green-text);
+  margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;
+}
+.book-close-btn { background: none; border: none; color: var(--green-text); cursor: pointer; font-size: 16px; padding: 0; line-height: 1; }
+.book-form-group { margin-bottom: 10px; }
+.book-form-label { display: block; font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px; }
+.book-form-input {
+  width: 100%; border: 1px solid var(--border); border-radius: var(--r-md);
+  padding: 9px 11px; font-size: 13px; color: var(--text);
+  background: var(--surface); font-family: inherit; outline: none;
+  transition: border-color 0.15s; -webkit-appearance: none;
+}
+.book-form-input:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(15,110,86,0.1); }
+.book-form-input.error { border-color: var(--red-text); }
+.book-field-error { font-size: 11px; color: var(--red-text); margin-top: 4px; display: none; align-items: center; gap: 4px; }
+.book-field-error.visible { display: flex; }
+.book-clash-alert {
+  display: flex; align-items: flex-start; gap: 7px;
+  background: var(--red-bg); border: 0.5px solid #F09595;
+  border-radius: var(--r-md); padding: 9px 11px; margin-bottom: 10px;
+  font-size: 12px; color: var(--red-text);
+}
+.book-clash-alert i { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+.book-btn-primary {
+  width: 100%; background: var(--green); color: #fff; border: none;
+  border-radius: var(--r-md); padding: 11px; font-size: 13px; font-weight: 600;
+  font-family: inherit; cursor: pointer; display: flex; align-items: center;
+  justify-content: center; gap: 6px; margin-bottom: 7px; transition: background 0.15s;
+}
+.book-btn-primary:hover { background: #0d5f49; }
+.book-btn-primary:disabled { background: var(--text3); cursor: not-allowed; }
+.book-btn-ghost {
+  width: 100%; background: transparent; color: var(--green);
+  border: 1px solid var(--green); border-radius: var(--r-md);
+  padding: 10px; font-size: 13px; font-weight: 500; font-family: inherit;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+}
+.book-btn-ghost:hover { background: var(--green-bg); }
+.book-alert {
+  border-radius: var(--r-md); padding: 10px 12px; font-size: 12px;
+  margin-bottom: 10px; display: none; align-items: center; gap: 8px;
+}
+.book-alert.visible { display: flex; }
+.book-alert i { font-size: 15px; flex-shrink: 0; }
+.room-picker-card {
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: var(--r-lg); padding: 10px 12px; margin-bottom: 8px;
+  display: flex; align-items: center; gap: 10px; cursor: pointer; transition: border-color 0.15s, background 0.15s;
+}
+.room-picker-card.selected { border-color: var(--green-mid); background: var(--green-bg); }
+.room-picker-card-check { font-size: 18px; color: var(--green-mid); visibility: hidden; }
+.room-picker-card.selected .room-picker-card-check { visibility: visible; }
+.book-alert-success { background: var(--green-bg); color: var(--green-text); }
+.book-alert-error   { background: var(--red-bg);   color: var(--red-text); }
+.book-spinner { width: 15px; height: 15px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; display: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.book-toggle {
+  width: 44px; height: 26px; border-radius: 13px;
+  background: var(--border); position: relative;
+  cursor: pointer; transition: background 0.2s; flex-shrink: 0;
+}
+.book-toggle.on { background: var(--green); }
+.book-toggle-knob {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: #fff; position: absolute; top: 3px; left: 3px;
+  transition: transform 0.2s; box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
+.book-toggle.on .book-toggle-knob { transform: translateX(18px); }
+.book-empty { text-align: center; padding: 14px 0; font-size: 12px; color: var(--text3); }
+.book-item {
+  background: var(--surface); border: 0.5px solid var(--border);
+  border-radius: var(--r-lg); padding: 12px 14px; margin-bottom: 8px;
+}
+.book-item-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+.book-item-name { font-size: 13px; font-weight: 600; color: var(--text); }
+.book-item-date { font-size: 11px; color: var(--text2); margin-bottom: 2px; }
+.book-item-purpose { font-size: 11px; color: var(--text3); }
+.book-cancel-btn {
+  background: none; border: none; color: var(--red-text); font-size: 11px;
+  font-weight: 600; font-family: inherit; cursor: pointer; padding: 0;
+  display: flex; align-items: center; gap: 4px; margin-top: 8px;
+  padding-top: 8px; border-top: 0.5px solid var(--border); width: 100%;
+}
+.book-cancel-btn i { font-size: 13px; }
+
+/* ── CALENDAR CARD (Booking availability) ── */
+.cal-card {
+  background: var(--surface); border-radius: 24px;
+  border: 0.5px solid var(--border); overflow: hidden; margin-bottom: 12px;
+  box-shadow: 0 6px 20px rgba(15,110,86,0.07);
+}
+.cal-header {
+  background: var(--green); padding: 16px 18px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.cal-nav-btn {
+  width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: #fff;
+  background: rgba(255,255,255,0.15); border-radius: var(--r-sm);
+  border: none;
+}
+.cal-nav-btn i { font-size: 18px; }
+.cal-month-label { font-size: 19px; font-weight: 700; color: #fff; }
+.cal-body { padding: 8px 14px 18px; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; }
+.cal-dow { font-size: 13px; font-weight: 500; color: var(--text2); padding: 2px 0 8px; }
+.cal-day {
+  font-size: 15px; color: var(--text); cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; padding: 4px 1px; gap: 3px;
+}
+.cal-day span {
+  line-height: 1; width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+}
+.cal-day.today span { background: var(--green); color: #fff; font-weight: 600; }
+.cal-day.has-event span, .cal-day.holiday span {
+  background: none; color: var(--text); font-weight: 500;
+}
+.cal-day.booked span {
+  background: #FCEBEB; color: var(--red-text); font-weight: 500;
+  border-radius: 5px;
+}
+.legend-row {
+  display: flex; gap: 16px; margin-top: 6px; flex-wrap: wrap;
+  justify-content: center;
+  border-top: 0.5px solid var(--border); padding-top: 12px;
+}
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text2); }
+.legend-line { width: 8px; height: 8px; border-radius: 50%; }
+
+/* ── Custom Date Picker (Booking) ── */
+.date-picker-display {
+  width:100%; padding:10px 12px; border:1px solid var(--border);
+  border-radius:8px; font-size:13px; color:var(--text);
+  background:var(--surface); cursor:pointer; text-align:left;
+  display:flex; align-items:center; gap:8px;
+}
+.date-picker-display.placeholder { color:var(--text2); }
+.date-picker-cal {
+  display:none; border:1px solid var(--border); border-radius:10px;
+  overflow:hidden; margin-top:6px; background:var(--surface);
+}
+.date-picker-cal.open { display:block; }
+.dpc-header {
+  background:var(--green); color:#fff; padding:8px 12px;
+  display:flex; align-items:center; justify-content:space-between;
+  font-size:13px; font-weight:600;
+}
+.dpc-nav { background:none; border:none; color:#fff; font-size:18px; cursor:pointer; padding:0 6px; }
+.dpc-grid { display:grid; grid-template-columns:repeat(7,1fr); text-align:center; }
+.dpc-dow { font-size:10px; font-weight:600; color:var(--text2); padding:6px 0; }
+.dpc-day {
+  font-size:12px; padding:7px 2px; cursor:pointer; border-radius:6px;
+  margin:1px; color:var(--text);
+}
+.dpc-day:hover { background:var(--green-bg); }
+.dpc-day.today { background:var(--green); color:#fff; font-weight:700; }
+.dpc-day.selected { background:var(--green); color:#fff; font-weight:700; }
+.dpc-day.past { color:var(--text2); cursor:not-allowed; opacity:0.4; }
+.dpc-day.empty { cursor:default; }
+
 .btn-danger {
   background: none; border: none;
   color: var(--red-text); font-size: 12px; font-weight: 500;
@@ -764,7 +934,7 @@ html, body {
           <div class="qa-ic" style="background:var(--blue-bg);color:var(--blue-text);"><i class="ti ti-clock"></i></div>
           <div class="qa-label">Time Off</div>
         </div>
-        <div class="qa-item" onclick="window.location.href='index.html#book'">
+        <div class="qa-item" onclick="switchTabByName('book')">
           <div class="qa-ic" style="background:var(--purple-bg);color:var(--purple-text);"><i class="ti ti-calendar-event"></i></div>
           <div class="qa-label">Booking</div>
         </div>
@@ -1229,6 +1399,223 @@ html, body {
     </div><!-- /event -->
 
     <!-- ═══════════════════════════
+         BOOKING
+    ═══════════════════════════ -->
+    <div class="screen-section" id="screen-book">
+
+      <!-- Pill toggle -->
+      <div style="display:flex;background:var(--surface);border-radius:var(--r-lg);border:0.5px solid var(--border);padding:4px;gap:4px;margin-bottom:12px;">
+        <button id="book-pill-vehicle" onclick="switchBookPill('vehicle')"
+          style="flex:1;padding:7px;border-radius:var(--r-md);border:none;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;background:var(--green);color:#fff;transition:all 0.15s;">
+          <i class="ti ti-car"></i> Vehicle
+        </button>
+        <button id="book-pill-room" onclick="switchBookPill('room')"
+          style="flex:1;padding:7px;border-radius:var(--r-md);border:none;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:var(--text2);transition:all 0.15s;">
+          <i class="ti ti-door"></i> Room
+        </button>
+      </div>
+
+      <!-- ── VEHICLE PANEL ── -->
+      <div id="book-panel-vehicle">
+
+        <div class="card" style="margin-bottom:10px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <div style="width:40px;height:40px;border-radius:var(--r-md);background:var(--green-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <i class="ti ti-car" style="font-size:20px;color:var(--green);"></i>
+            </div>
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--text);">Vehicle Booking (QPA1234)</div>
+              <div style="font-size:11px;color:var(--text2);">Full day or time-slot · First-come, first-served</div>
+            </div>
+          </div>
+          <button class="book-btn-primary" onclick="showVehicleForm()">
+            <i class="ti ti-plus"></i> New Booking
+          </button>
+        </div>
+
+        <!-- Vehicle booking form -->
+        <div class="book-inline-form" id="vehicle-form" style="display:none;">
+          <div class="book-form-title">
+            <span><i class="ti ti-car"></i> &nbsp;Book Vehicle</span>
+            <button class="book-close-btn" onclick="hideVehicleForm()">&times;</button>
+          </div>
+          <div class="book-form-group">
+            <label class="book-form-label">Date</label>
+            <button type="button" class="date-picker-display placeholder" id="v-date-display" onclick="toggleDatePicker('v')">
+              <i class="ti ti-calendar"></i><span id="v-date-display-text">Tap to select date</span>
+            </button>
+            <input type="hidden" id="v-date">
+            <div class="book-field-error" id="v-date-error"><i class="ti ti-alert-circle"></i> Please select a date.</div>
+            <div class="date-picker-cal" id="v-date-cal"></div>
+            <div id="v-date-tags" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;"></div>
+          </div>
+          <!-- Full day toggle -->
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:0.5px solid #C2E6D8;border-bottom:0.5px solid #C2E6D8;margin-bottom:10px;">
+            <div>
+              <div style="font-size:13px;font-weight:500;color:var(--text);">Full Day</div>
+              <div style="font-size:11px;color:var(--text2);margin-top:1px;">Toggle off to pick a time slot</div>
+            </div>
+            <div id="v-fullday-toggle" class="book-toggle on" onclick="toggleVehicleFullDay()">
+              <div class="book-toggle-knob"></div>
+            </div>
+          </div>
+          <!-- Time slot (hidden when full day) -->
+          <div id="v-time-row" style="display:none;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              <div class="book-form-group">
+                <label class="book-form-label">From</label>
+                <input class="book-form-input" type="time" id="v-time-from" onchange="checkVehicleClash()">
+                <div class="book-field-error" id="v-time-from-error"><i class="ti ti-alert-circle"></i> Required.</div>
+              </div>
+              <div class="book-form-group">
+                <label class="book-form-label">To</label>
+                <input class="book-form-input" type="time" id="v-time-to" onchange="checkVehicleClash()">
+                <div class="book-field-error" id="v-time-to-error"><i class="ti ti-alert-circle"></i> Required.</div>
+              </div>
+            </div>
+          </div>
+          <div class="book-clash-alert" id="v-clash-alert" style="display:none;">
+            <i class="ti ti-alert-circle"></i>
+            <span id="v-clash-msg">Already booked on that slot.</span>
+          </div>
+          <div class="book-form-group">
+            <label class="book-form-label">Purpose <span style="font-size:10px;color:var(--text3);font-weight:400;text-transform:none;">(optional)</span></label>
+            <input class="book-form-input" type="text" id="v-purpose" placeholder="e.g. Site visit to Klang">
+          </div>
+          <button class="book-btn-primary" id="v-submit-btn" onclick="submitVehicleBooking()">
+            <span id="v-submit-label">Confirm Booking</span>
+            <div class="book-spinner" id="v-spinner"></div>
+          </button>
+          <button class="book-btn-ghost" onclick="hideVehicleForm()">Cancel</button>
+        </div>
+
+        <!-- Success/error alerts -->
+        <div class="book-alert book-alert-success" id="v-success"><i class="ti ti-circle-check"></i><span>Vehicle booked successfully!</span></div>
+        <div class="book-alert book-alert-error" id="v-error"><i class="ti ti-alert-circle"></i><span id="v-error-msg">Could not save booking.</span></div>
+
+        <!-- Vehicle calendar -->
+        <div class="sec-title" style="margin-bottom:8px;">Availability</div>
+        <div class="cal-card" style="margin-bottom:10px;">
+          <div class="cal-header">
+            <button class="cal-nav-btn" onclick="vCalPrev()"><i class="ti ti-chevron-left"></i></button>
+            <div class="cal-month-label" id="v-cal-label">June 2026</div>
+            <button class="cal-nav-btn" onclick="vCalNext()"><i class="ti ti-chevron-right"></i></button>
+          </div>
+          <div class="cal-body">
+            <div class="cal-grid" id="v-cal-grid">
+              <div class="cal-dow">S</div><div class="cal-dow">M</div><div class="cal-dow">T</div>
+              <div class="cal-dow">W</div><div class="cal-dow">T</div><div class="cal-dow">F</div><div class="cal-dow">S</div>
+            </div>
+            <div style="display:flex;gap:12px;margin-top:10px;flex-wrap:wrap;border-top:0.5px solid var(--border);padding-top:10px;">
+              <div class="legend-item"><div style="width:14px;height:14px;border-radius:50%;background:var(--green);"></div>Today</div>
+              <div class="legend-item"><div style="width:14px;height:14px;border-radius:4px;background:#FCEBEB;border:1px solid #F09595;"></div>Booked · tap to view</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- My vehicle bookings this month -->
+        <div class="sec-title" style="margin-bottom:8px;">My Bookings This Month</div>
+        <div id="v-my-bookings"><div class="book-empty">Loading...</div></div>
+
+      </div><!-- /vehicle panel -->
+
+      <!-- ── ROOM PANEL ── -->
+      <div id="book-panel-room" style="display:none;">
+
+        <div class="sec-title" style="margin-bottom:8px;">Select a Room</div>
+        <div id="room-picker-list" style="margin-bottom:12px;"></div>
+
+        <div class="card" style="margin-bottom:10px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <div style="width:40px;height:40px;border-radius:var(--r-md);background:var(--purple-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;" id="room-card-ic-wrap">
+              <i class="ti ti-presentation" style="font-size:20px;color:var(--purple-text);" id="room-card-ic"></i>
+            </div>
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--text);" id="room-card-title">1st Floor Event Hall (A)</div>
+              <div style="font-size:11px;color:var(--text2);" id="room-card-sub">With interactive board · Time-slot booking</div>
+            </div>
+          </div>
+          <button class="book-btn-primary" onclick="showRoomForm()">
+            <i class="ti ti-plus"></i> New Booking
+          </button>
+        </div>
+
+        <!-- Room booking form -->
+        <div class="book-inline-form" id="room-form" style="display:none;">
+          <div class="book-form-title">
+            <span><i class="ti ti-door"></i> &nbsp;Book <span id="room-form-room-name">Room</span></span>
+            <button class="book-close-btn" onclick="hideRoomForm()">&times;</button>
+          </div>
+          <div class="book-form-group">
+            <label class="book-form-label">Date</label>
+            <button type="button" class="date-picker-display placeholder" id="r-date-display" onclick="toggleDatePicker('r')">
+              <i class="ti ti-calendar"></i><span id="r-date-display-text">Tap to select date</span>
+            </button>
+            <input type="hidden" id="r-date">
+            <div class="book-field-error" id="r-date-error"><i class="ti ti-alert-circle"></i> Please select a date.</div>
+            <div class="date-picker-cal" id="r-date-cal"></div>
+            <div id="r-date-tags" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;"></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <div class="book-form-group">
+              <label class="book-form-label">From</label>
+              <input class="book-form-input" type="time" id="r-time-from" onchange="checkRoomClash()">
+              <div class="book-field-error" id="r-time-from-error"><i class="ti ti-alert-circle"></i> Required.</div>
+            </div>
+            <div class="book-form-group">
+              <label class="book-form-label">To</label>
+              <input class="book-form-input" type="time" id="r-time-to" onchange="checkRoomClash()">
+              <div class="book-field-error" id="r-time-to-error"><i class="ti ti-alert-circle"></i> Required.</div>
+            </div>
+          </div>
+          <div class="book-clash-alert" id="r-clash-alert" style="display:none;">
+            <i class="ti ti-alert-circle"></i>
+            <span id="r-clash-msg">Time slot already booked.</span>
+          </div>
+          <div class="book-form-group">
+            <label class="book-form-label">Purpose <span style="font-size:10px;color:var(--text3);font-weight:400;text-transform:none;">(optional)</span></label>
+            <input class="book-form-input" type="text" id="r-purpose" placeholder="e.g. Monthly team review">
+          </div>
+          <button class="book-btn-primary" id="r-submit-btn" onclick="submitRoomBooking()">
+            <span id="r-submit-label">Confirm Booking</span>
+            <div class="book-spinner" id="r-spinner"></div>
+          </button>
+          <button class="book-btn-ghost" onclick="hideRoomForm()">Cancel</button>
+        </div>
+
+        <!-- Success/error alerts -->
+        <div class="book-alert book-alert-success" id="r-success"><i class="ti ti-circle-check"></i><span>Room booked successfully!</span></div>
+        <div class="book-alert book-alert-error" id="r-error"><i class="ti ti-alert-circle"></i><span id="r-error-msg">Could not save booking.</span></div>
+
+        <!-- Room calendar -->
+        <div class="sec-title" style="margin-bottom:8px;" id="room-cal-section-title">Availability</div>
+        <div class="cal-card" style="margin-bottom:10px;">
+          <div class="cal-header">
+            <button class="cal-nav-btn" onclick="rCalPrev()"><i class="ti ti-chevron-left"></i></button>
+            <div class="cal-month-label" id="r-cal-label">June 2026</div>
+            <button class="cal-nav-btn" onclick="rCalNext()"><i class="ti ti-chevron-right"></i></button>
+          </div>
+          <div class="cal-body">
+            <div class="cal-grid" id="r-cal-grid">
+              <div class="cal-dow">S</div><div class="cal-dow">M</div><div class="cal-dow">T</div>
+              <div class="cal-dow">W</div><div class="cal-dow">T</div><div class="cal-dow">F</div><div class="cal-dow">S</div>
+            </div>
+            <div style="display:flex;gap:12px;margin-top:10px;flex-wrap:wrap;border-top:0.5px solid var(--border);padding-top:10px;">
+              <div class="legend-item"><div style="width:14px;height:14px;border-radius:50%;background:var(--green);"></div>Today</div>
+              <div class="legend-item"><div style="width:14px;height:14px;border-radius:4px;background:#FCEBEB;border:1px solid #F09595;"></div>Booked · tap to view</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- My room bookings this month -->
+        <div class="sec-title" style="margin-bottom:8px;">My Bookings This Month</div>
+        <div id="r-my-bookings"><div class="book-empty">Loading...</div></div>
+
+      </div><!-- /room panel -->
+
+    </div><!-- /book -->
+
+    <!-- ═══════════════════════════
          SETTINGS
     ═══════════════════════════ -->
     <div class="screen-section" id="screen-menu">
@@ -1406,6 +1793,17 @@ html, body {
   </div>
 </div>
 
+<!-- ── BOOKING DAY DETAIL MODAL ── -->
+<div id="book-day-modal" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,0.45);" onclick="closeDayModal()">
+  <div style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:var(--surface);border-radius:20px 20px 0 0;padding:20px 16px 32px;" onclick="event.stopPropagation()">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div id="book-day-modal-title" style="font-size:14px;font-weight:700;color:var(--text);"></div>
+      <button onclick="closeDayModal()" style="background:none;border:none;font-size:20px;color:var(--text2);cursor:pointer;line-height:1;">&times;</button>
+    </div>
+    <div id="book-day-modal-body"></div>
+  </div>
+</div>
+
 <!-- ── DELETE CONFIRMATION MODAL ── -->
 <div class="modal-overlay" id="delete-modal">
   <div class="modal">
@@ -1473,6 +1871,7 @@ html, body {
     if (name === 'invite')   loadInviteLog();
     if (name === 'event')    loadDbEvents();
     if (name === 'estatetrip') loadDbEstateTrips();
+    if (name === 'book')     initBookTab();
   }
   function switchTabByName(name) {
     var tabs = document.querySelectorAll('.tab-btn');
@@ -1487,6 +1886,7 @@ html, body {
     if (name === 'invite')   loadInviteLog();
     if (name === 'event')    loadDbEvents();
     if (name === 'estatetrip') loadDbEstateTrips();
+    if (name === 'book')     initBookTab();
   }
   function syncNav(name) {
     document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
@@ -2408,6 +2808,793 @@ html, body {
       throw new Error('Request failed: ' + res.status + (detail ? ' - ' + detail : ''));
     }
     try { return await res.json(); } catch(e) { return null; }
+  }
+
+  async function sbGet(table, filter) {
+    var hasOwnOrder = filter && /(^|&)order=/.test(filter);
+    var url = SURL + '/rest/v1/' + table + '?' + (hasOwnOrder ? '' : 'order=created_at.desc&') + (filter || '');
+    url = url.replace(/[?&]$/, '');
+    var res = await fetch(url, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
+    try { return await res.json(); } catch(e) { return []; }
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  BOOKING (Vehicle + Room: Event Hall A/B, Conference Room)
+  //  Native to Admin -- shares the same vehicle_bookings/room_bookings
+  //  tables the Staff app uses, so bookings from either app correctly
+  //  conflict with each other.
+  // ══════════════════════════════════════════════════════════════
+
+  var bookTabInited = false;
+  var vCalYear, vCalMonth, rCalYear, rCalMonth;
+
+  // ── Custom Date Picker (iOS-safe, no native input) ──
+  var dpState = {}; // prefix -> { year, month }
+
+  function toggleDatePicker(prefix) {
+    var cal = document.getElementById(prefix + '-date-cal');
+    if (!cal) return;
+    var isOpen = cal.classList.contains('open');
+    document.querySelectorAll('.date-picker-cal').forEach(function(el){ el.classList.remove('open'); });
+    if (!isOpen) {
+      var now = new Date();
+      if (!dpState[prefix]) dpState[prefix] = { year: now.getFullYear(), month: now.getMonth() };
+      renderDatePickerCal(prefix);
+      cal.classList.add('open');
+    }
+  }
+
+  function renderDatePickerCal(prefix) {
+    var cal   = document.getElementById(prefix + '-date-cal');
+    var state = dpState[prefix];
+    var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    var DAYS   = ['S','M','T','W','T','F','S'];
+    var today  = new Date(); today.setHours(0,0,0,0);
+    var selected = document.getElementById(prefix + '-date').value;
+    var firstDay    = new Date(state.year, state.month, 1).getDay();
+    var daysInMonth = new Date(state.year, state.month+1, 0).getDate();
+
+    var html = '<div class="dpc-header">'
+      + '<button class="dpc-nav" data-prefix="' + prefix + '" data-dir="-1">&#8249;</button>'
+      + '<span>' + MONTHS[state.month] + ' ' + state.year + '</span>'
+      + '<button class="dpc-nav" data-prefix="' + prefix + '" data-dir="1">&#8250;</button>'
+      + '</div><div class="dpc-grid">';
+    DAYS.forEach(function(d){ html += '<div class="dpc-dow">' + d + '</div>'; });
+    for (var i = 0; i < firstDay; i++) html += '<div class="dpc-day empty"></div>';
+    for (var d = 1; d <= daysInMonth; d++) {
+      var dateStr  = state.year + '-' + String(state.month+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+      var cellDate = new Date(state.year, state.month, d);
+      var isPast   = cellDate < today;
+      var isToday  = cellDate.getTime() === today.getTime();
+      var isSel    = dateStr === selected;
+      var cls = 'dpc-day';
+      if (isPast)       cls += ' past';
+      else if (isSel)   cls += ' selected';
+      else if (isToday) cls += ' today';
+      if (!isPast) {
+        html += '<div class="' + cls + '" data-prefix="' + prefix + '" data-date="' + dateStr + '">' + d + '</div>';
+      } else {
+        html += '<div class="' + cls + '">' + d + '</div>';
+      }
+    }
+    html += '</div>';
+    cal.innerHTML = html;
+
+    cal.querySelectorAll('.dpc-nav').forEach(function(btn) {
+      btn.onclick = function() {
+        var p = this.getAttribute('data-prefix');
+        var dir = parseInt(this.getAttribute('data-dir'));
+        dpState[p].month += dir;
+        if (dpState[p].month > 11) { dpState[p].month = 0;  dpState[p].year++; }
+        if (dpState[p].month < 0)  { dpState[p].month = 11; dpState[p].year--; }
+        renderDatePickerCal(p);
+      };
+    });
+    cal.querySelectorAll('.dpc-day[data-date]').forEach(function(cell) {
+      cell.onclick = function() {
+        var p  = this.getAttribute('data-prefix');
+        var ds = this.getAttribute('data-date');
+        selectPickerDate(p, ds);
+      };
+    });
+  }
+
+  function dpNav(prefix, dir) {
+    dpState[prefix].month += dir;
+    if (dpState[prefix].month > 11) { dpState[prefix].month = 0; dpState[prefix].year++; }
+    if (dpState[prefix].month < 0)  { dpState[prefix].month = 11; dpState[prefix].year--; }
+    renderDatePickerCal(prefix);
+  }
+
+  function selectPickerDate(prefix, dateStr) {
+    document.getElementById(prefix + '-date').value = dateStr;
+    var display = document.getElementById(prefix + '-date-display');
+    var displayText = document.getElementById(prefix + '-date-display-text');
+    if (display) display.classList.remove('placeholder');
+    if (displayText) displayText.textContent = fmtDate(dateStr);
+    document.getElementById(prefix + '-date-cal').classList.remove('open');
+    if (prefix === 'v') {
+      addVehicleDate();
+    } else {
+      addRoomDate();
+      loadRoomSlots();
+    }
+  }
+
+  function initBookTab() {
+    if (bookTabInited) return;
+    bookTabInited = true;
+    var now = new Date();
+    if (vCalYear === undefined) { vCalYear = now.getFullYear(); vCalMonth = now.getMonth(); }
+    if (rCalYear === undefined) { rCalYear = now.getFullYear(); rCalMonth = now.getMonth(); }
+    renderRoomPicker();
+    updateRoomCardInfo();
+    loadVehicleCalendar();
+    loadRoomCalendar();
+    loadMyVehicleBookings();
+    loadMyRoomBookings();
+  }
+
+  // ── PILL TOGGLE ──
+  function switchBookPill(type) {
+    var isVehicle = type === 'vehicle';
+    document.getElementById('book-panel-vehicle').style.display = isVehicle ? 'block' : 'none';
+    document.getElementById('book-panel-room').style.display    = isVehicle ? 'none'  : 'block';
+    var pV = document.getElementById('book-pill-vehicle');
+    var pR = document.getElementById('book-pill-room');
+    pV.style.background = isVehicle ? 'var(--green)' : 'transparent';
+    pV.style.color       = isVehicle ? '#fff' : 'var(--text2)';
+    pR.style.background  = isVehicle ? 'transparent' : 'var(--green)';
+    pR.style.color        = isVehicle ? 'var(--text2)' : '#fff';
+  }
+
+  // ════════════════════════════
+  //  VEHICLE
+  // ════════════════════════════
+
+  var vIsFullDay = true;
+  var vSelectedDates = [];
+
+  function showVehicleForm() {
+    vIsFullDay = true;
+    vSelectedDates = [];
+    document.getElementById('vehicle-form').style.display = 'block';
+    var today = new Date().toISOString().split('T')[0];
+    document.getElementById('v-date').min   = today;
+    document.getElementById('v-date').value = '';
+    var vdisp = document.getElementById('v-date-display'); if (vdisp) vdisp.classList.add('placeholder');
+    var vdispT = document.getElementById('v-date-display-text'); if (vdispT) vdispT.textContent = 'Tap to select date';
+    document.getElementById('v-date-tags').innerHTML = '';
+    document.getElementById('v-time-from').value = '';
+    document.getElementById('v-time-to').value   = '';
+    document.getElementById('v-purpose').value   = '';
+    document.getElementById('v-time-row').style.display = 'none';
+    document.getElementById('v-fullday-toggle').className = 'book-toggle on';
+    document.getElementById('v-clash-alert').style.display = 'none';
+    clearBookErrors(['v-date','v-time-from','v-time-to']);
+    hideBookAlert('v-success'); hideBookAlert('v-error');
+  }
+
+  function hideVehicleForm() {
+    document.getElementById('vehicle-form').style.display = 'none';
+    vSelectedDates = [];
+    document.getElementById('v-date-tags').innerHTML = '';
+    document.getElementById('v-date').style.display = 'block';
+    document.getElementById('v-clash-alert').style.display = 'none';
+    clearBookErrors(['v-date','v-time-from','v-time-to']);
+  }
+
+  function addVehicleDate() {
+    var d = document.getElementById('v-date').value;
+    if (!d) return;
+    vSelectedDates = [d];
+    renderVehicleDateTags();
+    document.getElementById('v-date').style.display = 'none';
+    document.getElementById('v-clash-alert').style.display = 'none';
+    checkVehicleClash();
+  }
+
+  function removeVehicleDate(d) {
+    vSelectedDates = [];
+    document.getElementById('v-date-tags').innerHTML = '';
+    document.getElementById('v-date').value = '';
+    var disp = document.getElementById('v-date-display');
+    var dispT = document.getElementById('v-date-display-text');
+    if (disp) disp.classList.add('placeholder');
+    if (dispT) dispT.textContent = 'Tap to select date';
+    checkVehicleClash();
+  }
+
+  function renderVehicleDateTags() {
+    var tags = document.getElementById('v-date-tags');
+    if (!tags) return;
+    tags.innerHTML = vSelectedDates.map(function(d) {
+      var label = new Date(d + 'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'});
+      return '<div style="display:flex;align-items:center;gap:6px;background:var(--green-bg);border:0.5px solid var(--green);border-radius:8px;padding:6px 12px;font-size:12px;color:var(--green-text);font-weight:500;">'
+        + '<i class="ti ti-calendar" style="font-size:13px;"></i>' + label
+        + '<span onclick="removeVehicleDate(\'' + d + '\')" style="cursor:pointer;font-size:15px;line-height:1;margin-left:4px;color:var(--green);" title="Change date">&times;</span></div>';
+    }).join('');
+  }
+
+  function toggleVehicleFullDay() {
+    vIsFullDay = !vIsFullDay;
+    document.getElementById('v-fullday-toggle').className = 'book-toggle' + (vIsFullDay ? ' on' : '');
+    document.getElementById('v-time-row').style.display = vIsFullDay ? 'none' : 'block';
+    document.getElementById('v-clash-alert').style.display = 'none';
+    checkVehicleClash();
+  }
+
+  var vehicleBookingsCache = [];
+  async function checkVehicleClash() {
+    document.getElementById('v-clash-alert').style.display = 'none';
+    if (!vSelectedDates.length) return;
+    var tfrom = document.getElementById('v-time-from').value;
+    var tto   = document.getElementById('v-time-to').value;
+    try {
+      for (var i = 0; i < vSelectedDates.length; i++) {
+        var url  = SURL + '/rest/v1/vehicle_bookings?booking_date=eq.' + vSelectedDates[i] + '&select=*';
+        var res  = await fetch(url, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
+        var data = await res.json() || [];
+        var clash = null;
+        if (vIsFullDay) {
+          clash = data[0];
+        } else {
+          if (!tfrom || !tto) continue;
+          clash = data.find(function(b) {
+            if (b.is_full_day) return true;
+            return to24h(tfrom) < b.time_to && to24h(tto) > b.time_from;
+          });
+        }
+        if (clash) {
+          var msg = 'Already booked by ' + clash.booked_by + ' on ' + fmtDate(vSelectedDates[i]);
+          msg += clash.is_full_day ? ' (Full day).' : ' (' + fmtTime(clash.time_from) + '–' + fmtTime(clash.time_to) + ').';
+          document.getElementById('v-clash-msg').textContent = msg;
+          document.getElementById('v-clash-alert').style.display = 'flex';
+          return;
+        }
+      }
+    } catch(e) {}
+  }
+
+  async function submitVehicleBooking() {
+    var tfrom   = document.getElementById('v-time-from').value;
+    var tto     = document.getElementById('v-time-to').value;
+    var purpose = document.getElementById('v-purpose').value.trim();
+    var valid   = true;
+    clearBookErrors(['v-date','v-time-from','v-time-to']);
+    if (!vSelectedDates.length) { showBookError('v-date'); valid = false; }
+    if (!vIsFullDay) {
+      if (!tfrom) { showBookError('v-time-from'); valid = false; }
+      if (!tto)   { showBookError('v-time-to');   valid = false; }
+      if (valid && tfrom >= tto) { showBookError('v-time-to'); return; }
+    }
+    if (!valid) return;
+    if (document.getElementById('v-clash-alert').style.display !== 'none') return;
+    setBookLoading('v-submit-btn','v-submit-label','v-spinner', true);
+    try {
+      var raw = sessionStorage.getItem('mjm_user');
+      var u   = raw ? JSON.parse(raw) : {};
+      var bookedBy = u.name || u.email || 'Unknown';
+      var posts = vSelectedDates.map(function(d) {
+        return fetch(SURL + '/rest/v1/vehicle_bookings', {
+          method: 'POST',
+          headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY,
+                     'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+          body: JSON.stringify({
+            booked_by: bookedBy, booking_date: d,
+            is_full_day: vIsFullDay,
+            time_from: vIsFullDay ? null : to24h(tfrom),
+            time_to:   vIsFullDay ? null : to24h(tto),
+            purpose:   purpose || null
+          })
+        });
+      });
+      var results = await Promise.all(posts);
+      setBookLoading('v-submit-btn','v-submit-label','v-spinner', false);
+      var allOk = results.every(function(r){ return r.ok || r.status === 201; });
+      if (allOk) {
+        hideVehicleForm(); showBookAlert('v-success');
+        loadVehicleCalendar(); loadMyVehicleBookings();
+      } else {
+        document.getElementById('v-error-msg').textContent = 'Could not save booking. Please try again.';
+        showBookAlert('v-error');
+      }
+    } catch(e) {
+      setBookLoading('v-submit-btn','v-submit-label','v-spinner', false);
+      document.getElementById('v-error-msg').textContent = 'Connection error. Try again.';
+      showBookAlert('v-error');
+    }
+  }
+
+  async function loadVehicleCalendar() {
+    var bookedDates = {};
+    try {
+      var data = await sbGet('vehicle_bookings', 'select=booking_date');
+      if (data && data.length) {
+        data.forEach(function(b) { bookedDates[b.booking_date] = true; });
+      }
+    } catch(e) {}
+    renderVehicleCalendar(bookedDates);
+  }
+
+  function renderVehicleCalendar(bookedDates) {
+    var grid  = document.getElementById('v-cal-grid');
+    var label = document.getElementById('v-cal-label');
+    if (!grid || !label) return;
+    var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    label.textContent = MONTHS[vCalMonth] + ' ' + vCalYear;
+    while (grid.children.length > 7) grid.removeChild(grid.lastChild);
+    var firstDay    = new Date(vCalYear, vCalMonth, 1).getDay();
+    var daysInMonth = new Date(vCalYear, vCalMonth + 1, 0).getDate();
+    var today = new Date();
+    for (var i = 0; i < firstDay; i++) { grid.appendChild(document.createElement('div')); }
+    for (var d = 1; d <= daysInMonth; d++) {
+      var cell = document.createElement('div');
+      cell.className = 'cal-day';
+      var dateStr  = vCalYear + '-' + String(vCalMonth+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+      var isToday  = (d === today.getDate() && vCalMonth === today.getMonth() && vCalYear === today.getFullYear());
+      var isBooked = bookedDates && bookedDates[dateStr];
+      if (isToday) cell.classList.add('today');
+      if (isBooked && !isToday) cell.classList.add('booked');
+      var spanStyle = (isToday && isBooked) ? ' style="outline:2.5px solid #E24B4A;outline-offset:2px;"' : '';
+      cell.innerHTML = '<span' + spanStyle + '>' + d + '</span>';
+      if (isBooked) {
+        cell.style.cursor = 'pointer';
+        (function(ds){ cell.onclick = function(){ showDayDetail('vehicle', ds); }; })(dateStr);
+      }
+      grid.appendChild(cell);
+    }
+  }
+
+  function vCalPrev() { vCalMonth--; if (vCalMonth < 0)  { vCalMonth = 11; vCalYear--; } loadVehicleCalendar(); loadMyVehicleBookings(); }
+  function vCalNext() { vCalMonth++; if (vCalMonth > 11) { vCalMonth = 0;  vCalYear++; } loadVehicleCalendar(); loadMyVehicleBookings(); }
+
+  async function cancelVehicleBookingFromModal(id) {
+    if (!confirm('Cancel your vehicle booking?')) return;
+    try {
+      var res = await fetch(SURL + '/rest/v1/vehicle_bookings?id=eq.' + id, {
+        method: 'DELETE',
+        headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY }
+      });
+      if (res.ok) { closeDayModal(); loadVehicleCalendar(); loadMyVehicleBookings(); }
+    } catch(e) {}
+  }
+
+  async function loadMyVehicleBookings() {
+    var el = document.getElementById('v-my-bookings');
+    if (!el) return;
+    var raw = sessionStorage.getItem('mjm_user');
+    var u   = raw ? JSON.parse(raw) : {};
+    var monthStart = vCalYear + '-' + String(vCalMonth+1).padStart(2,'0') + '-01';
+    var monthEnd   = new Date(vCalYear, vCalMonth+1, 0).toISOString().split('T')[0];
+    try {
+      var url  = SURL + '/rest/v1/vehicle_bookings?booking_date=gte.' + monthStart
+               + '&booking_date=lte.' + monthEnd
+               + '&order=booking_date.asc&limit=200';
+      var res  = await fetch(url, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
+      var data = await res.json();
+      if (!data || !data.length) { el.innerHTML = '<div class="book-empty">No bookings this month.</div>'; return; }
+      var mine = data.filter(function(b) {
+        if (!b.booked_by) return false;
+        var by = b.booked_by.toLowerCase();
+        var em = u.email ? u.email.toLowerCase() : '';
+        var nm = u.name  ? u.name.toLowerCase()  : '';
+        return (em && by === em) || (nm && (by === nm || by.indexOf(nm) === 0));
+      });
+      if (!mine.length) { el.innerHTML = '<div class="book-empty">No bookings this month.</div>'; return; }
+      el.innerHTML = mine.map(function(b) {
+        var d       = fmtDate(b.booking_date);
+        var timeStr = b.is_full_day ? 'Full Day' : fmtTime(b.time_from) + ' – ' + fmtTime(b.time_to);
+        return '<div class="book-item">'
+          + '<div class="book-item-header"><div class="book-item-name">' + d + '</div>'
+          + '<span class="badge b-blue">Mine</span></div>'
+          + '<div class="book-item-date"><i class="ti ti-clock" style="font-size:11px;"></i> ' + timeStr + '</div>'
+          + (b.purpose ? '<div class="book-item-purpose">' + escHtml(b.purpose) + '</div>' : '')
+          + '<button class="book-cancel-btn" onclick="cancelMyVehicleBooking(\'' + b.id + '\')">'
+          + '<i class="ti ti-trash"></i> Cancel this booking</button>'
+          + '</div>';
+      }).join('');
+    } catch(e) { el.innerHTML = '<div class="book-empty">Could not load bookings.</div>'; }
+  }
+
+  async function cancelMyVehicleBooking(id) {
+    if (!confirm('Cancel this vehicle booking?')) return;
+    try {
+      await fetch(SURL + '/rest/v1/vehicle_bookings?id=eq.' + id, {
+        method: 'DELETE',
+        headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY }
+      });
+      loadVehicleCalendar(); loadMyVehicleBookings();
+    } catch(e) {}
+  }
+
+  // ════════════════════════════
+  //  ROOM (Event Hall A / B / Conference Room)
+  // ════════════════════════════
+
+  var ROOMS = [
+    { name: '1st Floor Event Hall (A)', sub: 'With interactive board', icon: 'ti-presentation', bg: 'var(--purple-bg)', color: 'var(--purple-text)' },
+    { name: '1st Floor Event Hall (B)', sub: 'Standard event hall',    icon: 'ti-building',      bg: 'var(--blue-bg)',   color: 'var(--blue-text)' },
+    { name: '2nd Floor Conference Room', sub: 'Meetings · Small groups', icon: 'ti-door',        bg: 'var(--coral-bg)',  color: 'var(--coral-text)' }
+  ];
+  var rSelectedRoom = ROOMS[0].name;
+  var rSelectedDates = [];
+
+  function renderRoomPicker() {
+    var el = document.getElementById('room-picker-list');
+    if (!el) return;
+    el.innerHTML = ROOMS.map(function(r) {
+      var sel = r.name === rSelectedRoom;
+      return '<div class="room-picker-card' + (sel ? ' selected' : '') + '" onclick="selectRoom(\'' + escJsAttr(r.name) + '\')">'
+        + '<div style="width:36px;height:36px;border-radius:var(--r-md);background:' + r.bg + ';color:' + r.color + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:17px;"><i class="ti ' + r.icon + '"></i></div>'
+        + '<div style="flex:1;min-width:0;">'
+        + '<div style="font-size:13px;font-weight:600;color:var(--text);">' + escHtml(r.name) + '</div>'
+        + '<div style="font-size:10.5px;color:var(--text2);margin-top:1px;">' + escHtml(r.sub) + '</div>'
+        + '</div>'
+        + '<i class="ti ti-circle-check room-picker-card-check"></i>'
+        + '</div>';
+    }).join('');
+  }
+
+  function selectRoom(name) {
+    if (name === rSelectedRoom) return;
+    rSelectedRoom = name;
+    renderRoomPicker();
+    updateRoomCardInfo();
+    hideRoomForm();
+    loadRoomCalendar();
+    loadMyRoomBookings();
+  }
+
+  function updateRoomCardInfo() {
+    var room = ROOMS.find(function(r){ return r.name === rSelectedRoom; }) || ROOMS[0];
+    var icWrap = document.getElementById('room-card-ic-wrap');
+    var ic     = document.getElementById('room-card-ic');
+    var title  = document.getElementById('room-card-title');
+    var sub    = document.getElementById('room-card-sub');
+    var formName = document.getElementById('room-form-room-name');
+    var calTitle = document.getElementById('room-cal-section-title');
+    if (icWrap) icWrap.style.background = room.bg;
+    if (ic)     { ic.className = 'ti ' + room.icon; ic.style.color = room.color; }
+    if (title)  title.textContent = room.name;
+    if (sub)    sub.textContent = room.sub + ' · Time-slot booking';
+    if (formName) formName.textContent = room.name;
+    if (calTitle) calTitle.textContent = room.name + ' — Availability';
+  }
+
+  function showRoomForm() {
+    rSelectedDates = [];
+    document.getElementById('room-form').style.display = 'block';
+    var today = new Date().toISOString().split('T')[0];
+    document.getElementById('r-date').min   = today;
+    document.getElementById('r-date').value = '';
+    var rdisp = document.getElementById('r-date-display'); if (rdisp) rdisp.classList.add('placeholder');
+    var rdispT = document.getElementById('r-date-display-text'); if (rdispT) rdispT.textContent = 'Tap to select date';
+    document.getElementById('r-date-tags').innerHTML = '';
+    document.getElementById('r-time-from').value = '';
+    document.getElementById('r-time-to').value   = '';
+    document.getElementById('r-purpose').value   = '';
+    document.getElementById('r-clash-alert').style.display = 'none';
+    clearBookErrors(['r-date','r-time-from','r-time-to']);
+    hideBookAlert('r-success'); hideBookAlert('r-error');
+  }
+
+  function hideRoomForm() {
+    document.getElementById('room-form').style.display = 'none';
+    rSelectedDates = [];
+    document.getElementById('r-date-tags').innerHTML = '';
+    document.getElementById('r-date').style.display = 'block';
+    document.getElementById('r-time-from').value = '';
+    document.getElementById('r-time-to').value   = '';
+    document.getElementById('r-purpose').value   = '';
+    document.getElementById('r-clash-alert').style.display = 'none';
+    clearBookErrors(['r-date','r-time-from','r-time-to']);
+  }
+
+  function addRoomDate() {
+    var d = document.getElementById('r-date').value;
+    if (!d) return;
+    rSelectedDates = [d];
+    renderRoomDateTags();
+    document.getElementById('r-date').style.display = 'none';
+    document.getElementById('r-clash-alert').style.display = 'none';
+  }
+
+  function removeRoomDate(d) {
+    rSelectedDates = [];
+    document.getElementById('r-date-tags').innerHTML = '';
+    document.getElementById('r-date').value = '';
+    var disp = document.getElementById('r-date-display');
+    var dispT = document.getElementById('r-date-display-text');
+    if (disp) disp.classList.add('placeholder');
+    if (dispT) dispT.textContent = 'Tap to select date';
+    document.getElementById('r-clash-alert').style.display = 'none';
+  }
+
+  function renderRoomDateTags() {
+    var tags = document.getElementById('r-date-tags');
+    if (!tags) return;
+    tags.innerHTML = rSelectedDates.map(function(d) {
+      var label = new Date(d + 'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'});
+      return '<div style="display:flex;align-items:center;gap:6px;background:var(--green-bg);border:0.5px solid var(--green);border-radius:8px;padding:6px 12px;font-size:12px;color:var(--green-text);font-weight:500;">'
+        + '<i class="ti ti-calendar" style="font-size:13px;"></i>' + label
+        + '<span onclick="removeRoomDate(\'' + d + '\')" style="cursor:pointer;font-size:15px;line-height:1;margin-left:4px;color:var(--green);" title="Change date">&times;</span></div>';
+    }).join('');
+  }
+
+  var roomBookingsCache = [];
+  async function loadRoomSlots() {
+    var date = rSelectedDates.length ? rSelectedDates[0] : document.getElementById('r-date').value;
+    if (!date) return;
+    try {
+      var data = await sbGet('room_bookings', 'booking_date=eq.' + date + '&room_name=eq.' + encodeURIComponent(rSelectedRoom) + '&order=time_from.asc');
+      roomBookingsCache = data || [];
+    } catch(e) { roomBookingsCache = []; }
+    checkRoomClash();
+  }
+
+  function checkRoomClash() {
+    var from = document.getElementById('r-time-from').value;
+    var to   = document.getElementById('r-time-to').value;
+    document.getElementById('r-clash-alert').style.display = 'none';
+    if (!from || !to || !roomBookingsCache.length) return;
+    var clash = roomBookingsCache.find(function(b) {
+      return to24h(from) < b.time_to && to24h(to) > b.time_from;
+    });
+    if (clash) {
+      document.getElementById('r-clash-msg').textContent =
+        'Already booked by ' + clash.booked_by + ' (' + fmtTime(clash.time_from) + '–' + fmtTime(clash.time_to) + ').';
+      document.getElementById('r-clash-alert').style.display = 'flex';
+    }
+  }
+
+  async function submitRoomBooking() {
+    var tfrom   = document.getElementById('r-time-from').value;
+    var tto     = document.getElementById('r-time-to').value;
+    var purpose = document.getElementById('r-purpose').value.trim();
+    var valid   = true;
+    clearBookErrors(['r-date','r-time-from','r-time-to']);
+    if (!rSelectedDates.length) { showBookError('r-date'); valid = false; }
+    if (!tfrom) { showBookError('r-time-from'); valid = false; }
+    if (!tto)   { showBookError('r-time-to');   valid = false; }
+    if (!valid) return;
+    if (tfrom >= tto) { showBookError('r-time-to'); return; }
+    if (document.getElementById('r-clash-alert').style.display !== 'none') return;
+    setBookLoading('r-submit-btn','r-submit-label','r-spinner', true);
+    try {
+      var raw = sessionStorage.getItem('mjm_user');
+      var u   = raw ? JSON.parse(raw) : {};
+      var bookedBy = u.name || u.email || 'Unknown';
+      var posts = rSelectedDates.map(function(d) {
+        return fetch(SURL + '/rest/v1/room_bookings', {
+          method: 'POST',
+          headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY,
+                     'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+          body: JSON.stringify({
+            booked_by: bookedBy, booking_date: d, room_name: rSelectedRoom,
+            time_from: to24h(tfrom), time_to: to24h(tto), purpose: purpose || null
+          })
+        });
+      });
+      var results = await Promise.all(posts);
+      setBookLoading('r-submit-btn','r-submit-label','r-spinner', false);
+      var allOk = results.every(function(r){ return r.ok || r.status === 201; });
+      if (allOk) {
+        hideRoomForm(); showBookAlert('r-success');
+        loadRoomCalendar(); loadMyRoomBookings();
+      } else {
+        document.getElementById('r-error-msg').textContent = 'Could not save booking. Please try again.';
+        showBookAlert('r-error');
+      }
+    } catch(e) {
+      setBookLoading('r-submit-btn','r-submit-label','r-spinner', false);
+      document.getElementById('r-error-msg').textContent = 'Connection error. Try again.';
+      showBookAlert('r-error');
+    }
+  }
+
+  async function loadRoomCalendar() {
+    var bookedDates = {};
+    try {
+      var data = await sbGet('room_bookings', 'room_name=eq.' + encodeURIComponent(rSelectedRoom) + '&select=booking_date');
+      if (data && data.length) {
+        data.forEach(function(b) { bookedDates[b.booking_date] = true; });
+      }
+    } catch(e) {}
+    renderRoomCalendar(bookedDates);
+  }
+
+  function renderRoomCalendar(bookedDates) {
+    var grid  = document.getElementById('r-cal-grid');
+    var label = document.getElementById('r-cal-label');
+    if (!grid || !label) return;
+    var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    label.textContent = MONTHS[rCalMonth] + ' ' + rCalYear;
+    while (grid.children.length > 7) grid.removeChild(grid.lastChild);
+    var firstDay    = new Date(rCalYear, rCalMonth, 1).getDay();
+    var daysInMonth = new Date(rCalYear, rCalMonth + 1, 0).getDate();
+    var today = new Date();
+    for (var i = 0; i < firstDay; i++) { grid.appendChild(document.createElement('div')); }
+    for (var d = 1; d <= daysInMonth; d++) {
+      var cell = document.createElement('div');
+      cell.className = 'cal-day';
+      var dateStr  = rCalYear + '-' + String(rCalMonth+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+      var isToday  = (d === today.getDate() && rCalMonth === today.getMonth() && rCalYear === today.getFullYear());
+      var isBooked = bookedDates && bookedDates[dateStr];
+      if (isToday)  cell.classList.add('today');
+      if (isBooked) {
+        cell.classList.add('booked');
+        cell.style.cursor = 'pointer';
+        (function(ds){ cell.onclick = function(){ showDayDetail('room', ds); }; })(dateStr);
+      }
+      cell.innerHTML = '<span>' + d + '</span>';
+      grid.appendChild(cell);
+    }
+  }
+
+  function rCalPrev() { rCalMonth--; if (rCalMonth < 0)  { rCalMonth = 11; rCalYear--; } loadRoomCalendar(); loadMyRoomBookings(); }
+  function rCalNext() { rCalMonth++; if (rCalMonth > 11) { rCalMonth = 0;  rCalYear++; } loadRoomCalendar(); loadMyRoomBookings(); }
+
+  async function cancelRoomBooking(id) {
+    if (!confirm('Cancel your room booking?')) return;
+    try {
+      var res = await fetch(SURL + '/rest/v1/room_bookings?id=eq.' + id, {
+        method: 'DELETE',
+        headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY }
+      });
+      if (res.ok) { closeDayModal(); loadRoomCalendar(); loadMyRoomBookings(); }
+    } catch(e) {}
+  }
+
+  async function loadMyRoomBookings() {
+    var el = document.getElementById('r-my-bookings');
+    if (!el) return;
+    var raw = sessionStorage.getItem('mjm_user');
+    var u   = raw ? JSON.parse(raw) : {};
+    var monthStart = rCalYear + '-' + String(rCalMonth+1).padStart(2,'0') + '-01';
+    var monthEnd   = new Date(rCalYear, rCalMonth+1, 0).toISOString().split('T')[0];
+    try {
+      var url  = SURL + '/rest/v1/room_bookings?booking_date=gte.' + monthStart
+               + '&booking_date=lte.' + monthEnd
+               + '&room_name=eq.' + encodeURIComponent(rSelectedRoom)
+               + '&order=booking_date.asc,time_from.asc&limit=200';
+      var res  = await fetch(url, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
+      var data = await res.json();
+      if (!data || !data.length) { el.innerHTML = '<div class="book-empty">No room bookings this month.</div>'; return; }
+      var mine = data.filter(function(b) {
+        if (!b.booked_by) return false;
+        var by = b.booked_by.toLowerCase();
+        var em = u.email ? u.email.toLowerCase() : '';
+        var nm = u.name  ? u.name.toLowerCase()  : '';
+        return (em && by === em) || (nm && (by === nm || by.indexOf(nm) === 0));
+      });
+      if (!mine.length) { el.innerHTML = '<div class="book-empty">No room bookings this month.</div>'; return; }
+      el.innerHTML = mine.map(function(b) {
+        var d = fmtDate(b.booking_date);
+        return '<div class="book-item">'
+          + '<div class="book-item-header"><div class="book-item-name">' + d + '</div>'
+          + '<span class="badge b-blue">Mine</span></div>'
+          + '<div class="book-item-date"><i class="ti ti-clock" style="font-size:11px;"></i> '
+          + fmtTime(b.time_from) + ' – ' + fmtTime(b.time_to) + '</div>'
+          + (b.purpose ? '<div class="book-item-purpose">' + escHtml(b.purpose) + '</div>' : '')
+          + '<button class="book-cancel-btn" onclick="cancelMyRoomBooking(\'' + b.id + '\')">'
+          + '<i class="ti ti-trash"></i> Cancel this booking</button>'
+          + '</div>';
+      }).join('');
+    } catch(e) { el.innerHTML = '<div class="book-empty">Could not load bookings.</div>'; }
+  }
+
+  async function cancelMyRoomBooking(id) {
+    if (!confirm('Cancel this room booking?')) return;
+    try {
+      await fetch(SURL + '/rest/v1/room_bookings?id=eq.' + id, {
+        method: 'DELETE',
+        headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY }
+      });
+      loadRoomCalendar(); loadMyRoomBookings();
+    } catch(e) {}
+  }
+
+  // ════════════════════════════
+  //  DAY DETAIL MODAL
+  // ════════════════════════════
+
+  async function showDayDetail(type, dateStr) {
+    var modal = document.getElementById('book-day-modal');
+    var title = document.getElementById('book-day-modal-title');
+    var body  = document.getElementById('book-day-modal-body');
+    var icon  = type === 'vehicle' ? '🚗' : '🏢';
+    title.textContent = icon + ' ' + fmtDate(dateStr);
+    body.innerHTML = '<div class="book-empty">Loading...</div>';
+    modal.style.display = 'block';
+    try {
+      var raw2 = sessionStorage.getItem('mjm_user');
+      var u2   = raw2 ? JSON.parse(raw2) : {};
+      var data = type === 'vehicle'
+        ? await sbGet('vehicle_bookings', 'booking_date=eq.' + dateStr + '&order=time_from.asc')
+        : await sbGet('room_bookings',    'booking_date=eq.' + dateStr + '&room_name=eq.' + encodeURIComponent(rSelectedRoom) + '&order=time_from.asc');
+      if (!data || data.length === 0) {
+        body.innerHTML = '<div class="book-empty">No bookings found.</div>'; return;
+      }
+      body.innerHTML = data.map(function(b) {
+        var byLow  = (b.booked_by || '').toLowerCase();
+        var emLow  = u2.email ? u2.email.toLowerCase() : '';
+        var nmLow  = u2.name  ? u2.name.toLowerCase()  : '';
+        var isMine = (emLow && byLow === emLow) ||
+                     (nmLow && (byLow === nmLow || byLow.indexOf(nmLow) === 0));
+        var timeStr  = type === 'vehicle'
+          ? (b.is_full_day ? 'Full Day' : fmtTime(b.time_from) + ' – ' + fmtTime(b.time_to))
+          : fmtTime(b.time_from) + ' – ' + fmtTime(b.time_to);
+        var cancelFn = type === 'vehicle'
+          ? 'cancelVehicleBookingFromModal(\'' + b.id + '\')'
+          : 'cancelRoomBooking(\'' + b.id + '\')';
+        return '<div class="book-item" style="margin-bottom:8px;">'
+          + '<div class="book-item-header"><div class="book-item-name">' + escHtml(b.booked_by) + '</div>'
+          + '<span class="badge ' + (isMine ? 'b-blue' : 'b-amber') + '">' + (isMine ? 'Mine' : 'Booked') + '</span></div>'
+          + '<div class="book-item-date"><i class="ti ti-clock" style="font-size:11px;"></i> ' + timeStr + '</div>'
+          + (b.purpose ? '<div class="book-item-purpose">' + escHtml(b.purpose) + '</div>' : '')
+          + (isMine ? '<button class="book-cancel-btn" onclick="' + cancelFn + '"><i class="ti ti-trash"></i> Cancel my booking</button>' : '')
+          + '</div>';
+      }).join('');
+    } catch(e) { body.innerHTML = '<div class="book-empty">Could not load bookings.</div>'; }
+  }
+
+  function closeDayModal() {
+    document.getElementById('book-day-modal').style.display = 'none';
+  }
+
+  // ════════════════════════════
+  //  BOOKING HELPERS
+  // ════════════════════════════
+
+  function to24h(str) {
+    if (!str) return null;
+    str = str.trim();
+    var ampm = str.match(/([AP]M)$/i);
+    if (!ampm) return str.substring(0, 5);
+    var parts = str.replace(/\s*[AP]M$/i, '').split(':');
+    var h = parseInt(parts[0]);
+    var m = parts[1] ? parts[1].substring(0, 2) : '00';
+    if (ampm[1].toUpperCase() === 'PM' && h !== 12) h += 12;
+    if (ampm[1].toUpperCase() === 'AM' && h === 12) h = 0;
+    return String(h).padStart(2, '0') + ':' + m;
+  }
+
+  function fmtDate(str) {
+    if (!str) return '';
+    return new Date(str + 'T00:00:00').toLocaleDateString('en-MY', { day:'numeric', month:'short', year:'numeric' });
+  }
+
+  function fmtTime(str) {
+    if (!str) return '';
+    var parts = str.split(':');
+    var h = parseInt(parts[0]); var m = parts[1];
+    var ap = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return h + ':' + m + ' ' + ap;
+  }
+
+  function showBookAlert(id) {
+    var el = document.getElementById(id);
+    if (el) { el.classList.add('visible'); setTimeout(function(){ el.classList.remove('visible'); }, 4000); }
+  }
+  function hideBookAlert(id) {
+    var el = document.getElementById(id); if (el) el.classList.remove('visible');
+  }
+  function showBookError(fieldId) {
+    var input = document.getElementById(fieldId); if (input) input.classList.add('error');
+    var err   = document.getElementById(fieldId + '-error'); if (err) err.classList.add('visible');
+  }
+  function clearBookErrors(ids) {
+    ids.forEach(function(id) {
+      var input = document.getElementById(id); if (input) input.classList.remove('error');
+      var err   = document.getElementById(id + '-error'); if (err) err.classList.remove('visible');
+    });
+  }
+  function setBookLoading(btnId, labelId, spinnerId, on) {
+    var btn = document.getElementById(btnId); if (btn) btn.disabled = on;
+    var lbl = document.getElementById(labelId); if (lbl) lbl.style.display = on ? 'none' : 'inline';
+    var spn = document.getElementById(spinnerId); if (spn) spn.style.display = on ? 'block' : 'none';
   }
 
   // ── LOAD ANNOUNCEMENTS FROM SUPABASE ──
