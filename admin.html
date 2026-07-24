@@ -4160,7 +4160,7 @@ html, body {
     if (data) { data.forEach(function(a){ if (new Date(a.created_at) >= cut2) recent.push(a); }); }
     if (recent.length) {
       bannerText.innerHTML = recent.map(function(a, i){
-        var divider = i > 0 ? '<div style="border-top:1px solid rgba(133,79,11,0.2);margin:10px 0;"></div>' : '';
+        var divider = i > 0 ? '<div style="border-top:1.5px solid #E3B94D;margin:12px 0;"></div>' : '';
         return divider
           + '<div class="home-alert-title">' + escHtml(a.title) + '</div>'
           + '<div class="home-alert-body">' + escHtml(a.body) + '</div>'
