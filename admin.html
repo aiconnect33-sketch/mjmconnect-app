@@ -881,12 +881,8 @@ html, body {
       <div class="greet-name"><span id="greet-name-text">Super Admin</span> 👋</div>
       <div class="greet-sub">Here's what's happening today.</div>
 
-      <!-- Urgent banner — shows ALL urgent announcements -->
-      <div id="admin-urgent-banner" class="home-alert-banner" style="display:none;cursor:pointer;" onclick="switchTabByName('announce')">
-        <div class="home-alert-icon-box"><i class="ti ti-speakerphone"></i></div>
-        <div id="admin-urgent-text" class="home-alert-text"></div>
-        <i class="ti ti-chevron-right home-alert-chev"></i>
-      </div>
+      <!-- Urgent banner — shows ALL urgent announcements, one card each -->
+      <div id="admin-urgent-banner" style="display:none;"></div>
 
       <!-- Calendar -->
       <div style="background:var(--surface);border-radius:var(--r-xl);border:0.5px solid var(--border);overflow:hidden;margin-bottom:10px;">
@@ -4153,20 +4149,25 @@ html, body {
   // type) posted in the last 7 days.
   function updateAnnouncementBanner(data) {
     var banner = document.getElementById('admin-urgent-banner');
-    var bannerText = document.getElementById('admin-urgent-text');
-    if (!banner || !bannerText) return;
+    if (!banner) return;
     var cut2 = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
     var recent = [];
     if (data) { data.forEach(function(a){ if (new Date(a.created_at) >= cut2) recent.push(a); }); }
     if (recent.length) {
-      bannerText.innerHTML = recent.map(function(a, i){
-        var divider = i > 0 ? '<div style="border-top:1.5px solid #E3B94D;margin:12px 0;"></div>' : '';
-        return divider
+      banner.innerHTML = recent.map(function(a){
+        var d = new Date(a.created_at).toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'});
+        var t = new Date(a.created_at).toLocaleTimeString('en-MY',{hour:'numeric',minute:'2-digit',hour12:true});
+        return '<div class="home-alert-banner" style="cursor:pointer;" onclick="switchTabByName(\'announce\')">'
+          + '<div class="home-alert-icon-box"><i class="ti ti-speakerphone"></i></div>'
+          + '<div class="home-alert-text">'
           + '<div class="home-alert-title">' + escHtml(a.title) + '</div>'
           + '<div class="home-alert-body">' + escHtml(a.body) + '</div>'
-          + '<div style="font-size:10px;color:var(--text3);margin-top:3px;">' + new Date(a.created_at).toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'}) + ' · ' + new Date(a.created_at).toLocaleTimeString('en-MY',{hour:'numeric',minute:'2-digit',hour12:true}) + '</div>';
+          + '<div style="font-size:10px;color:var(--text3);margin-top:3px;">' + d + ' · ' + t + '</div>'
+          + '</div>'
+          + '<i class="ti ti-chevron-right home-alert-chev"></i>'
+          + '</div>';
       }).join('');
-      banner.style.display = 'flex';
+      banner.style.display = 'block';
     } else {
       banner.style.display = 'none';
     }
