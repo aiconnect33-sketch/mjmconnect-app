@@ -4159,11 +4159,13 @@ html, body {
     var recent = [];
     if (data) { data.forEach(function(a){ if (new Date(a.created_at) >= cut2) recent.push(a); }); }
     if (recent.length) {
-      bannerText.innerHTML = recent.map(function(a){
-        return '<div class="home-alert-title">' + escHtml(a.title) + '</div>'
+      bannerText.innerHTML = recent.map(function(a, i){
+        var divider = i > 0 ? '<div style="border-top:1px solid rgba(133,79,11,0.2);margin:10px 0;"></div>' : '';
+        return divider
+          + '<div class="home-alert-title">' + escHtml(a.title) + '</div>'
           + '<div class="home-alert-body">' + escHtml(a.body) + '</div>'
           + '<div style="font-size:10px;color:var(--text3);margin-top:3px;">' + new Date(a.created_at).toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'}) + ' · ' + new Date(a.created_at).toLocaleTimeString('en-MY',{hour:'numeric',minute:'2-digit',hour12:true}) + '</div>';
-      }).join('<div style="height:10px;"></div>');
+      }).join('');
       banner.style.display = 'flex';
     } else {
       banner.style.display = 'none';
