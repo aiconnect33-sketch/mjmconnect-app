@@ -523,6 +523,51 @@
     padding-top: 8px; border-top: 0.5px solid var(--border); width: 100%;
   }
   .book-cancel-btn i { font-size: 13px; }
+
+  /* ── FAULTY COMPLAIN TAB ── */
+  .fc-readonly-chip {
+    display: flex; align-items: center; gap: 7px; background: var(--green-bg); color: var(--green-text);
+    border-radius: var(--radius-md); padding: 9px 12px; font-size: 13px; font-weight: 600;
+  }
+  .fc-readonly-chip .fc-hint { font-size: 10.5px; font-weight: 500; opacity: .75; margin-left: auto; }
+  .fc-select {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md);
+    padding: 10px 12px; font-size: 13px; color: var(--text-primary); display: flex; justify-content: space-between;
+    align-items: center; cursor: pointer; gap: 8px;
+  }
+  .fc-select.placeholder { color: var(--text-light); }
+  .fc-select .fc-chev { color: var(--text-light); font-size: 11px; transition: transform 0.15s ease; flex-shrink: 0; }
+  .fc-select.open .fc-chev { transform: rotate(180deg); }
+  .fc-select.error { border-color: var(--red-text); }
+  .fc-option-list {
+    margin-top: 6px; border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden;
+    max-height: 220px; overflow-y: auto; background: var(--surface);
+  }
+  .fc-option-row { padding: 10px 12px; font-size: 12.5px; color: var(--text-primary); border-bottom: 0.5px solid var(--border); cursor: pointer; }
+  .fc-option-row:last-child { border-bottom: none; }
+  .fc-option-row.selected { background: var(--coral-bg); color: var(--coral-text); font-weight: 600; }
+  .fc-urgency-row { display: flex; gap: 7px; }
+  .fc-urgency-pill {
+    flex: 1; text-align: center; padding: 9px 4px; border-radius: var(--radius-md); font-size: 11.5px;
+    font-weight: 700; border: 1.5px solid var(--border); color: var(--text-secondary); cursor: pointer; background: var(--surface);
+  }
+  .fc-urgency-pill[data-u="immediate"].active { background: var(--red-bg); border-color: var(--red-text); color: var(--red-text); }
+  .fc-urgency-pill[data-u="urgent"].active { background: var(--amber-bg); border-color: var(--amber-text); color: var(--amber-text); }
+  .fc-urgency-pill[data-u="non-urgent"].active { background: var(--green-bg); border-color: var(--green-text); color: var(--green-text); }
+  .fc-photo-attach { display: flex; gap: 8px; flex-wrap: wrap; }
+  .fc-btn-attach {
+    display: flex; align-items: center; gap: 7px; background: var(--bg); border: 1px dashed var(--text-light);
+    border-radius: var(--radius-md); padding: 9px 13px; font-size: 12px; font-weight: 600; color: var(--text-secondary); cursor: pointer;
+  }
+  .fc-btn-attach:hover { border-color: var(--coral-text); color: var(--coral-text); }
+  .fc-photo-thumb {
+    display: flex; align-items: center; gap: 8px; background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius-md); padding: 6px 10px; font-size: 11.5px; color: var(--text-secondary);
+  }
+  .fc-photo-swatch { width: 26px; height: 26px; border-radius: 6px; background: var(--coral-bg); flex-shrink: 0; }
+  .fc-photo-thumb .fc-rm { cursor: pointer; color: var(--text-light); font-weight: 700; margin-left: 2px; }
+  .fc-photo-thumb .fc-rm:hover { color: var(--red-text); }
+
   /* Timeline */
   .timeline-slot {
     display: flex; align-items: center; gap: 8px;
@@ -680,7 +725,7 @@
           <div class="qa-ic" style="background:var(--booking-bg);color:var(--booking-text);"><i class="ti ti-calendar-event"></i></div>
           <div class="qa-label">Booking</div>
         </div>
-        <div class="qa-item" id="qa-faulty-complain" onclick="window.open('https://docs.google.com/forms/d/e/1FAIpQLSdVrxv1-pLFGcUR4WSo2RVbfltNto-AmXm4HHiK-A8EtIjSiw/viewform', '_blank')">
+        <div class="qa-item" id="qa-faulty-complain" onclick="switchNav('faulty');initFaultyTab()">
           <div class="qa-ic" style="background:var(--coral-bg);color:var(--coral-text);"><i class="ti ti-clipboard-x"></i></div>
           <div class="qa-label">Faulty Complain</div>
         </div>
@@ -1074,6 +1119,79 @@
 
     </div><!-- /book -->
 
+    <!-- ── FAULTY COMPLAIN ── -->
+    <div class="screen-section" id="screen-faulty">
+
+      <div class="section-row"><div class="section-title">Faulty Complain</div></div>
+
+      <div class="card" style="margin-bottom:10px;">
+
+        <div id="fc-toast-holder"></div>
+
+        <div class="book-form-group">
+          <label class="book-form-label">Staff Name</label>
+          <div class="fc-readonly-chip"><i class="ti ti-user"></i> <span id="fc-staff-name">—</span><span class="fc-hint">auto-filled</span></div>
+        </div>
+
+        <div class="book-form-group">
+          <label class="book-form-label">Location</label>
+          <div class="fc-select placeholder" id="fc-loc-field" onclick="toggleFcList('loc')">
+            <span id="fc-loc-label">Tap to select location</span><i class="ti ti-chevron-down fc-chev"></i>
+          </div>
+          <div class="fc-option-list" id="fc-loc-list" style="display:none;"></div>
+          <div class="book-field-error" id="fc-loc-err"><i class="ti ti-alert-circle"></i>Please select a location.</div>
+        </div>
+
+        <div class="book-form-group">
+          <label class="book-form-label">Item</label>
+          <div class="fc-select placeholder" id="fc-item-field" onclick="toggleFcList('item')">
+            <span id="fc-item-label">Tap to select item</span><i class="ti ti-chevron-down fc-chev"></i>
+          </div>
+          <div class="fc-option-list" id="fc-item-list" style="display:none;"></div>
+          <input class="book-form-input" type="text" id="fc-item-other" placeholder="Please state the item" style="display:none;margin-top:8px;">
+          <div class="book-field-error" id="fc-item-err"><i class="ti ti-alert-circle"></i>Please select an item.</div>
+        </div>
+
+        <div class="book-form-group">
+          <label class="book-form-label">Please describe the issue you faced</label>
+          <textarea class="book-form-input" id="fc-desc" rows="2" placeholder="e.g. Paper keeps jamming on every 3rd print"></textarea>
+          <div class="book-field-error" id="fc-desc-err"><i class="ti ti-alert-circle"></i>Please describe the issue.</div>
+        </div>
+
+        <div class="book-form-group">
+          <label class="book-form-label">Photo / Video Attachment</label>
+          <div class="fc-photo-attach" id="fc-photo-area">
+            <label class="fc-btn-attach" for="fc-photo-camera"><i class="ti ti-camera"></i> Take Photo</label>
+            <input type="file" id="fc-photo-camera" accept="image/*" capture="environment" style="display:none;">
+            <label class="fc-btn-attach" for="fc-photo-file"><i class="ti ti-paperclip"></i> Add File</label>
+            <input type="file" id="fc-photo-file" accept="image/*,video/*" style="display:none;">
+          </div>
+        </div>
+
+        <div class="book-form-group">
+          <label class="book-form-label">Urgency (Expected Action Time)</label>
+          <div class="fc-urgency-row">
+            <div class="fc-urgency-pill" data-u="immediate" onclick="setFcUrgency('immediate')">Immediate<br>(ASAP)</div>
+            <div class="fc-urgency-pill" data-u="urgent" onclick="setFcUrgency('urgent')">Urgent<br>(Today)</div>
+            <div class="fc-urgency-pill" data-u="non-urgent" onclick="setFcUrgency('non-urgent')">Non-urgent<br>(1–2 days)</div>
+          </div>
+          <div class="book-field-error" id="fc-urgency-err"><i class="ti ti-alert-circle"></i>Please choose an urgency.</div>
+        </div>
+
+        <button class="book-btn-primary" id="fc-submit-btn" onclick="submitFaultyComplaint()">
+          <span id="fc-submit-label"><i class="ti ti-send"></i> Submit Complaint</span>
+          <span class="book-spinner" id="fc-spinner"></span>
+        </button>
+        <div class="book-alert book-alert-success" id="fc-success"><i class="ti ti-circle-check"></i><span>Complaint submitted — Admin has been notified.</span></div>
+        <div class="book-alert book-alert-error" id="fc-error"><i class="ti ti-alert-circle"></i><span id="fc-error-msg">Could not submit complaint.</span></div>
+
+      </div>
+
+      <div class="section-row"><div class="section-title">My Complaints</div></div>
+      <div id="fc-my-complaints"><div class="book-empty">Loading...</div></div>
+
+    </div><!-- /faulty -->
+
     <!-- ── MENU ── -->
     <div class="screen-section" id="screen-menu">
       <div class="menu-header">
@@ -1146,6 +1264,7 @@
 <script src="js/tab-duty.js"></script>
 <script src="js/tab-estatetrip.js"></script>
 <script src="js/tab-book.js"></script>
+<script src="js/tab-faulty.js"></script>
 
 <!-- Day detail modal -->
 <div id="staff-day-modal" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,0.45);" onclick="closeStaffDayModal()">
