@@ -444,6 +444,57 @@ html, body {
 }
 .book-cancel-btn i { font-size: 13px; }
 
+/* ── FAULTY COMPLAIN TAB ── */
+.fc-readonly-chip {
+  display: flex; align-items: center; gap: 7px; background: var(--green-bg); color: var(--green-text);
+  border-radius: var(--r-md); padding: 9px 12px; font-size: 13px; font-weight: 600;
+}
+.fc-readonly-chip .fc-hint { font-size: 10.5px; font-weight: 500; opacity: .75; margin-left: auto; }
+.fc-select {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md);
+  padding: 10px 12px; font-size: 13px; color: var(--text); display: flex; justify-content: space-between;
+  align-items: center; cursor: pointer; gap: 8px;
+}
+.fc-select.placeholder { color: var(--text3); }
+.fc-select .fc-chev { color: var(--text3); font-size: 11px; transition: transform 0.15s ease; flex-shrink: 0; }
+.fc-select.open .fc-chev { transform: rotate(180deg); }
+.fc-select.error { border-color: var(--red-text); }
+.fc-option-list {
+  margin-top: 6px; border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden;
+  max-height: 220px; overflow-y: auto; background: var(--surface);
+}
+.fc-option-row { padding: 10px 12px; font-size: 12.5px; color: var(--text); border-bottom: 0.5px solid var(--border); cursor: pointer; }
+.fc-option-row:last-child { border-bottom: none; }
+.fc-option-row.selected { background: var(--coral-bg); color: var(--coral-text); font-weight: 600; }
+.fc-urgency-row { display: flex; gap: 7px; }
+.fc-urgency-pill {
+  flex: 1; text-align: center; padding: 9px 4px; border-radius: var(--r-md); font-size: 11.5px;
+  font-weight: 700; border: 1.5px solid var(--border); color: var(--text2); cursor: pointer; background: var(--surface);
+}
+.fc-urgency-pill[data-u="immediate"].active { background: var(--red-bg); border-color: var(--red-text); color: var(--red-text); }
+.fc-urgency-pill[data-u="urgent"].active { background: var(--amber-bg); border-color: var(--amber-text); color: var(--amber-text); }
+.fc-urgency-pill[data-u="non-urgent"].active { background: var(--green-bg); border-color: var(--green-text); color: var(--green-text); }
+.fc-photo-attach { display: flex; gap: 8px; flex-wrap: wrap; }
+.fc-btn-attach {
+  display: flex; align-items: center; gap: 7px; background: var(--bg); border: 1px dashed var(--text3);
+  border-radius: var(--r-md); padding: 9px 13px; font-size: 12px; font-weight: 600; color: var(--text2); cursor: pointer;
+}
+.fc-btn-attach:hover { border-color: var(--coral-text); color: var(--coral-text); }
+.fc-photo-thumb {
+  display: flex; align-items: center; gap: 8px; background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--r-md); padding: 6px 10px; font-size: 11.5px; color: var(--text2);
+}
+.fc-photo-swatch { width: 26px; height: 26px; border-radius: 6px; background: var(--coral-bg); flex-shrink: 0; }
+.fc-photo-thumb .fc-rm { cursor: pointer; color: var(--text3); font-weight: 700; margin-left: 2px; }
+.fc-photo-thumb .fc-rm:hover { color: var(--red-text); }
+.fc-table-wrap { overflow-x: auto; }
+.fc-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 640px; }
+.fc-table th { text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--text2); padding: 10px 12px; border-bottom: 2px solid var(--border); }
+.fc-table td { padding: 11px 12px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
+.fc-table tr.row-immediate td { background: var(--red-bg); }
+.fc-btn-resolve { background: var(--green); color: #fff; border: none; border-radius: var(--r-sm); padding: 6px 10px; font-size: 10.5px; font-weight: 700; cursor: pointer; }
+.fc-btn-resolve:hover { filter: brightness(1.1); }
+
 /* ── CALENDAR CARD (Booking availability) ── */
 .cal-card {
   background: var(--surface); border-radius: 24px;
@@ -934,7 +985,7 @@ html, body {
           <div class="qa-ic" style="background:var(--purple-bg);color:var(--purple-text);"><i class="ti ti-calendar-event"></i></div>
           <div class="qa-label">Booking</div>
         </div>
-        <div class="qa-item" onclick="window.open('https://docs.google.com/forms/d/e/1FAIpQLSdVrxv1-pLFGcUR4WSo2RVbfltNto-AmXm4HHiK-A8EtIjSiw/viewform', '_blank')">
+        <div class="qa-item" onclick="switchTabByName('faulty')">
           <div class="qa-ic" style="background:var(--coral-bg);color:var(--coral-text);"><i class="ti ti-clipboard-x"></i></div>
           <div class="qa-label">Faulty Complain</div>
         </div>
@@ -1612,6 +1663,88 @@ html, body {
     </div><!-- /book -->
 
     <!-- ═══════════════════════════
+         FAULTY COMPLAIN
+    ═══════════════════════════ -->
+    <div class="screen-section" id="screen-faulty">
+
+      <div class="sec-title" style="margin-bottom:8px;">Report an Issue</div>
+
+      <div class="card" style="margin-bottom:14px;">
+
+        <div id="fc-toast-holder"></div>
+
+        <div class="book-form-group">
+          <label class="book-form-label">Staff Name</label>
+          <div class="fc-readonly-chip"><i class="ti ti-user"></i> <span id="fc-staff-name">—</span><span class="fc-hint">auto-filled</span></div>
+        </div>
+
+        <div class="book-form-group">
+          <label class="book-form-label">Location</label>
+          <div class="fc-select placeholder" id="fc-loc-field" onclick="toggleFcList('loc')">
+            <span id="fc-loc-label">Tap to select location</span><i class="ti ti-chevron-down fc-chev"></i>
+          </div>
+          <div class="fc-option-list" id="fc-loc-list" style="display:none;"></div>
+          <div class="book-field-error" id="fc-loc-err"><i class="ti ti-alert-circle"></i>Please select a location.</div>
+        </div>
+
+        <div class="book-form-group">
+          <label class="book-form-label">Item</label>
+          <div class="fc-select placeholder" id="fc-item-field" onclick="toggleFcList('item')">
+            <span id="fc-item-label">Tap to select item</span><i class="ti ti-chevron-down fc-chev"></i>
+          </div>
+          <div class="fc-option-list" id="fc-item-list" style="display:none;"></div>
+          <input class="book-form-input" type="text" id="fc-item-other" placeholder="Please state the item" style="display:none;margin-top:8px;">
+          <div class="book-field-error" id="fc-item-err"><i class="ti ti-alert-circle"></i>Please select an item.</div>
+        </div>
+
+        <div class="book-form-group">
+          <label class="book-form-label">Please describe the issue you faced</label>
+          <textarea class="book-form-input" id="fc-desc" rows="2" placeholder="e.g. Paper keeps jamming on every 3rd print"></textarea>
+          <div class="book-field-error" id="fc-desc-err"><i class="ti ti-alert-circle"></i>Please describe the issue.</div>
+        </div>
+
+        <div class="book-form-group">
+          <label class="book-form-label">Photo / Video Attachment</label>
+          <div class="fc-photo-attach" id="fc-photo-area">
+            <label class="fc-btn-attach" for="fc-photo-camera"><i class="ti ti-camera"></i> Take Photo</label>
+            <input type="file" id="fc-photo-camera" accept="image/*" capture="environment" style="display:none;">
+            <label class="fc-btn-attach" for="fc-photo-file"><i class="ti ti-paperclip"></i> Add File</label>
+            <input type="file" id="fc-photo-file" accept="image/*,video/*" style="display:none;">
+          </div>
+        </div>
+
+        <div class="book-form-group">
+          <label class="book-form-label">Urgency (Expected Action Time)</label>
+          <div class="fc-urgency-row">
+            <div class="fc-urgency-pill" data-u="immediate" onclick="setFcUrgency('immediate')">Immediate<br>(ASAP)</div>
+            <div class="fc-urgency-pill" data-u="urgent" onclick="setFcUrgency('urgent')">Urgent<br>(Today)</div>
+            <div class="fc-urgency-pill" data-u="non-urgent" onclick="setFcUrgency('non-urgent')">Non-urgent<br>(1–2 days)</div>
+          </div>
+          <div class="book-field-error" id="fc-urgency-err"><i class="ti ti-alert-circle"></i>Please choose an urgency.</div>
+        </div>
+
+        <button class="book-btn-primary" id="fc-submit-btn" onclick="submitFaultyComplaint()">
+          <span id="fc-submit-label"><i class="ti ti-send"></i> Submit Complaint</span>
+          <span class="book-spinner" id="fc-spinner"></span>
+        </button>
+        <div class="book-alert book-alert-success" id="fc-success"><i class="ti ti-circle-check"></i><span>Complaint submitted.</span></div>
+        <div class="book-alert book-alert-error" id="fc-error"><i class="ti ti-alert-circle"></i><span id="fc-error-msg">Could not submit complaint.</span></div>
+
+      </div>
+
+      <div class="sec-title" style="margin-bottom:8px;">All Complaints</div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div class="fc-table-wrap">
+          <table class="fc-table">
+            <thead><tr><th>Staff</th><th>Location</th><th>Item</th><th>Urgency</th><th>Status</th><th></th></tr></thead>
+            <tbody id="fc-admin-rows"><tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px;">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /faulty -->
+
+    <!-- ═══════════════════════════
          SETTINGS
     ═══════════════════════════ -->
     <div class="screen-section" id="screen-menu">
@@ -1868,6 +2001,7 @@ html, body {
     if (name === 'event')    loadDbEvents();
     if (name === 'estatetrip') loadDbEstateTrips();
     if (name === 'book')     initBookTab();
+    if (name === 'faulty')   initFaultyTab();
   }
   function switchTabByName(name) {
     var tabs = document.querySelectorAll('.tab-btn');
@@ -1883,6 +2017,7 @@ html, body {
     if (name === 'event')    loadDbEvents();
     if (name === 'estatetrip') loadDbEstateTrips();
     if (name === 'book')     initBookTab();
+    if (name === 'faulty')   initFaultyTab();
   }
   function syncNav(name) {
     document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
@@ -3591,6 +3726,297 @@ html, body {
     var btn = document.getElementById(btnId); if (btn) btn.disabled = on;
     var lbl = document.getElementById(labelId); if (lbl) lbl.style.display = on ? 'none' : 'inline';
     var spn = document.getElementById(spinnerId); if (spn) spn.style.display = on ? 'block' : 'none';
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  FAULTY COMPLAIN
+  //  Native replacement for the old Google Form Quick Access link.
+  //  Shares the same faulty_complaints table + faulty-photos storage
+  //  bucket the Staff app writes to, so complaints from either app
+  //  show up together here. Optionally mirrored into a Google Sheet
+  //  (see docs/faulty-complain-sheet-sync.md) if FC_SHEET_WEBHOOK_URL
+  //  is set to a deployed Apps Script Web App URL.
+  // ══════════════════════════════════════════════════════════════
+  var FC_SHEET_WEBHOOK_URL = '';
+  var FC_BUCKET = 'faulty-photos';
+
+  var FC_LOCATIONS = [
+    "1st Floor (From Entrance to Herrick's office)",
+    "1st Floor (Newly refurbished area)",
+    "2nd Floor - New Wing (From Ryan's office to Mr. Pui's office)",
+    "2nd Floor - Old Wing (From the stairs to Coco's office)"
+  ];
+  var FC_ITEMS = [
+    "Printer - Paper jam", "Printer - Scanning / printing issue", "Printer - Cartridge replacement",
+    "Washroom - Clogging toilet", "Washroom - Bidet issues", "Washroom - broken toilet seat",
+    "Washroom - building issues such as leaking pipes / basin", "Lighting issues", "Air conditioner issues",
+    "Water dispenser issues", "Chair issues", "Table / drawer issues", "Cabinet issues", "Electrical issues",
+    "Other Issues (Please state item and describe the issue)"
+  ];
+
+  var faultyTabInited = false;
+  var fcState = { loc: null, item: null, itemOther: '', urgency: null, photoFile: null, photoObjectUrl: null };
+
+  function initFaultyTab() {
+    if (faultyTabInited) return;
+    faultyTabInited = true;
+    var raw = sessionStorage.getItem('mjm_user');
+    var u = raw ? JSON.parse(raw) : {};
+    var nameEl = document.getElementById('fc-staff-name');
+    if (nameEl) nameEl.textContent = u.name || u.email || 'Unknown';
+
+    renderFcOptionList('fc-loc-list', FC_LOCATIONS);
+    renderFcOptionList('fc-item-list', FC_ITEMS);
+
+    loadAllComplaints();
+  }
+
+  function renderFcOptionList(listId, options) {
+    var el = document.getElementById(listId);
+    if (!el) return;
+    el.innerHTML = options.map(function (o) {
+      return '<div class="fc-option-row" data-val="' + escHtml(o) + '">' + escHtml(o) + '</div>';
+    }).join('');
+  }
+
+  document.addEventListener('click', function (e) {
+    var row = e.target.closest && e.target.closest('.fc-option-row');
+    if (!row) return;
+    var listEl = row.closest('.fc-option-list');
+    if (!listEl) return;
+    var val = row.getAttribute('data-val');
+    if (listEl.id === 'fc-loc-list') selectFcOption('loc', val);
+    else if (listEl.id === 'fc-item-list') selectFcOption('item', val);
+  });
+
+  function toggleFcList(which) {
+    var field = document.getElementById('fc-' + which + '-field');
+    var list = document.getElementById('fc-' + which + '-list');
+    if (!field || !list) return;
+    var opening = list.style.display === 'none';
+    document.querySelectorAll('.fc-option-list').forEach(function (l) { l.style.display = 'none'; });
+    document.querySelectorAll('.fc-select').forEach(function (f) { f.classList.remove('open'); });
+    if (opening) { list.style.display = 'block'; field.classList.add('open'); }
+  }
+
+  function selectFcOption(which, val) {
+    fcState[which] = val;
+    var label = document.getElementById('fc-' + which + '-label');
+    var field = document.getElementById('fc-' + which + '-field');
+    if (label) label.textContent = val;
+    if (field) { field.classList.remove('placeholder', 'error'); field.classList.remove('open'); }
+    var list = document.getElementById('fc-' + which + '-list');
+    if (list) list.style.display = 'none';
+    var err = document.getElementById('fc-' + which + '-err');
+    if (err) err.classList.remove('visible');
+    if (which === 'item') {
+      var otherInput = document.getElementById('fc-item-other');
+      if (otherInput) otherInput.style.display = val.indexOf('Other Issues') === 0 ? 'block' : 'none';
+    }
+  }
+
+  function setFcUrgency(u) {
+    fcState.urgency = u;
+    document.querySelectorAll('.fc-urgency-pill').forEach(function (p) { p.classList.toggle('active', p.getAttribute('data-u') === u); });
+    var err = document.getElementById('fc-urgency-err');
+    if (err) err.classList.remove('visible');
+  }
+
+  document.addEventListener('change', function (e) {
+    if (!e.target.matches('#fc-photo-camera, #fc-photo-file')) return;
+    var file = e.target.files && e.target.files[0];
+    if (!file) return;
+    fcState.photoFile = file;
+    renderFcPhotoThumb(file);
+  });
+
+  function renderFcPhotoThumb(file) {
+    var area = document.getElementById('fc-photo-area');
+    if (!area) return;
+    if (fcState.photoObjectUrl) { URL.revokeObjectURL(fcState.photoObjectUrl); fcState.photoObjectUrl = null; }
+    var thumb = document.createElement('div');
+    thumb.className = 'fc-photo-thumb';
+    var swatch = document.createElement('span');
+    swatch.className = 'fc-photo-swatch';
+    if (file.type.indexOf('image/') === 0) {
+      fcState.photoObjectUrl = URL.createObjectURL(file);
+      swatch.style.background = 'center / cover no-repeat url(' + fcState.photoObjectUrl + ')';
+    }
+    thumb.appendChild(swatch);
+    var label = document.createElement('span');
+    label.textContent = file.name + ' · ' + Math.round(file.size / 1024) + 'KB';
+    thumb.appendChild(label);
+    var rm = document.createElement('span');
+    rm.className = 'fc-rm';
+    rm.textContent = '✕';
+    rm.onclick = resetFcPhoto;
+    thumb.appendChild(rm);
+    area.innerHTML = '';
+    area.appendChild(thumb);
+  }
+
+  function resetFcPhoto() {
+    fcState.photoFile = null;
+    if (fcState.photoObjectUrl) { URL.revokeObjectURL(fcState.photoObjectUrl); fcState.photoObjectUrl = null; }
+    var area = document.getElementById('fc-photo-area');
+    if (!area) return;
+    area.innerHTML = '<label class="fc-btn-attach" for="fc-photo-camera"><i class="ti ti-camera"></i> Take Photo</label>'
+      + '<input type="file" id="fc-photo-camera" accept="image/*" capture="environment" style="display:none;">'
+      + '<label class="fc-btn-attach" for="fc-photo-file"><i class="ti ti-paperclip"></i> Add File</label>'
+      + '<input type="file" id="fc-photo-file" accept="image/*,video/*" style="display:none;">';
+  }
+
+  function fcFileToBase64(file) {
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function () {
+        var result = reader.result;
+        resolve(result.slice(result.indexOf(',') + 1));
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function uploadFcPhoto(file) {
+    var safeName = file.name.replace(/[^a-zA-Z0-9_.-]/g, '_');
+    var path = 'faulty/' + Date.now() + '-' + safeName;
+    var res = await fetch(SURL + '/storage/v1/object/' + FC_BUCKET + '/' + path, {
+      method: 'POST',
+      headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY, 'Content-Type': file.type || 'application/octet-stream' },
+      body: file
+    });
+    if (!res.ok) throw new Error('Photo upload failed: ' + res.status);
+    return SURL + '/storage/v1/object/public/' + FC_BUCKET + '/' + path;
+  }
+
+  async function syncFcToSheet(payload, file) {
+    if (!FC_SHEET_WEBHOOK_URL) return;
+    try {
+      var body = {
+        timestamp: new Date().toISOString(),
+        staffName: payload.staff_name, location: payload.location, item: payload.item,
+        itemOther: payload.item_other, description: payload.description, urgency: payload.urgency,
+        photoName: null, photoMime: null, photoBase64: null
+      };
+      if (file) {
+        body.photoName = file.name;
+        body.photoMime = file.type;
+        body.photoBase64 = await fcFileToBase64(file);
+      }
+      fetch(FC_SHEET_WEBHOOK_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(body) }).catch(function(){});
+    } catch (e) { /* best-effort only */ }
+  }
+
+  function clearFcErrors() {
+    document.querySelectorAll('#screen-faulty .book-field-error').forEach(function (e) { e.classList.remove('visible'); });
+    document.querySelectorAll('#screen-faulty .fc-select').forEach(function (e) { e.classList.remove('error'); });
+  }
+
+  async function submitFaultyComplaint() {
+    clearFcErrors();
+    var desc = document.getElementById('fc-desc').value.trim();
+    var itemOther = document.getElementById('fc-item-other').value.trim();
+    var valid = true;
+
+    if (!fcState.loc) { document.getElementById('fc-loc-err').classList.add('visible'); document.getElementById('fc-loc-field').classList.add('error'); valid = false; }
+    var isOther = fcState.item && fcState.item.indexOf('Other Issues') === 0;
+    if (!fcState.item || (isOther && !itemOther)) { document.getElementById('fc-item-err').classList.add('visible'); document.getElementById('fc-item-field').classList.add('error'); valid = false; }
+    if (!desc) { document.getElementById('fc-desc-err').classList.add('visible'); valid = false; }
+    if (!fcState.urgency) { document.getElementById('fc-urgency-err').classList.add('visible'); valid = false; }
+    if (!valid) return;
+
+    setBookLoading('fc-submit-btn', 'fc-submit-label', 'fc-spinner', true);
+    hideBookAlert('fc-success'); hideBookAlert('fc-error');
+    try {
+      var raw = sessionStorage.getItem('mjm_user');
+      var u = raw ? JSON.parse(raw) : {};
+      var photoUrl = null;
+      if (fcState.photoFile) photoUrl = await uploadFcPhoto(fcState.photoFile);
+
+      var payload = {
+        staff_email: u.email || null,
+        staff_name: u.name || u.email || 'Unknown',
+        location: fcState.loc,
+        item: isOther ? 'Other Issues' : fcState.item,
+        item_other: isOther ? itemOther : null,
+        description: desc,
+        photo_url: photoUrl,
+        urgency: fcState.urgency,
+        status: 'open'
+      };
+      await sbFetch('POST', '/rest/v1/faulty_complaints', payload);
+      syncFcToSheet(payload, fcState.photoFile);
+
+      resetFaultyForm();
+      showBookAlert('fc-success');
+      loadAllComplaints();
+    } catch (e) {
+      document.getElementById('fc-error-msg').textContent = e.message || 'Could not submit complaint.';
+      showBookAlert('fc-error');
+    } finally {
+      setBookLoading('fc-submit-btn', 'fc-submit-label', 'fc-spinner', false);
+    }
+  }
+
+  function resetFaultyForm() {
+    resetFcPhoto();
+    fcState.loc = null; fcState.item = null; fcState.itemOther = ''; fcState.urgency = null;
+    document.getElementById('fc-loc-label').textContent = 'Tap to select location';
+    document.getElementById('fc-loc-field').classList.add('placeholder');
+    document.getElementById('fc-item-label').textContent = 'Tap to select item';
+    document.getElementById('fc-item-field').classList.add('placeholder');
+    document.getElementById('fc-item-other').style.display = 'none';
+    document.getElementById('fc-item-other').value = '';
+    document.getElementById('fc-desc').value = '';
+    document.querySelectorAll('.fc-urgency-pill').forEach(function (p) { p.classList.remove('active'); });
+    clearFcErrors();
+  }
+
+  function fcUrgencyBadge(u) {
+    if (u === 'immediate') return '<span class="badge b-red">Immediate</span>';
+    if (u === 'urgent') return '<span class="badge b-amber">Urgent</span>';
+    return '<span class="badge b-green">Non-urgent</span>';
+  }
+  function fcStatusBadge(s) {
+    return s === 'resolved' ? '<span class="badge b-green">Resolved</span>' : '<span class="badge b-amber">Open</span>';
+  }
+
+  async function loadAllComplaints() {
+    var rows = document.getElementById('fc-admin-rows');
+    if (!rows) return;
+    try {
+      var data = await sbGet('faulty_complaints', 'order=created_at.desc&limit=100');
+      if (!data || !data.length) {
+        rows.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px;">No complaints yet.</td></tr>';
+        return;
+      }
+      rows.innerHTML = data.map(function (c) {
+        var itemLabel = c.item === 'Other Issues' && c.item_other ? c.item_other : c.item;
+        var rowClass = (c.urgency === 'immediate' && c.status !== 'resolved') ? 'row-immediate' : '';
+        var actionCell = c.status === 'resolved'
+          ? ''
+          : '<button class="fc-btn-resolve" onclick="resolveFaultyComplaint(' + c.id + ')">Mark Resolved</button>';
+        var photoCell = c.photo_url ? ' <a href="' + escHtml(c.photo_url) + '" target="_blank" style="color:var(--blue-text);"><i class="ti ti-photo"></i></a>' : '';
+        return '<tr class="' + rowClass + '">'
+          + '<td>' + escHtml(c.staff_name) + '</td>'
+          + '<td style="color:var(--text2);font-size:11.5px;">' + escHtml(c.location) + '</td>'
+          + '<td style="font-weight:600;">' + escHtml(itemLabel) + photoCell + '</td>'
+          + '<td>' + fcUrgencyBadge(c.urgency) + '</td>'
+          + '<td>' + fcStatusBadge(c.status) + '</td>'
+          + '<td>' + actionCell + '</td>'
+          + '</tr>';
+      }).join('');
+    } catch (e) {
+      rows.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px;">Could not load complaints.</td></tr>';
+    }
+  }
+
+  async function resolveFaultyComplaint(id) {
+    try {
+      await sbFetch('PATCH', '/rest/v1/faulty_complaints?id=eq.' + id, { status: 'resolved' }, { 'Prefer': '' });
+      loadAllComplaints();
+    } catch (e) { alert('Could not update: ' + e.message); }
   }
 
   // ── LOAD ANNOUNCEMENTS FROM SUPABASE ──
