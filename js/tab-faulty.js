@@ -6,7 +6,8 @@
 // also best-effort mirrored into a Google Sheet (with the photo copied
 // into a Drive folder) — see docs/faulty-complain-sheet-sync.md for the
 // script + one-time setup steps. Left blank, that side is simply skipped.
-var FC_SHEET_WEBHOOK_URL = '';
+var FC_SHEET_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycby32pYxP-k_KotbHVzq0B7s0zyMp83qA3GycLe3vLKJXACg950aIsky7i5gbMphPvaz/exec';
+var FC_SHEET_SECRET = 'ix_qAlAob81eSlI0wL_zO7JOgjvidSoV';
 var FC_BUCKET = 'faulty-photos';
 
 var FC_LOCATIONS = [
@@ -172,6 +173,7 @@ async function syncFcToSheet(payload, file) {
   if (!FC_SHEET_WEBHOOK_URL) return;
   try {
     var body = {
+      secret: FC_SHEET_SECRET,
       timestamp: new Date().toISOString(),
       staffName: payload.staff_name, location: payload.location, item: payload.item,
       itemOther: payload.item_other, description: payload.description, urgency: payload.urgency,
