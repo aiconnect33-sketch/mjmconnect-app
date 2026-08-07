@@ -37,8 +37,9 @@ async function loadDuty() {
         var isActive   = g.date_from <= today && today <= (g.date_to || g.date_from);
         var badgeCls   = isActive ? 'badge-success' : 'badge badge-info';
         var badgeLabel = isActive ? 'Active' : 'Upcoming';
+        var memberNames = g.members.map(function(m){ return m.staff_name; }).join(', ');
         var delBtn = canEdit
-          ? '<div style="cursor:pointer;color:var(--red-text);" onclick="deleteDutyAssignment(\'' + escJsAttr(g.ids.join(',')) + '\')"><i class="ti ti-trash"></i></div>'
+          ? '<div style="cursor:pointer;color:var(--red-text);" onclick="deleteDutyAssignment(\'' + escJsAttr(g.ids.join(',')) + '\',\'' + escJsAttr(g.role || 'General Duty') + '\',\'' + escJsAttr(dateLabel) + '\',\'' + escJsAttr(memberNames) + '\')"><i class="ti ti-trash"></i></div>'
           : '';
         return '<div class="card" style="margin-bottom:10px;">'
           + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">'
@@ -68,6 +69,7 @@ async function loadDuty() {
 
 // ── DUTY — STAFF EDIT (Duty module permission) ──
 var editingDutyId = null;
+var editingDutyOriginal = null;
 
 function showDutyForm() {
   editingDutyId = null;
@@ -83,11 +85,13 @@ function showDutyForm() {
 function hideDutyForm() {
   document.getElementById('duty-form').style.display = 'none';
   editingDutyId = null;
+  editingDutyOriginal = null;
 }
 
 function editDutyAssignment(id, name, role, from, to) {
   if (!hasEditPermission('duty')) return;
   editingDutyId = id;
+  editingDutyOriginal = { name: name, role: role, from: from, to: to };
   document.getElementById('duty-form-title').textContent = 'Edit Duty Assignment';
   document.getElementById('duty-form-name').value = name;
   document.getElementById('duty-form-role').value = role;
@@ -108,7 +112,17 @@ async function saveDutyAssignment() {
   try {
     if (editingDutyId) {
       await sbWrite('PATCH', 'duty_roster', { staff_name: name, duty_role: role || 'General Duty', date_from: from, date_to: to, period: from + ' to ' + to }, 'id=eq.' + editingDutyId);
+      var diffs = [];
+      if (editingDutyOriginal) {
+        var o = editingDutyOriginal;
+        var newRole = role || 'General Duty';
+        if (o.name !== name) diffs.push({ label: 'Staff', from: o.name, to: name });
+        if ((o.role || 'General Duty') !== newRole) diffs.push({ label: 'Role', from: o.role || 'General Duty', to: newRole });
+        if (o.from !== from || o.to !== to) diffs.push({ label: 'Dates', from: o.from + ' – ' + o.to, to: from + ' – ' + to });
+      }
+      if (diffs.length) logAudit('duty', editingDutyId, 'edited', role || 'General Duty', diffs, null);
       editingDutyId = null;
+      editingDutyOriginal = null;
     } else {
       await sbWrite('POST', 'duty_roster', { staff_name: name, duty_role: role || 'General Duty', date_from: from, date_to: to, period: from + ' to ' + to });
     }
@@ -117,12 +131,13 @@ async function saveDutyAssignment() {
   } catch(e) { alert('Could not save duty assignment. Please try again.'); }
 }
 
-async function deleteDutyAssignment(idsStr) {
+async function deleteDutyAssignment(idsStr, role, dateLabel, namesCsv) {
   if (!hasEditPermission('duty')) return;
   if (!confirm('Delete this duty assignment?')) return;
   var ids = idsStr.split(',').filter(Boolean);
   try {
     await sbWrite('DELETE', 'duty_roster', null, 'id=in.(' + ids.join(',') + ')');
+    logAudit('duty', ids.join(','), 'deleted', role || 'General Duty', { role: role || 'General Duty', dates: dateLabel || '', staff: namesCsv || '' }, null);
     loadDuty();
   } catch(e) { alert('Could not delete duty assignment. Please try again.'); }
 }
