@@ -494,6 +494,8 @@ html, body {
 .fc-table tr.row-immediate td { background: var(--red-bg); }
 .fc-btn-resolve { background: var(--green); color: #fff; border: none; border-radius: var(--r-sm); padding: 6px 10px; font-size: 10.5px; font-weight: 700; cursor: pointer; }
 .fc-btn-resolve:hover { filter: brightness(1.1); }
+.fc-btn-reopen { background: var(--surface); border: 1.5px solid var(--amber-text); color: var(--amber-text); border-radius: var(--r-sm); padding: 6px 10px; font-size: 10.5px; font-weight: 700; cursor: pointer; }
+.fc-btn-reopen:hover { background: var(--amber-bg); }
 
 /* ── CALENDAR CARD (Booking availability) ── */
 .cal-card {
@@ -2320,15 +2322,18 @@ html, body {
 
   var dutyStaffAll = [];
   var dutyStaffSelected = [];
+  var dutyStaffEmailMap = {};
 
   async function loadDutyStaffDropdown() {
     dutyStaffAll = [];
+    dutyStaffEmailMap = {};
     document.getElementById('duty-staff-search').value = '';
     document.getElementById('duty-staff-dropdown').style.display = 'none';
     try {
-      var data = await sbFetch('GET', '/rest/v1/profiles?role=neq.pending&order=full_name.asc&select=id,full_name&limit=200');
+      var data = await sbFetch('GET', '/rest/v1/profiles?role=neq.pending&order=full_name.asc&select=id,full_name,email&limit=200');
       if (data && data.length) {
         dutyStaffAll = data.map(function(s){ return s.full_name; });
+        data.forEach(function(s){ dutyStaffEmailMap[s.full_name] = s.email || null; });
       }
     } catch(e) {}
     // Load existing duty roles into datalist
@@ -2430,7 +2435,7 @@ html, body {
         if (newStaff.length) {
           await Promise.all(newStaff.map(function(name) {
             return sbFetch('POST', '/rest/v1/duty_roster', {
-              staff_name: name, duty_role: role,
+              staff_name: name, staff_email: dutyStaffEmailMap[name] || null, duty_role: role,
               date_from: dfrom, date_to: dto, period: dfrom + ' to ' + dto
             });
           }));
@@ -2441,7 +2446,7 @@ html, body {
       } else {
         await Promise.all(checked.map(function(name) {
           return sbFetch('POST', '/rest/v1/duty_roster', {
-            staff_name: name, duty_role: role,
+            staff_name: name, staff_email: dutyStaffEmailMap[name] || null, duty_role: role,
             date_from: dfrom, date_to: dto,
             period: dfrom + ' to ' + dto
           });
@@ -3891,11 +3896,13 @@ html, body {
     return SURL + '/storage/v1/object/public/' + FC_BUCKET + '/' + path;
   }
 
-  async function syncFcToSheet(payload, file) {
+  async function syncFcToSheet(payload, file, id) {
     if (!FC_SHEET_WEBHOOK_URL) return;
     try {
       var body = {
         secret: FC_SHEET_SECRET,
+        action: 'create',
+        id: id || null,
         timestamp: new Date().toISOString(),
         staffName: payload.staff_name, location: payload.location, item: payload.item,
         itemOther: payload.item_other, description: payload.description, urgency: payload.urgency,
@@ -3906,6 +3913,16 @@ html, body {
         body.photoMime = file.type;
         body.photoBase64 = await fcFileToBase64(file);
       }
+      fetch(FC_SHEET_WEBHOOK_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(body) }).catch(function(){});
+    } catch (e) { /* best-effort only */ }
+  }
+
+  // Best-effort -- tells the same Apps Script to flip an existing Sheet
+  // row's Status column, matched by the complaint's Supabase id.
+  function syncFcResolveToSheet(id, action, resolvedBy) {
+    if (!FC_SHEET_WEBHOOK_URL || !id) return;
+    try {
+      var body = { secret: FC_SHEET_SECRET, action: action, id: id, resolvedBy: resolvedBy || null, resolvedAt: new Date().toISOString() };
       fetch(FC_SHEET_WEBHOOK_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(body) }).catch(function(){});
     } catch (e) { /* best-effort only */ }
   }
@@ -3947,8 +3964,9 @@ html, body {
         urgency: fcState.urgency,
         status: 'open'
       };
-      await sbFetch('POST', '/rest/v1/faulty_complaints', payload);
-      syncFcToSheet(payload, fcState.photoFile);
+      var inserted = await sbFetch('POST', '/rest/v1/faulty_complaints', payload);
+      var newId = inserted && inserted[0] ? inserted[0].id : null;
+      syncFcToSheet(payload, fcState.photoFile, newId);
 
       resetFaultyForm();
       showBookAlert('fc-success');
@@ -3995,9 +4013,15 @@ html, body {
       }
       rows.innerHTML = data.map(function (c) {
         var itemLabel = c.item === 'Other Issues' && c.item_other ? c.item_other : c.item;
-        var rowClass = (c.urgency === 'immediate' && c.status !== 'resolved') ? 'row-immediate' : '';
-        var actionCell = c.status === 'resolved'
-          ? ''
+        var isResolved = c.status === 'resolved';
+        var rowClass = (c.urgency === 'immediate' && !isResolved) ? 'row-immediate' : '';
+        var statusCell = fcStatusBadge(c.status);
+        if (isResolved && c.resolved_by) {
+          var resolvedAt = c.resolved_at ? new Date(c.resolved_at).toLocaleDateString('en-MY', { day: 'numeric', month: 'short' }) + ' ' + new Date(c.resolved_at).toLocaleTimeString('en-MY', { hour: 'numeric', minute: '2-digit', hour12: true }) : '';
+          statusCell += '<div style="font-size:10px;color:var(--text3);margin-top:2px;">by ' + escHtml(c.resolved_by) + (resolvedAt ? ' · ' + resolvedAt : '') + '</div>';
+        }
+        var actionCell = isResolved
+          ? '<button class="fc-btn-reopen" onclick="reopenFaultyComplaint(' + c.id + ')">Reopen</button>'
           : '<button class="fc-btn-resolve" onclick="resolveFaultyComplaint(' + c.id + ')">Mark Resolved</button>';
         var photoCell = c.photo_url ? ' <a href="' + escHtml(c.photo_url) + '" target="_blank" style="color:var(--blue-text);"><i class="ti ti-photo"></i></a>' : '';
         return '<tr class="' + rowClass + '">'
@@ -4005,7 +4029,7 @@ html, body {
           + '<td style="color:var(--text2);font-size:11.5px;">' + escHtml(c.location) + '</td>'
           + '<td style="font-weight:600;">' + escHtml(itemLabel) + photoCell + '</td>'
           + '<td>' + fcUrgencyBadge(c.urgency) + '</td>'
-          + '<td>' + fcStatusBadge(c.status) + '</td>'
+          + '<td>' + statusCell + '</td>'
           + '<td>' + actionCell + '</td>'
           + '</tr>';
       }).join('');
@@ -4015,8 +4039,21 @@ html, body {
   }
 
   async function resolveFaultyComplaint(id) {
+    var raw = sessionStorage.getItem('mjm_user');
+    var u = raw ? JSON.parse(raw) : {};
+    var resolvedBy = u.name || u.email || 'Admin';
+    var resolvedAt = new Date().toISOString();
     try {
-      await sbFetch('PATCH', '/rest/v1/faulty_complaints?id=eq.' + id, { status: 'resolved' }, { 'Prefer': '' });
+      await sbFetch('PATCH', '/rest/v1/faulty_complaints?id=eq.' + id, { status: 'resolved', resolved_by: resolvedBy, resolved_at: resolvedAt }, { 'Prefer': '' });
+      syncFcResolveToSheet(id, 'resolve', resolvedBy);
+      loadAllComplaints();
+    } catch (e) { alert('Could not update: ' + e.message); }
+  }
+
+  async function reopenFaultyComplaint(id) {
+    try {
+      await sbFetch('PATCH', '/rest/v1/faulty_complaints?id=eq.' + id, { status: 'open', resolved_by: null, resolved_at: null }, { 'Prefer': '' });
+      syncFcResolveToSheet(id, 'reopen', null);
       loadAllComplaints();
     } catch (e) { alert('Could not update: ' + e.message); }
   }

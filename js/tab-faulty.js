@@ -24,6 +24,8 @@ var FC_ITEMS = [
   "Other Issues (Please state item and describe the issue)"
 ];
 
+var FC_DUTY_ROLE = 'Faulty Complaint Maintenance';
+
 var faultyTabInited = false;
 var fcState = { loc: null, item: null, itemOther: '', urgency: null, photoFile: null, photoObjectUrl: null };
 
@@ -38,7 +40,25 @@ function initFaultyTab() {
   renderFcOptionList('fc-loc-list', FC_LOCATIONS);
   renderFcOptionList('fc-item-list', FC_ITEMS);
 
-  loadMyComplaints();
+  loadTeamComplaints();
+}
+
+// Is the logged-in staff member currently assigned the "Faulty Complaint
+// Maintenance" On Duty role for today? Matched by email when the roster
+// row has one (immune to display-name changes), falling back to name for
+// older/legacy roster rows that predate the staff_email column.
+async function isFaultyMaintainer() {
+  var raw = sessionStorage.getItem('mjm_user');
+  var u = raw ? JSON.parse(raw) : {};
+  var today = new Date().toISOString().split('T')[0];
+  try {
+    var data = await sbGet('duty_roster', 'duty_role=eq.' + encodeURIComponent(FC_DUTY_ROLE) + '&date_from=lte.' + today + '&date_to=gte.' + today);
+    if (!data || !data.length) return false;
+    return data.some(function (r) {
+      if (u.email && r.staff_email) return r.staff_email.toLowerCase() === u.email.toLowerCase();
+      return u.name && r.staff_name && r.staff_name.toLowerCase() === u.name.toLowerCase();
+    });
+  } catch (e) { return false; }
 }
 
 // Option rows carry their value in data-val; clicks are handled by the
@@ -169,11 +189,13 @@ async function uploadFcPhoto(file) {
 // into a Drive folder) via a small Apps Script Web App. Fire-and-forget:
 // no-cors means we can't read the response, so this never blocks or fails
 // the real submission, which already succeeded in Supabase by this point.
-async function syncFcToSheet(payload, file) {
+async function syncFcToSheet(payload, file, id) {
   if (!FC_SHEET_WEBHOOK_URL) return;
   try {
     var body = {
       secret: FC_SHEET_SECRET,
+      action: 'create',
+      id: id || null,
       timestamp: new Date().toISOString(),
       staffName: payload.staff_name, location: payload.location, item: payload.item,
       itemOther: payload.item_other, description: payload.description, urgency: payload.urgency,
@@ -184,6 +206,16 @@ async function syncFcToSheet(payload, file) {
       body.photoMime = file.type;
       body.photoBase64 = await fileToBase64(file);
     }
+    fetch(FC_SHEET_WEBHOOK_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(body) }).catch(function () {});
+  } catch (e) { /* best-effort only */ }
+}
+
+// Best-effort — tells the same Apps Script to flip an existing Sheet row's
+// Status column, matched by the complaint's Supabase id written at create time.
+function syncFcResolveToSheet(id, action, resolvedBy) {
+  if (!FC_SHEET_WEBHOOK_URL || !id) return;
+  try {
+    var body = { secret: FC_SHEET_SECRET, action: action, id: id, resolvedBy: resolvedBy || null, resolvedAt: new Date().toISOString() };
     fetch(FC_SHEET_WEBHOOK_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(body) }).catch(function () {});
   } catch (e) { /* best-effort only */ }
 }
@@ -225,12 +257,13 @@ async function submitFaultyComplaint() {
       urgency: fcState.urgency,
       status: 'open'
     };
-    await sbWrite('POST', 'faulty_complaints', payload);
-    syncFcToSheet(payload, fcState.photoFile);
+    var inserted = await sbWrite('POST', 'faulty_complaints', payload);
+    var newId = inserted && inserted[0] ? inserted[0].id : null;
+    syncFcToSheet(payload, fcState.photoFile, newId);
 
     resetFaultyForm();
     showFcAlert('fc-success');
-    loadMyComplaints();
+    loadTeamComplaints();
   } catch (e) {
     document.getElementById('fc-error-msg').textContent = e.message || 'Could not submit complaint.';
     showFcAlert('fc-error');
@@ -270,30 +303,46 @@ function fcUrgencyBadge(u) {
   if (u === 'urgent') return '<span class="badge badge-amber">Urgent</span>';
   return '<span class="badge badge-success">Non-urgent</span>';
 }
-function fcStatusBadge(s) {
-  return s === 'resolved' ? '<span class="badge badge-success">Resolved</span>' : '<span class="badge badge-amber">Open</span>';
-}
 
-async function loadMyComplaints() {
-  var el = document.getElementById('fc-my-complaints');
+async function loadTeamComplaints() {
+  var el = document.getElementById('fc-team-complaints');
+  var bannerEl = document.getElementById('fc-duty-banner');
   if (!el) return;
-  var raw = sessionStorage.getItem('mjm_user');
-  var u = raw ? JSON.parse(raw) : {};
-  if (!u.email) { el.innerHTML = '<div class="book-empty">No complaints submitted yet.</div>'; return; }
+  var onDuty = await isFaultyMaintainer();
+  if (bannerEl) {
+    bannerEl.innerHTML = onDuty
+      ? '<div class="fc-duty-banner on"><i class="ti ti-tool"></i> You\'re on Faulty Complaint Maintenance duty this month — you can resolve any complaint below.</div>'
+      : '<div class="fc-duty-banner off"><i class="ti ti-eye"></i> You can see every complaint, but only this month\'s maintenance duty can mark them resolved.</div>';
+  }
   try {
-    var data = await sbGet('faulty_complaints', 'staff_email=eq.' + encodeURIComponent(u.email) + '&order=created_at.desc&limit=20');
-    if (!data || !data.length) { el.innerHTML = '<div class="book-empty">No complaints submitted yet.</div>'; return; }
+    var data = await sbGet('faulty_complaints', 'status=eq.open&order=created_at.desc&limit=100');
+    if (!data || !data.length) { el.innerHTML = '<div class="book-empty">No open complaints right now.</div>'; return; }
     el.innerHTML = data.map(function (c) {
       var itemLabel = c.item === 'Other Issues' && c.item_other ? c.item_other : c.item;
       var d = new Date(c.created_at).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' });
+      var resolveBtn = onDuty ? '<button class="fc-btn-resolve" onclick="resolveFaultyComplaint(' + c.id + ')">✓ Mark Resolved</button>' : '';
       return '<div class="book-item">'
-        + '<div class="book-item-header"><div class="book-item-name">' + escHtml(itemLabel) + '</div>' + fcStatusBadge(c.status) + '</div>'
+        + '<div class="book-item-header"><div class="book-item-name">' + escHtml(itemLabel) + '</div>' + fcUrgencyBadge(c.urgency) + '</div>'
         + '<div class="book-item-date">' + escHtml(c.location) + ' · ' + d + '</div>'
         + '<div class="book-item-purpose">' + escHtml(c.description) + '</div>'
-        + '<div style="margin-top:6px;">' + fcUrgencyBadge(c.urgency) + '</div>'
+        + '<div style="font-size:10.5px;color:var(--text-light);margin-top:4px;">Submitted by ' + escHtml(c.staff_name) + '</div>'
+        + resolveBtn
         + '</div>';
     }).join('');
   } catch (e) {
-    el.innerHTML = '<div class="book-empty">Could not load your complaints.</div>';
+    el.innerHTML = '<div class="book-empty">Could not load complaints.</div>';
+  }
+}
+
+async function resolveFaultyComplaint(id) {
+  var raw = sessionStorage.getItem('mjm_user');
+  var u = raw ? JSON.parse(raw) : {};
+  var resolvedBy = u.name || u.email || 'Unknown';
+  try {
+    await sbWrite('PATCH', 'faulty_complaints', { status: 'resolved', resolved_by: resolvedBy, resolved_at: new Date().toISOString() }, 'id=eq.' + id);
+    syncFcResolveToSheet(id, 'resolve', resolvedBy);
+    loadTeamComplaints();
+  } catch (e) {
+    alert('Could not update: ' + e.message);
   }
 }
