@@ -210,7 +210,7 @@ async function loadAnnouncements() {
             + '<div style="cursor:pointer;font-size:11px;color:var(--red-text);" onclick="deleteAnnouncement(\'' + escJsAttr(ann.id) + '\')"><i class="ti ti-trash"></i> Delete</div>'
             + '</div>'
           : '';
-        return '<div class="card card-info" style="margin-bottom:10px;" data-ann-id="' + escHtml(ann.id) + '" data-posted-by-email="' + escHtml(ann.posted_by_email || '') + '">'
+        return '<div class="card card-info" style="margin-bottom:10px;" data-ann-id="' + escHtml(ann.id) + '" data-posted-by-email="' + escHtml(ann.posted_by_email || '') + '" data-posted-by="' + escHtml(ann.posted_by || 'Staff') + '">'
           + '<div class="card-meta"><span class="card-time">' + d + ' · ' + t + '</span></div>'
           + '<div class="card-title">' + escHtml(ann.title) + '</div>'
           + '<div class="card-body">'  + escHtml(ann.body)  + '</div>'
@@ -224,6 +224,7 @@ async function loadAnnouncements() {
 
 // ── ANNOUNCEMENTS — STAFF EDIT (Announcements module permission) ──
 var editingAnnId = null;
+var editingAnnOriginal = null;
 
 function showAnnForm(id) {
   document.getElementById('ann-form').style.display = 'block';
@@ -241,6 +242,7 @@ function hideAnnForm() {
   document.getElementById('ann-form-title-input').value = '';
   document.getElementById('ann-form-body-input').value  = '';
   editingAnnId = null;
+  editingAnnOriginal = null;
 }
 
 // HR Admin/Super Admin can manage any announcement; everyone else can only
@@ -264,6 +266,7 @@ async function editAnnouncement(id) {
   var title = card.querySelector('.card-title').textContent;
   var body  = card.querySelector('.card-body').textContent;
   editingAnnId = id;
+  editingAnnOriginal = { title: title, body: body, postedBy: card.getAttribute('data-posted-by') || 'Staff' };
   document.getElementById('ann-form-title').textContent = 'Edit Announcement';
   document.getElementById('ann-form-title-input').value = title;
   document.getElementById('ann-form-body-input').value  = body;
@@ -281,6 +284,12 @@ async function saveAnnouncement() {
   try {
     if (editingAnnId) {
       await sbWrite('PATCH', 'announcements', { title: title, body: body }, 'id=eq.' + editingAnnId);
+      var diffs = [];
+      if (editingAnnOriginal) {
+        if (editingAnnOriginal.title !== title) diffs.push({ label: 'Title', from: editingAnnOriginal.title, to: title });
+        if (editingAnnOriginal.body  !== body)  diffs.push({ label: 'Body',  from: editingAnnOriginal.body,  to: body });
+      }
+      if (diffs.length) logAudit('announcements', editingAnnId, 'edited', title, diffs, editingAnnOriginal ? editingAnnOriginal.postedBy : null);
     } else {
       await sbWrite('POST', 'announcements', { title: title, body: body, badge: 'general', posted_by: user.name || 'Staff', posted_by_email: user.email || '' });
     }
@@ -293,8 +302,11 @@ async function deleteAnnouncement(id) {
   if (!hasEditPermission('announcements')) return;
   if (!canManageAnnouncement(id)) { alert('You can only delete your own announcements.'); return; }
   if (!confirm('Delete this announcement?')) return;
+  var card = document.querySelector('[data-ann-id="' + id + '"]');
+  var snapshot = card ? { title: card.querySelector('.card-title').textContent, body: card.querySelector('.card-body').textContent, posted_by: card.getAttribute('data-posted-by') || 'Staff' } : null;
   try {
     await sbWrite('DELETE', 'announcements', null, 'id=eq.' + id);
+    if (snapshot) logAudit('announcements', id, 'deleted', snapshot.title, snapshot, snapshot.posted_by);
     loadAnnouncements();
   } catch(e) { alert('Could not delete announcement. Please try again.'); }
 }

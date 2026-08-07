@@ -36,7 +36,7 @@ async function loadStaffEvents() {
           + '<div style="cursor:pointer;font-size:11px;color:var(--red-text);" onclick="deleteStaffEvent(\'' + escJsAttr(ev.id) + '\')"><i class="ti ti-trash"></i> Delete</div>'
           + '</div>'
         : '';
-      return '<div class="card" style="margin-bottom:10px;border-left:3px solid #534AB7;border-radius:0 var(--radius-lg) var(--radius-lg) 0;" data-event-id="' + escHtml(ev.id) + '" data-event-date="' + escHtml(ev.event_date) + '" data-event-time="' + escHtml(ev.event_time || '') + '" data-created-by-email="' + escHtml(ev.created_by_email || '') + '">'
+      return '<div class="card" style="margin-bottom:10px;border-left:3px solid #534AB7;border-radius:0 var(--radius-lg) var(--radius-lg) 0;" data-event-id="' + escHtml(ev.id) + '" data-event-date="' + escHtml(ev.event_date) + '" data-event-time="' + escHtml(ev.event_time || '') + '" data-created-by-email="' + escHtml(ev.created_by_email || '') + '" data-created-by="' + escHtml(ev.created_by || 'Staff') + '">'
         + '<div class="card-meta">'
         + '<span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;background:#EEEDFE;color:#534AB7;">Event</span>'
         + '<span class="card-time">' + d + (t ? ' · ' + t : '') + '</span>'
@@ -54,6 +54,7 @@ async function loadStaffEvents() {
 
 // ── EVENTS — STAFF EDIT (Events module permission) ──
 var editingStaffEventId = null;
+var editingStaffEventOriginal = null;
 
 function showStaffEventForm(id) {
   if (!id) {
@@ -71,6 +72,7 @@ function showStaffEventForm(id) {
 function hideStaffEventForm() {
   document.getElementById('staff-event-form').style.display = 'none';
   editingStaffEventId = null;
+  editingStaffEventOriginal = null;
 }
 
 // HR Admin/Super Admin can manage any event; everyone else can only manage
@@ -91,12 +93,17 @@ function editStaffEvent(id) {
   var card = document.querySelector('[data-event-id="' + id + '"]');
   if (!card) return;
   editingStaffEventId = id;
-  document.getElementById('staff-event-form-title').textContent = 'Edit Event';
-  document.getElementById('staff-event-title').value = card.querySelector('.card-title').textContent;
-  document.getElementById('staff-event-date').value  = card.getAttribute('data-event-date') || '';
-  document.getElementById('staff-event-time').value  = card.getAttribute('data-event-time') || '';
+  var title = card.querySelector('.card-title').textContent;
+  var date  = card.getAttribute('data-event-date') || '';
+  var time  = card.getAttribute('data-event-time') || '';
   var bodyEl = card.querySelector('.card-body');
-  document.getElementById('staff-event-desc').value = bodyEl ? bodyEl.textContent : '';
+  var desc = bodyEl ? bodyEl.textContent : '';
+  editingStaffEventOriginal = { title: title, date: date, time: time, desc: desc, createdBy: card.getAttribute('data-created-by') || 'Staff' };
+  document.getElementById('staff-event-form-title').textContent = 'Edit Event';
+  document.getElementById('staff-event-title').value = title;
+  document.getElementById('staff-event-date').value  = date;
+  document.getElementById('staff-event-time').value  = time;
+  document.getElementById('staff-event-desc').value = desc;
   showStaffEventForm(id);
 }
 
@@ -114,6 +121,15 @@ async function saveStaffEvent() {
   try {
     if (editingStaffEventId) {
       await sbWrite('PATCH', 'events', { title: title, event_date: date, event_time: time || null, description: desc || null }, 'id=eq.' + editingStaffEventId);
+      var diffs = [];
+      if (editingStaffEventOriginal) {
+        var o = editingStaffEventOriginal;
+        if (o.title !== title) diffs.push({ label: 'Title', from: o.title, to: title });
+        if (o.date  !== date)  diffs.push({ label: 'Date',  from: o.date,  to: date });
+        if ((o.time || '') !== (time || '')) diffs.push({ label: 'Time', from: o.time || '(none)', to: time || '(none)' });
+        if (o.desc  !== desc)  diffs.push({ label: 'Description', from: o.desc || '(none)', to: desc || '(none)' });
+      }
+      if (diffs.length) logAudit('events', editingStaffEventId, 'edited', title, diffs, editingStaffEventOriginal ? editingStaffEventOriginal.createdBy : null);
     } else {
       await sbWrite('POST', 'events', { title: title, event_date: date, event_time: time || null, description: desc || null, created_by: user.name || 'Staff', created_by_email: user.email || '' });
     }
@@ -126,8 +142,17 @@ async function deleteStaffEvent(id) {
   if (!hasEditPermission('events')) return;
   if (!canManageEvent(id)) { alert('You can only delete events you created.'); return; }
   if (!confirm('Delete this event?')) return;
+  var card = document.querySelector('[data-event-id="' + id + '"]');
+  var snapshot = card ? {
+    title: card.querySelector('.card-title').textContent,
+    date: card.getAttribute('data-event-date') || '',
+    time: card.getAttribute('data-event-time') || '',
+    description: (card.querySelector('.card-body') ? card.querySelector('.card-body').textContent : ''),
+    created_by: card.getAttribute('data-created-by') || 'Staff'
+  } : null;
   try {
     await sbWrite('DELETE', 'events', null, 'id=eq.' + id);
+    if (snapshot) logAudit('events', id, 'deleted', snapshot.title, snapshot, snapshot.created_by);
     loadStaffEvents();
   } catch(e) { alert('Could not delete event. Please try again.'); }
 }

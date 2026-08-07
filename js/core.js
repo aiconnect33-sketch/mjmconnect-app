@@ -60,6 +60,25 @@ function escJsAttr(str) {
   return jsEscaped.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// ── Audit log (Announcements / Duty / Events only — see logAudit callers) ──
+// Best-effort: never blocks or fails the real save/delete it accompanies.
+function logAudit(module, recordId, action, itemTitle, details, originalBy) {
+  try {
+    var raw = sessionStorage.getItem('mjm_user');
+    var u = raw ? JSON.parse(raw) : null;
+    var changedBy = (u && (u.name || u.email)) || 'Unknown';
+    sbWrite('POST', 'audit_log', {
+      module: module,
+      record_id: recordId != null ? String(recordId) : null,
+      action: action,
+      item_title: itemTitle || '',
+      changed_by: changedBy,
+      original_by: originalBy || null,
+      details: details || null
+    }).catch(function(){});
+  } catch(e) {}
+}
+
 // ── Clock ──
 function tick() {
   var now = new Date();

@@ -713,6 +713,39 @@ html, body {
 .modal-actions { display: flex; gap: 8px; }
 .modal-actions button { flex: 1; }
 
+/* ── AUDIT LOG ── */
+.audit-modal { max-width: 420px; max-height: 82vh; display: flex; flex-direction: column; padding: 0; overflow: hidden; }
+.audit-modal-hdr { padding: 16px 18px 12px; border-bottom: 0.5px solid var(--border); flex-shrink: 0; }
+.audit-modal-hdr .modal-title { margin-bottom: 2px; }
+.audit-modal-sub { font-size: 11px; color: var(--text2); }
+.audit-modal-close { position: absolute; top: 14px; right: 14px; cursor: pointer; color: var(--text3); font-size: 16px; }
+.audit-modal-body { padding: 12px 18px 18px; overflow-y: auto; flex: 1; }
+.audit-filter-row { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+.audit-filter-chip { font-size: 11px; font-weight: 600; padding: 6px 11px; border-radius: 20px; background: var(--bg); border: 0.5px solid var(--border); color: var(--text2); cursor: pointer; }
+.audit-filter-chip.active { background: var(--green); border-color: var(--green); color: #fff; }
+.audit-card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--r-md); margin-bottom: 8px; overflow: hidden; cursor: pointer; }
+.audit-row { display: flex; align-items: flex-start; gap: 10px; padding: 11px 12px; }
+.audit-ic { width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; }
+.audit-ic.announcements { background: var(--purple-bg); color: var(--purple-text); }
+.audit-ic.duty { background: var(--blue-bg); color: var(--blue-text); }
+.audit-ic.events { background: var(--green-bg); color: var(--green-text); }
+.audit-main { flex: 1; min-width: 0; }
+.audit-line1 { font-size: 12.5px; color: var(--text); line-height: 1.4; }
+.audit-action-deleted { color: var(--red-text); font-weight: 700; }
+.audit-action-edited { color: var(--amber-text); font-weight: 700; }
+.audit-meta { font-size: 10.5px; color: var(--text3); margin-top: 3px; }
+.audit-chev { color: var(--text3); font-size: 11px; flex-shrink: 0; margin-top: 3px; transition: transform .15s ease; }
+.audit-card.open .audit-chev { transform: rotate(90deg); }
+.audit-detail { display: none; padding: 0 12px 12px 50px; }
+.audit-card.open .audit-detail { display: block; }
+.audit-diff-row { display: flex; gap: 8px; font-size: 11px; margin-bottom: 5px; align-items: baseline; }
+.audit-diff-label { color: var(--text3); width: 58px; flex-shrink: 0; text-transform: uppercase; font-size: 9.5px; font-weight: 700; letter-spacing: .03em; padding-top: 2px; }
+.audit-diff-old { color: var(--red-text); text-decoration: line-through; opacity: .7; }
+.audit-diff-new { color: var(--green-text); font-weight: 600; }
+.audit-deleted-snapshot { background: var(--red-bg); color: var(--red-text); border-radius: 6px; padding: 8px 10px; font-size: 11px; line-height: 1.5; }
+.audit-deleted-snapshot b { display: block; margin-bottom: 2px; }
+.audit-empty { text-align: center; color: var(--text3); font-size: 12px; padding: 20px 0; }
+
 /* ── BOTTOM NAV (same gradient/rounded treatment as the staff app) ── */
 /* Backing must be the SAME gradient as .nav-bar, not a flat colour -- a flat
    colour only matches the gradient exactly at the very edges (0%/100%), so
@@ -1872,6 +1905,22 @@ html, body {
         </div>
       </div>
 
+      <!-- Oversight -->
+      <div class="sec-hdr" id="oversight-section" style="margin-top:6px;display:none;">
+        <div class="sec-title">Oversight</div>
+      </div>
+      <div class="card" id="oversight-card" style="display:none;cursor:pointer;" onclick="openAuditLog()">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="stat-ic" style="width:34px;height:34px;border-radius:9px;background:var(--purple-bg);color:var(--purple-text);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;"><i class="ti ti-history"></i></div>
+          <div style="flex:1;">
+            <div style="font-size:13px;font-weight:600;color:var(--text);">Audit Log</div>
+            <div style="font-size:11px;color:var(--text2);">Who edited or deleted what, across Announcements, Duty &amp; Events</div>
+          </div>
+          <span class="badge b-purple" style="flex-shrink:0;">Super Admin</span>
+          <i class="ti ti-chevron-right" style="color:var(--text3);"></i>
+        </div>
+      </div>
+
       <!-- Danger zone -->
       <div class="sec-hdr" style="margin-top:6px;">
         <div class="sec-title" style="color:var(--red-text);">Danger Zone</div>
@@ -1958,6 +2007,21 @@ html, body {
     <div class="modal-actions">
       <button class="btn-ghost" style="margin:0;" onclick="closePermissionsModal()">Cancel</button>
       <button class="btn-primary" style="margin:0;" onclick="savePermissions()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── AUDIT LOG MODAL ── -->
+<div class="modal-overlay" id="audit-modal">
+  <div class="modal audit-modal" style="position:relative;">
+    <div class="audit-modal-close" onclick="closeAuditLog()"><i class="ti ti-x"></i></div>
+    <div class="audit-modal-hdr">
+      <div class="modal-title">Audit Log</div>
+      <div class="audit-modal-sub">Announcements &middot; Duty &middot; Events</div>
+    </div>
+    <div class="audit-modal-body">
+      <div class="audit-filter-row" id="audit-filters"></div>
+      <div id="audit-list"></div>
     </div>
   </div>
 </div>
@@ -2055,6 +2119,7 @@ html, body {
     document.getElementById('post-form').scrollIntoView({ behavior:'smooth', block:'start' });
   }
   function hidePostForm() {
+    editingAnnOriginal = null;
     document.getElementById('post-form').classList.remove('visible');
     document.getElementById('post-ann-btn').style.display = 'flex';
     document.getElementById('ann-title').value = '';
@@ -2088,7 +2153,14 @@ html, body {
       if (editingAnnId) {
         // PATCH existing record — preserves original created_at so banner timing is unchanged
         await sbFetch('PATCH', '/rest/v1/announcements?id=eq.' + editingAnnId, { title: title, body: body, posted_by: user.name || 'HR' }, { 'Prefer': '' });
+        var diffs = [];
+        if (editingAnnOriginal) {
+          if (editingAnnOriginal.title !== title) diffs.push({ label: 'Title', from: editingAnnOriginal.title, to: title });
+          if (editingAnnOriginal.body  !== body)  diffs.push({ label: 'Body',  from: editingAnnOriginal.body,  to: body });
+        }
+        if (diffs.length) logAudit('announcements', editingAnnId, 'edited', title, diffs, editingAnnOriginal ? editingAnnOriginal.postedBy : null);
         editingAnnId = null;
+        editingAnnOriginal = null;
       } else {
         await publishToDb(title, body, notifyOn, user.name || 'HR', user.email || '');
       }
@@ -2234,6 +2306,7 @@ html, body {
   var editingDutyId = null;
   var editingDutyOriginalStaff = null;
   var editingDutyGroupIds = []; // all IDs in the group being edited
+  var editingDutyOriginal = null; // { role, from, to } snapshot at edit-open time, for audit diffs
 
   async function editDutyGroup(btn) {
     var card = btn.closest('.card');
@@ -2250,6 +2323,7 @@ html, body {
       editingDutyId = ids[0];
       editingDutyGroupIds = ids;
       editingDutyOriginalStaff = null;
+      editingDutyOriginal = { role: r.duty_role || '', from: r.date_from || '', to: r.date_to || '' };
       // Load staff dropdown first (resets tags/selected internally)
       dutyStaffSelected = [];
       var tags = document.getElementById('duty-staff-tags');
@@ -2277,10 +2351,14 @@ html, body {
     if (!allIds) return;
     var ids = allIds.split(',').filter(Boolean);
     if (!confirm('Delete this entire duty team?')) return;
+    var role = card.querySelector('.card-label') ? card.querySelector('.card-label').textContent : 'General Duty';
+    var dateLabel = card.getAttribute('data-date-label') || '';
+    var staffNames = Array.prototype.map.call(card.querySelectorAll('.duty-slot .p-name'), function(el){ return el.textContent; }).join(', ');
     try {
       await Promise.all(ids.map(function(id) {
         return sbFetch('DELETE', '/rest/v1/duty_roster?id=eq.' + id, null, { 'Prefer': '' });
       }));
+      logAudit('duty', ids.join(','), 'deleted', role, { role: role, dates: dateLabel, staff: staffNames }, null);
       card.style.transition = 'opacity 0.2s'; card.style.opacity = '0';
       setTimeout(function(){ card.remove(); loadAdminLeaveDuty(); }, 220);
     } catch(e) {}
@@ -2290,6 +2368,7 @@ html, body {
     editingDutyId = null;
     editingDutyOriginalStaff = null;
     editingDutyGroupIds = [];
+    editingDutyOriginal = null;
     document.getElementById('duty-form-title').textContent = 'New Duty Assignment';
     document.getElementById('duty-form').classList.add('visible');
     document.getElementById('duty-form').scrollIntoView({ behavior:'smooth', block:'start' });
@@ -2299,6 +2378,7 @@ html, body {
     editingDutyId = null;
     editingDutyOriginalStaff = null;
     editingDutyGroupIds = [];
+    editingDutyOriginal = null;
     document.getElementById('duty-form').classList.remove('visible');
     document.getElementById('duty-role-input').value = '';
     document.getElementById('duty-date-from').value  = '';
@@ -2440,9 +2520,19 @@ html, body {
             });
           }));
         }
+        var dutyDiffs = [];
+        if (editingDutyOriginal) {
+          if (editingDutyOriginal.role !== role) dutyDiffs.push({ label: 'Role', from: editingDutyOriginal.role, to: role });
+          if (editingDutyOriginal.from !== dfrom || editingDutyOriginal.to !== dto) dutyDiffs.push({ label: 'Dates', from: editingDutyOriginal.from + ' – ' + editingDutyOriginal.to, to: dfrom + ' – ' + dto });
+        }
+        var oldStaffSorted = existingNames.slice().sort().join(', ');
+        var newStaffSorted = checked.slice().sort().join(', ');
+        if (oldStaffSorted !== newStaffSorted) dutyDiffs.push({ label: 'Staff', from: existingNames.join(', '), to: checked.join(', ') });
+        if (dutyDiffs.length) logAudit('duty', editingDutyGroupIds.join(','), 'edited', role, dutyDiffs, null);
         editingDutyId = null;
         editingDutyOriginalStaff = null;
         editingDutyGroupIds = [];
+        editingDutyOriginal = null;
       } else {
         await Promise.all(checked.map(function(name) {
           return sbFetch('POST', '/rest/v1/duty_roster', {
@@ -2522,12 +2612,14 @@ html, body {
 
   // ── EDIT ANNOUNCEMENT (inline toggle) ──
   var editingAnnId = null;
+  var editingAnnOriginal = null;
 
   function editAnn(btn) {
     var item  = btn.closest('.ann-item');
     var title = item.querySelector('.ann-title').textContent;
     var body  = item.querySelector('.ann-body').textContent;
     editingAnnId = item.getAttribute('data-id') || null;
+    editingAnnOriginal = { title: title, body: body, postedBy: item.getAttribute('data-posted-by') || 'HR' };
     // Populate post form and scroll to it
     switchTabByName('announce');
     document.getElementById('ann-title').value = title;
@@ -2550,6 +2642,23 @@ html, body {
   function clearFormErrors() {
     document.querySelectorAll('.field-error').forEach(e => e.classList.remove('visible'));
     document.querySelectorAll('.form-input, .form-textarea').forEach(i => i.classList.remove('error'));
+  }
+  // ── Audit log (Announcements / Duty / Events only) — best-effort, never blocks the real save/delete ──
+  function logAudit(module, recordId, action, itemTitle, details, originalBy) {
+    try {
+      var raw = sessionStorage.getItem('mjm_user');
+      var u = raw ? JSON.parse(raw) : null;
+      var changedBy = (u && (u.name || u.email)) || 'Unknown';
+      sbFetch('POST', '/rest/v1/audit_log', {
+        module: module,
+        record_id: recordId != null ? String(recordId) : null,
+        action: action,
+        item_title: itemTitle || '',
+        changed_by: changedBy,
+        original_by: originalBy || null,
+        details: details || null
+      }).catch(function(){});
+    } catch(e) {}
   }
   function setLoading(which, on) {
     var map = {
@@ -2619,12 +2728,18 @@ html, body {
     var assignForm  = document.getElementById('assign-admin-form');
     var settingsNav = document.getElementById('nav-settings');
     var settingsBtn = document.getElementById('settings-tab-btn');
+    var oversightSection = document.getElementById('oversight-section');
+    var oversightCard    = document.getElementById('oversight-card');
     if (user.role === 'superadmin') {
       if (assignForm)  assignForm.style.display = 'block';
       if (settingsNav) settingsNav.style.display = 'flex';
       if (settingsBtn) settingsBtn.style.display = 'inline-block';
+      if (oversightSection) oversightSection.style.display = 'flex';
+      if (oversightCard)    oversightCard.style.display = 'block';
     } else {
       if (assignForm)  assignForm.style.display = 'none';
+      if (oversightSection) oversightSection.style.display = 'none';
+      if (oversightCard)    oversightCard.style.display = 'none';
     }
 
     // Render admins list (superadmin + hradmin)
@@ -2759,6 +2874,95 @@ html, body {
     } catch(e) {
       alert('Could not save permissions. Please try again.');
     }
+  }
+
+  // ══════════════════════════════════════
+  // AUDIT LOG (Super Admin — Settings > Oversight)
+  // ══════════════════════════════════════
+  var AUDIT_MODULES = {
+    announcements: { label: 'Announcements', singular: 'Announcement', icon: 'ti-speakerphone' },
+    duty:          { label: 'Duty',          singular: 'Duty',          icon: 'ti-calendar-event' },
+    events:        { label: 'Events',        singular: 'Event',         icon: 'ti-confetti' }
+  };
+  var auditEntries = [];
+  var auditFilter = 'all';
+
+  async function openAuditLog() {
+    document.getElementById('audit-modal').classList.add('visible');
+    auditFilter = 'all';
+    await loadAuditLog();
+  }
+  function closeAuditLog() {
+    document.getElementById('audit-modal').classList.remove('visible');
+  }
+
+  async function loadAuditLog() {
+    var listEl = document.getElementById('audit-list');
+    listEl.innerHTML = '<div class="audit-empty">Loading...</div>';
+    try {
+      var data = await sbFetch('GET', '/rest/v1/audit_log?order=changed_at.desc&limit=200');
+      auditEntries = data || [];
+    } catch(e) {
+      auditEntries = [];
+      listEl.innerHTML = '<div class="audit-empty">Could not load audit log.</div>';
+      return;
+    }
+    renderAuditFilters();
+    renderAuditList();
+  }
+
+  function setAuditFilter(f) {
+    auditFilter = f;
+    renderAuditFilters();
+    renderAuditList();
+  }
+
+  function renderAuditFilters() {
+    var opts = [['all','All'],['announcements','Announcements'],['duty','Duty'],['events','Events']];
+    document.getElementById('audit-filters').innerHTML = opts.map(function(o) {
+      return '<div class="audit-filter-chip' + (auditFilter === o[0] ? ' active' : '') + '" onclick="setAuditFilter(\'' + o[0] + '\')">' + o[1] + '</div>';
+    }).join('');
+  }
+
+  function auditActionLabel(a) {
+    return a === 'deleted' ? '<span class="audit-action-deleted">Deleted</span>' : '<span class="audit-action-edited">Edited</span>';
+  }
+
+  function fmtAuditTime(str) {
+    var d = new Date(str);
+    return d.toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'}) + ' · ' + d.toLocaleTimeString('en-MY',{hour:'numeric',minute:'2-digit',hour12:true});
+  }
+
+  function renderAuditList() {
+    var el = document.getElementById('audit-list');
+    var filtered = auditEntries.filter(function(e){ return auditFilter === 'all' || e.module === auditFilter; });
+    if (!filtered.length) { el.innerHTML = '<div class="audit-empty">No audit events in this filter.</div>'; return; }
+    el.innerHTML = filtered.map(function(e, i) {
+      var mod = AUDIT_MODULES[e.module] || { label: e.module, singular: e.module, icon: 'ti-file' };
+      var detail = '';
+      if (e.action === 'deleted') {
+        var snap = e.details || {};
+        detail = '<div class="audit-deleted-snapshot"><b>Snapshot before deletion' + (e.original_by ? ' (originally by ' + escHtml(e.original_by) + ')' : '') + ':</b>'
+          + Object.keys(snap).map(function(k){ return escHtml(k) + ': ' + escHtml(snap[k]); }).join('<br>')
+          + '</div>';
+      } else {
+        var diffs = e.details || [];
+        detail = diffs.map(function(d) {
+          return '<div class="audit-diff-row"><div class="audit-diff-label">' + escHtml(d.label) + '</div><div><span class="audit-diff-old">' + escHtml(d.from) + '</span> → <span class="audit-diff-new">' + escHtml(d.to) + '</span></div></div>';
+        }).join('') + (e.original_by ? '<div style="font-size:10.5px;color:var(--text3);margin-top:6px;">Originally created by ' + escHtml(e.original_by) + '</div>' : '');
+      }
+      return '<div class="audit-card" data-idx="' + i + '">'
+        + '<div class="audit-row" onclick="this.closest(\'.audit-card\').classList.toggle(\'open\')">'
+        + '<div class="audit-ic ' + e.module + '"><i class="ti ' + mod.icon + '"></i></div>'
+        + '<div class="audit-main">'
+        + '<div class="audit-line1">' + auditActionLabel(e.action) + ' <b>' + escHtml(mod.singular) + '</b> — "' + escHtml(e.item_title || '') + '"</div>'
+        + '<div class="audit-meta">by ' + escHtml(e.changed_by || 'Unknown') + ' · ' + fmtAuditTime(e.changed_at) + '</div>'
+        + '</div>'
+        + '<i class="ti ti-chevron-right audit-chev"></i>'
+        + '</div>'
+        + '<div class="audit-detail">' + detail + '</div>'
+        + '</div>';
+    }).join('');
   }
 
   async function deleteStaff(id, name) {
@@ -4077,7 +4281,7 @@ html, body {
           var d = new Date(ann.created_at).toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'});
           var t = new Date(ann.created_at).toLocaleTimeString('en-MY',{hour:'numeric',minute:'2-digit',hour12:true});
           var dt = d + ' · ' + t;
-          return '<div class="ann-item" data-id="' + ann.id + '">'
+          return '<div class="ann-item" data-id="' + ann.id + '" data-posted-by="' + escHtml(ann.posted_by || 'HR') + '">'
             + '<div class="ann-meta"><span class="ann-time">' + dt + '</span></div>'
             + '<div class="ann-title">' + escHtml(ann.title) + '</div>'
             + '<div class="ann-body">' + escHtml(ann.body) + '</div>'
@@ -4103,8 +4307,14 @@ html, body {
     var id   = item ? item.getAttribute('data-id') : null;
     if (!id) { confirmDelete(btn); return; }
     if (!confirm('Delete this announcement? This cannot be undone.')) return;
+    var snapshot = {
+      title: item.querySelector('.ann-title').textContent,
+      body: item.querySelector('.ann-body').textContent,
+      posted_by: item.getAttribute('data-posted-by') || 'HR'
+    };
     try {
       await sbFetch('DELETE', '/rest/v1/announcements?id=eq.' + id, null, { 'Prefer': '' });
+      logAudit('announcements', id, 'deleted', snapshot.title, snapshot, snapshot.posted_by);
       item.style.transition = 'opacity 0.2s'; item.style.opacity = '0';
       setTimeout(function(){ item.remove(); }, 220);
       var countEl = document.getElementById('ann-count');
@@ -4261,7 +4471,7 @@ html, body {
         var dateLabel = from === to ? from : from + ' – ' + to;
         var isActive = g.date_from <= today && today <= (g.date_to || g.date_from);
         var allIds = g.members.map(function(r){ return r.id; }).join(',');
-        return '<div class="card" style="margin-bottom:10px;" data-group-ids="' + allIds + '">'
+        return '<div class="card" style="margin-bottom:10px;" data-group-ids="' + allIds + '" data-date-label="' + escHtml(dateLabel) + '">'
           + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
           + '<div class="card-label" style="margin:0;">' + escHtml(g.role) + '</div>'
           + '<div style="display:flex;align-items:center;gap:6px;">'
@@ -4692,6 +4902,7 @@ html, body {
 
   // ── EVENT FORM ──
   var editingEventId = null;
+  var editingEventOriginal = null;
 
   function showEventForm() {
     document.getElementById('event-form').classList.add('visible');
@@ -4709,6 +4920,7 @@ html, body {
     document.getElementById('event-title').classList.remove('error');
     document.getElementById('event-date').classList.remove('error');
     editingEventId = null;
+    editingEventOriginal = null;
   }
 
   async function saveEvent() {
@@ -4734,6 +4946,15 @@ html, body {
           title: title, event_date: date,
           event_time: time || null, description: desc || null
         }, { 'Prefer': '' });
+        var eventDiffs = [];
+        if (editingEventOriginal) {
+          var eo = editingEventOriginal;
+          if (eo.title !== title) eventDiffs.push({ label: 'Title', from: eo.title, to: title });
+          if (eo.event_date !== date) eventDiffs.push({ label: 'Date', from: eo.event_date, to: date });
+          if ((eo.event_time || '') !== (time || '')) eventDiffs.push({ label: 'Time', from: eo.event_time || '(none)', to: time || '(none)' });
+          if ((eo.description || '') !== desc) eventDiffs.push({ label: 'Description', from: eo.description || '(none)', to: desc || '(none)' });
+        }
+        if (eventDiffs.length) logAudit('events', editingEventId, 'edited', title, eventDiffs, editingEventOriginal ? editingEventOriginal.created_by : null);
       } else {
         await sbFetch('POST', '/rest/v1/events', {
           title: title, event_date: date,
@@ -4786,8 +5007,17 @@ html, body {
     var id   = item ? item.getAttribute('data-event-id') : null;
     if (!confirm('Delete this event?')) return;
     if (id) {
+      var snapshot = null;
+      try {
+        var existing = await sbFetch('GET', '/rest/v1/events?id=eq.' + id + '&select=*');
+        if (existing && existing.length) {
+          var ev = existing[0];
+          snapshot = { title: ev.title, event_date: ev.event_date, event_time: ev.event_time, description: ev.description, created_by: ev.created_by || 'HR' };
+        }
+      } catch(e) {}
       try {
         await sbFetch('DELETE', '/rest/v1/events?id=eq.' + id, null, { 'Prefer': '' });
+        if (snapshot) logAudit('events', id, 'deleted', snapshot.title, snapshot, snapshot.created_by);
       } catch(e) { alert('Could not delete event. Please try again.'); return; }
     }
     item.style.transition = 'opacity 0.2s'; item.style.opacity = '0';
@@ -4807,6 +5037,7 @@ html, body {
     sbFetch('GET', '/rest/v1/events?id=eq.' + id + '&select=*').then(function(data) {
       if (!data || !data.length) return;
       var ev = data[0];
+      editingEventOriginal = { title: ev.title || '', event_date: ev.event_date || '', event_time: ev.event_time ? ev.event_time.substring(0,5) : '', description: ev.description || '', created_by: ev.created_by || 'HR' };
       document.getElementById('event-title').value = ev.title || '';
       document.getElementById('event-date').value  = ev.event_date || '';
       document.getElementById('event-time').value  = ev.event_time ? ev.event_time.substring(0,5) : '';
