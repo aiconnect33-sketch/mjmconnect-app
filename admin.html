@@ -935,6 +935,9 @@ html, body {
           <div id="admin-notif-list"><div class="notif-empty-msg">No new notifications.</div></div>
         </div>
       </div>
+      <div class="notif-wrap" id="audit-log-icon-btn" onclick="openAuditLog()" title="Audit Log" style="display:none;width:20px;height:20px;justify-content:center;">
+        <i class="ti ti-history" style="font-size:20px;color:#E1F5EE;"></i>
+      </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;">
         <div class="top-av" id="top-av-initials" onclick="window.location.href='profile.html'" title="My Profile" style="cursor:pointer;">SA</div>
       </div>
@@ -1905,22 +1908,6 @@ html, body {
         </div>
       </div>
 
-      <!-- Oversight -->
-      <div class="sec-hdr" id="oversight-section" style="margin-top:6px;display:none;">
-        <div class="sec-title">Oversight</div>
-      </div>
-      <div class="card" id="oversight-card" style="display:none;cursor:pointer;" onclick="openAuditLog()">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <div class="stat-ic" style="width:34px;height:34px;border-radius:9px;background:var(--purple-bg);color:var(--purple-text);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;"><i class="ti ti-history"></i></div>
-          <div style="flex:1;">
-            <div style="font-size:13px;font-weight:600;color:var(--text);">Audit Log</div>
-            <div style="font-size:11px;color:var(--text2);">Who edited or deleted what, across Announcements, Duty &amp; Events</div>
-          </div>
-          <span class="badge b-purple" style="flex-shrink:0;">Super Admin</span>
-          <i class="ti ti-chevron-right" style="color:var(--text3);"></i>
-        </div>
-      </div>
-
       <!-- Danger zone -->
       <div class="sec-hdr" style="margin-top:6px;">
         <div class="sec-title" style="color:var(--red-text);">Danger Zone</div>
@@ -2728,18 +2715,15 @@ html, body {
     var assignForm  = document.getElementById('assign-admin-form');
     var settingsNav = document.getElementById('nav-settings');
     var settingsBtn = document.getElementById('settings-tab-btn');
-    var oversightSection = document.getElementById('oversight-section');
-    var oversightCard    = document.getElementById('oversight-card');
+    var auditIconBtn = document.getElementById('audit-log-icon-btn');
     if (user.role === 'superadmin') {
       if (assignForm)  assignForm.style.display = 'block';
       if (settingsNav) settingsNav.style.display = 'flex';
       if (settingsBtn) settingsBtn.style.display = 'inline-block';
-      if (oversightSection) oversightSection.style.display = 'flex';
-      if (oversightCard)    oversightCard.style.display = 'block';
+      if (auditIconBtn) auditIconBtn.style.display = 'flex';
     } else {
       if (assignForm)  assignForm.style.display = 'none';
-      if (oversightSection) oversightSection.style.display = 'none';
-      if (oversightCard)    oversightCard.style.display = 'none';
+      if (auditIconBtn) auditIconBtn.style.display = 'none';
     }
 
     // Render admins list (superadmin + hradmin)
