@@ -184,6 +184,7 @@ async function saveLeaveRequest() {
     }
     hideLeaveForm();
     loadLeave();
+    if (typeof loadStaffCalendar === 'function') loadStaffCalendar();
   } catch(e) { alert('Could not save leave. Please try again.'); }
 }
 
@@ -193,5 +194,6 @@ async function deleteLeaveRequest(id) {
   try {
     await sbWrite('DELETE', 'leave_records', null, 'id=eq.' + id);
     loadLeave();
+    if (typeof loadStaffCalendar === 'function') loadStaffCalendar();
   } catch(e) { alert('Could not delete leave record. Please try again.'); }
 }
