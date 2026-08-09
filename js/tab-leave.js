@@ -2,7 +2,7 @@
 
 async function loadLeave() {
   if (window.location.protocol === 'file:') return;
-  var today = new Date().toISOString().split('T')[0];
+  var today = localDateStr();
   var avColors = ['av-green','av-amber','av-coral','av-blue','av-purple','av-red'];
 
   // ── HOME TAB: today on leave ──
@@ -46,7 +46,7 @@ async function loadLeave() {
         return;
       }
       var oneMonthOut = new Date(); oneMonthOut.setMonth(oneMonthOut.getMonth() + 1);
-      var oneMonthStr = oneMonthOut.toISOString().split('T')[0];
+      var oneMonthStr = localDateStr(oneMonthOut);
       var current  = data2.filter(function(r){ return r.date_from <= today && today <= r.date_to; });
       var upcoming = data2.filter(function(r){ return r.date_from > today && r.date_from <= oneMonthStr; });
       var html2 = '';

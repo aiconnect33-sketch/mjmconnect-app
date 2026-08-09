@@ -3,7 +3,7 @@
 async function loadStaffEvents() {
   var el = document.getElementById('staff-event-list');
   if (!el) return;
-  var today = new Date().toISOString().split('T')[0];
+  var today = localDateStr();
   var canEdit = typeof hasEditPermission === 'function' && hasEditPermission('events');
   var addTrigger = document.getElementById('event-add-trigger');
   if (addTrigger) addTrigger.style.display = canEdit ? 'block' : 'none';

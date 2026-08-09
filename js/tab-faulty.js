@@ -50,7 +50,7 @@ function initFaultyTab() {
 async function isFaultyMaintainer() {
   var raw = sessionStorage.getItem('mjm_user');
   var u = raw ? JSON.parse(raw) : {};
-  var today = new Date().toISOString().split('T')[0];
+  var today = localDateStr();
   try {
     var data = await sbGet('duty_roster', 'duty_role=eq.' + encodeURIComponent(FC_DUTY_ROLE) + '&date_from=lte.' + today + '&date_to=gte.' + today);
     if (!data || !data.length) return false;
