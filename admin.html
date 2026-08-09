@@ -2618,6 +2618,14 @@ html, body {
   }
 
   // ── HELPERS ──
+  // 'YYYY-MM-DD' for a Date in LOCAL time -- new Date().toISOString() converts
+  // to UTC first, which silently rolls back to "yesterday" for anyone east of
+  // UTC (e.g. Malaysia, UTC+8) during the early hours of the day. Use this for
+  // every "today" date comparison instead.
+  function localDateStr(d) {
+    d = d || new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
   function escHtml(str) {
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   }
@@ -3285,7 +3293,7 @@ html, body {
     vIsFullDay = true;
     vSelectedDates = [];
     document.getElementById('vehicle-form').style.display = 'block';
-    var today = new Date().toISOString().split('T')[0];
+    var today = localDateStr();
     document.getElementById('v-date').min   = today;
     document.getElementById('v-date').value = '';
     var vdisp = document.getElementById('v-date-display'); if (vdisp) vdisp.classList.add('placeholder');
@@ -3492,7 +3500,7 @@ html, body {
     var raw = sessionStorage.getItem('mjm_user');
     var u   = raw ? JSON.parse(raw) : {};
     var monthStart = vCalYear + '-' + String(vCalMonth+1).padStart(2,'0') + '-01';
-    var monthEnd   = new Date(vCalYear, vCalMonth+1, 0).toISOString().split('T')[0];
+    var monthEnd   = localDateStr(new Date(vCalYear, vCalMonth+1, 0));
     try {
       var url  = SURL + '/rest/v1/vehicle_bookings?booking_date=gte.' + monthStart
                + '&booking_date=lte.' + monthEnd
@@ -3591,7 +3599,7 @@ html, body {
   function showRoomForm() {
     rSelectedDates = [];
     document.getElementById('room-form').style.display = 'block';
-    var today = new Date().toISOString().split('T')[0];
+    var today = localDateStr();
     document.getElementById('r-date').min   = today;
     document.getElementById('r-date').value = '';
     var rdisp = document.getElementById('r-date-display'); if (rdisp) rdisp.classList.add('placeholder');
@@ -3778,7 +3786,7 @@ html, body {
     var raw = sessionStorage.getItem('mjm_user');
     var u   = raw ? JSON.parse(raw) : {};
     var monthStart = rCalYear + '-' + String(rCalMonth+1).padStart(2,'0') + '-01';
-    var monthEnd   = new Date(rCalYear, rCalMonth+1, 0).toISOString().split('T')[0];
+    var monthEnd   = localDateStr(new Date(rCalYear, rCalMonth+1, 0));
     try {
       var url  = SURL + '/rest/v1/room_bookings?booking_date=gte.' + monthStart
                + '&booking_date=lte.' + monthEnd
@@ -4313,7 +4321,7 @@ html, body {
   async function loadDbLeave() {
     var card = document.getElementById('leave-list');
     if (!card) return;
-    var today = new Date().toISOString().split('T')[0];
+    var today = localDateStr();
     try {
       var data = await sbFetch('GET', '/rest/v1/leave_records?date_to=gte.' + today + '&order=date_from.asc&limit=200');
       if (!data) return;
@@ -4325,7 +4333,7 @@ html, body {
       // Matches the staff app's Leave tab: split into Currently on Leave / Upcoming Leave
       // (capped to the next month out).
       var oneMonthOut = new Date(); oneMonthOut.setMonth(oneMonthOut.getMonth() + 1);
-      var oneMonthStr = oneMonthOut.toISOString().split('T')[0];
+      var oneMonthStr = localDateStr(oneMonthOut);
       var current  = data.filter(function(r){ return r.date_from <= today && today <= r.date_to; });
       var upcoming = data.filter(function(r){ return r.date_from > today && r.date_from <= oneMonthStr; });
 
@@ -4370,7 +4378,7 @@ html, body {
   async function loadDbEstateTrips() {
     var card = document.getElementById('estatetrip-list');
     if (!card) return;
-    var today = new Date().toISOString().split('T')[0];
+    var today = localDateStr();
     try {
       var data = await sbFetch('GET', '/rest/v1/estate_trips?trip_date=gte.' + today + '&order=trip_date.asc&limit=200');
       if (!data) return;
@@ -4434,7 +4442,7 @@ html, body {
   async function loadDbDuty() {
     var el = document.getElementById('duty-db-list');
     if (!el) return;
-    var today = new Date().toISOString().split('T')[0];
+    var today = localDateStr();
     try {
       var data = await sbFetch('GET', '/rest/v1/duty_roster?date_to=gte.' + today + '&order=date_from.asc,duty_role.asc&limit=200');
       if (!data) return;
@@ -4837,7 +4845,7 @@ html, body {
   }
 
   async function loadAdminLeaveDuty() {
-    var today = new Date().toISOString().split('T')[0];
+    var today = localDateStr();
     try {
       var leaveEl = document.getElementById('admin-leave-today');
       if (leaveEl && window.location.protocol !== 'file:') {
@@ -4961,7 +4969,7 @@ html, body {
   }
 
   async function loadDbEvents() {
-    var today = new Date().toISOString().split('T')[0];
+    var today = localDateStr();
     var upEl  = document.getElementById('event-upcoming-list');
     var upCnt = document.getElementById('event-upcoming-count');
     if (!upEl) return;

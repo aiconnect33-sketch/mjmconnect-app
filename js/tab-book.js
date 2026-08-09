@@ -144,7 +144,7 @@ function showVehicleForm() {
   vIsFullDay = true;
   vSelectedDates = [];
   document.getElementById('vehicle-form').style.display = 'block';
-  var today = new Date().toISOString().split('T')[0];
+  var today = localDateStr();
   document.getElementById('v-date').min   = today;
   document.getElementById('v-date').value = '';
   document.getElementById('v-date').value = '';
@@ -354,7 +354,7 @@ async function loadMyVehicleBookings() {
   var raw = sessionStorage.getItem('mjm_user');
   var u   = raw ? JSON.parse(raw) : {};
   var monthStart = vCalYear + '-' + String(vCalMonth+1).padStart(2,'0') + '-01';
-  var monthEnd   = new Date(vCalYear, vCalMonth+1, 0).toISOString().split('T')[0];
+  var monthEnd   = localDateStr(new Date(vCalYear, vCalMonth+1, 0));
   try {
     var url  = SURL + '/rest/v1/vehicle_bookings?booking_date=gte.' + monthStart
              + '&booking_date=lte.' + monthEnd
@@ -453,7 +453,7 @@ function updateRoomCardInfo() {
 function showRoomForm() {
   rSelectedDates = [];
   document.getElementById('room-form').style.display = 'block';
-  var today = new Date().toISOString().split('T')[0];
+  var today = localDateStr();
   document.getElementById('r-date').min   = today;
   document.getElementById('r-date').value = '';
   document.getElementById('r-date').value = '';
@@ -641,7 +641,7 @@ async function loadMyRoomBookings() {
   var raw = sessionStorage.getItem('mjm_user');
   var u   = raw ? JSON.parse(raw) : {};
   var monthStart = rCalYear + '-' + String(rCalMonth+1).padStart(2,'0') + '-01';
-  var monthEnd   = new Date(rCalYear, rCalMonth+1, 0).toISOString().split('T')[0];
+  var monthEnd   = localDateStr(new Date(rCalYear, rCalMonth+1, 0));
   try {
     var url  = SURL + '/rest/v1/room_bookings?booking_date=gte.' + monthStart
              + '&booking_date=lte.' + monthEnd

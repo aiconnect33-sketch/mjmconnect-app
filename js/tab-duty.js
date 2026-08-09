@@ -2,7 +2,7 @@
 
 async function loadDuty() {
   if (window.location.protocol === 'file:') return;
-  var today = new Date().toISOString().split('T')[0];
+  var today = localDateStr();
   var avColors = ['av-green','av-amber','av-coral','av-blue','av-purple','av-red'];
 
   // ── DUTY TAB: upcoming + active, past auto-removed ──

@@ -4,6 +4,15 @@
 var SURL = 'https://jkbxngfwkytscgxnnnnd.supabase.co';
 var SKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImprYnhuZ2Z3a3l0c2NneG5ubm5kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNTcyMjcsImV4cCI6MjA5NTYzMzIyN30._FIzBEcmwtAkADDiDZVTS-YQY0kLoGBowL8n7T45Ulk';
 
+// 'YYYY-MM-DD' for a Date in LOCAL time. new Date().toISOString() converts to
+// UTC first, which silently rolls back to "yesterday" for anyone east of UTC
+// (e.g. Malaysia, UTC+8) during the early hours of the day -- use this for
+// every "today" date comparison instead.
+function localDateStr(d) {
+  d = d || new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
 async function sbGet(table, filter) {
   var hasOwnOrder = filter && /(^|&)order=/.test(filter);
   var url = SURL + '/rest/v1/' + table + '?' + (hasOwnOrder ? '' : 'order=created_at.desc&') + (filter || '');
