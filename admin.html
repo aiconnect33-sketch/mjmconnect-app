@@ -2222,6 +2222,8 @@ html, body {
       setLoading('leave-save', false);
       hideLeaveForm();
       await loadDbLeave();
+      if (typeof loadAdminCalendar === 'function') loadAdminCalendar();
+      if (typeof loadAdminLeaveDuty === 'function') loadAdminLeaveDuty();
       document.getElementById('leave-success').classList.add('visible');
       setTimeout(() => document.getElementById('leave-success').classList.remove('visible'), 3500);
     } catch(e) {
@@ -4360,6 +4362,8 @@ html, body {
     } catch(e) { alert('Could not remove leave entry. Please try again.'); return; }
     row.style.transition = 'opacity 0.2s'; row.style.opacity = '0';
     setTimeout(function(){ row.remove(); }, 220);
+    if (typeof loadAdminCalendar === 'function') loadAdminCalendar();
+    if (typeof loadAdminLeaveDuty === 'function') loadAdminLeaveDuty();
   }
 
   // ── LOAD ESTATE TRIPS FROM SUPABASE ──
