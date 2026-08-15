@@ -70,11 +70,30 @@ async function loadDuty() {
 // ── DUTY — STAFF EDIT (Duty module permission) ──
 var editingDutyId = null;
 var editingDutyOriginal = null;
+var dutyStaffOptions = [];
 
-function showDutyForm() {
+// Staff Name is a picker sourced from registered accounts only (matches
+// Admin's behaviour) -- not free text, so duty can't be assigned to
+// someone who hasn't signed up yet. `preserveName` keeps an existing
+// assignment's name selectable even if that account was later removed.
+async function loadDutyStaffOptions(preserveName) {
+  var sel = document.getElementById('duty-form-name');
+  if (!sel) return;
+  try {
+    var data = await sbGet('profiles', 'role=neq.pending&order=full_name.asc&select=full_name');
+    dutyStaffOptions = (data || []).map(function(p){ return p.full_name; }).filter(Boolean);
+  } catch(e) { dutyStaffOptions = []; }
+  var names = dutyStaffOptions.slice();
+  if (preserveName && names.indexOf(preserveName) === -1) names.push(preserveName);
+  sel.innerHTML = '<option value="" disabled' + (preserveName ? '' : ' selected') + '>Select staff…</option>'
+    + names.map(function(n){ return '<option value="' + escHtml(n) + '">' + escHtml(n) + '</option>'; }).join('');
+  if (preserveName) sel.value = preserveName;
+}
+
+async function showDutyForm() {
   editingDutyId = null;
   document.getElementById('duty-form-title').textContent = 'New Duty Assignment';
-  document.getElementById('duty-form-name').value = '';
+  await loadDutyStaffOptions();
   document.getElementById('duty-form-role').value = '';
   document.getElementById('duty-form-from').value = '';
   document.getElementById('duty-form-to').value   = '';
@@ -88,12 +107,12 @@ function hideDutyForm() {
   editingDutyOriginal = null;
 }
 
-function editDutyAssignment(id, name, role, from, to) {
+async function editDutyAssignment(id, name, role, from, to) {
   if (!hasEditPermission('duty')) return;
   editingDutyId = id;
   editingDutyOriginal = { name: name, role: role, from: from, to: to };
   document.getElementById('duty-form-title').textContent = 'Edit Duty Assignment';
-  document.getElementById('duty-form-name').value = name;
+  await loadDutyStaffOptions(name);
   document.getElementById('duty-form-role').value = role;
   document.getElementById('duty-form-from').value = from;
   document.getElementById('duty-form-to').value   = to;
