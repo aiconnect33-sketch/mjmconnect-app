@@ -1,8 +1,8 @@
 // ── core.js — shared utilities, Supabase, nav, clock ──
 
 // Supabase config
-var SURL = 'https://jkbxngfwkytscgxnnnnd.supabase.co';
-var SKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImprYnhuZ2Z3a3l0c2NneG5ubm5kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNTcyMjcsImV4cCI6MjA5NTYzMzIyN30._FIzBEcmwtAkADDiDZVTS-YQY0kLoGBowL8n7T45Ulk';
+var SURL = 'https://hbxzbowkucpqlhxdomap.supabase.co';
+var SKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhieHpib3drdWNwcWxoeGRvbWFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5OTEwMjYsImV4cCI6MjEwMjU2NzAyNn0.tZMdtKy92OUdLEOxKkO2XAa2bgXzkEeQtCAjtYF8yGA';
 
 // 'YYYY-MM-DD' for a Date in LOCAL time. new Date().toISOString() converts to
 // UTC first, which silently rolls back to "yesterday" for anyone east of UTC
