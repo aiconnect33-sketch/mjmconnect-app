@@ -1774,8 +1774,8 @@ html, body {
       <div class="card" style="padding:0;overflow:hidden;">
         <div class="fc-table-wrap">
           <table class="fc-table">
-            <thead><tr><th>Staff</th><th>Location</th><th>Item</th><th>Urgency</th><th>Status</th><th></th></tr></thead>
-            <tbody id="fc-admin-rows"><tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px;">Loading...</td></tr></tbody>
+            <thead><tr><th>Staff</th><th>Location</th><th>Item</th><th>Urgency</th><th>Submitted</th><th>Status</th><th></th></tr></thead>
+            <tbody id="fc-admin-rows"><tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px;">Loading...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -4206,7 +4206,7 @@ html, body {
     try {
       var data = await sbGet('faulty_complaints', 'order=created_at.desc&limit=100');
       if (!data || !data.length) {
-        rows.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px;">No complaints yet.</td></tr>';
+        rows.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px;">No complaints yet.</td></tr>';
         return;
       }
       rows.innerHTML = data.map(function (c) {
@@ -4218,6 +4218,7 @@ html, body {
           var resolvedAt = c.resolved_at ? new Date(c.resolved_at).toLocaleDateString('en-MY', { day: 'numeric', month: 'short' }) + ' ' + new Date(c.resolved_at).toLocaleTimeString('en-MY', { hour: 'numeric', minute: '2-digit', hour12: true }) : '';
           statusCell += '<div style="font-size:10px;color:var(--text3);margin-top:2px;">by ' + escHtml(c.resolved_by) + (resolvedAt ? ' · ' + resolvedAt : '') + '</div>';
         }
+        var submittedCell = c.created_at ? new Date(c.created_at).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
         var actionCell = isResolved
           ? '<button class="fc-btn-reopen" onclick="reopenFaultyComplaint(' + c.id + ')">Reopen</button>'
           : '<button class="fc-btn-resolve" onclick="resolveFaultyComplaint(' + c.id + ')">Mark Resolved</button>';
@@ -4227,12 +4228,13 @@ html, body {
           + '<td style="color:var(--text2);font-size:11.5px;">' + escHtml(c.location) + '</td>'
           + '<td style="font-weight:600;">' + escHtml(itemLabel) + photoCell + '</td>'
           + '<td>' + fcUrgencyBadge(c.urgency) + '</td>'
+          + '<td style="color:var(--text2);font-size:11.5px;">' + submittedCell + '</td>'
           + '<td>' + statusCell + '</td>'
           + '<td>' + actionCell + '</td>'
           + '</tr>';
       }).join('');
     } catch (e) {
-      rows.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px;">Could not load complaints.</td></tr>';
+      rows.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px;">Could not load complaints.</td></tr>';
     }
   }
 

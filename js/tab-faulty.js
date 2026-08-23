@@ -24,8 +24,6 @@ var FC_ITEMS = [
   "Other Issues (Please state item and describe the issue)"
 ];
 
-var FC_DUTY_ROLE = 'Faulty Complaint Maintenance';
-
 var faultyTabInited = false;
 var fcState = { loc: null, item: null, itemOther: '', urgency: null, photoFile: null, photoObjectUrl: null };
 
@@ -41,24 +39,6 @@ function initFaultyTab() {
   renderFcOptionList('fc-item-list', FC_ITEMS);
 
   loadTeamComplaints();
-}
-
-// Is the logged-in staff member currently assigned the "Faulty Complaint
-// Maintenance" On Duty role for today? Matched by email when the roster
-// row has one (immune to display-name changes), falling back to name for
-// older/legacy roster rows that predate the staff_email column.
-async function isFaultyMaintainer() {
-  var raw = sessionStorage.getItem('mjm_user');
-  var u = raw ? JSON.parse(raw) : {};
-  var today = localDateStr();
-  try {
-    var data = await sbGet('duty_roster', 'duty_role=eq.' + encodeURIComponent(FC_DUTY_ROLE) + '&date_from=lte.' + today + '&date_to=gte.' + today);
-    if (!data || !data.length) return false;
-    return data.some(function (r) {
-      if (u.email && r.staff_email) return r.staff_email.toLowerCase() === u.email.toLowerCase();
-      return u.name && r.staff_name && r.staff_name.toLowerCase() === u.name.toLowerCase();
-    });
-  } catch (e) { return false; }
 }
 
 // Option rows carry their value in data-val; clicks are handled by the
@@ -307,29 +287,35 @@ function fcUrgencyBadge(u) {
   return '<span class="badge badge-success">Non-urgent</span>';
 }
 
+function fcStatusBadge(s) {
+  return s === 'resolved' ? '<span class="badge badge-success">Resolved</span>' : '<span class="badge badge-amber">Open</span>';
+}
+
 async function loadTeamComplaints() {
   var el = document.getElementById('fc-team-complaints');
-  var bannerEl = document.getElementById('fc-duty-banner');
   if (!el) return;
-  var onDuty = await isFaultyMaintainer();
-  if (bannerEl) {
-    bannerEl.innerHTML = onDuty
-      ? '<div class="fc-duty-banner on"><i class="ti ti-tool"></i> You\'re on Faulty Complaint Maintenance duty this month — you can resolve any complaint below.</div>'
-      : '<div class="fc-duty-banner off"><i class="ti ti-eye"></i> You can see every complaint, but only this month\'s maintenance duty can mark them resolved.</div>';
-  }
   try {
-    var data = await sbGet('faulty_complaints', 'status=eq.open&order=created_at.desc&limit=100');
-    if (!data || !data.length) { el.innerHTML = '<div class="book-empty">No open complaints right now.</div>'; return; }
+    var data = await sbGet('faulty_complaints', 'order=created_at.desc&limit=100');
+    if (!data || !data.length) { el.innerHTML = '<div class="book-empty">No complaints yet.</div>'; return; }
     el.innerHTML = data.map(function (c) {
       var itemLabel = c.item === 'Other Issues' && c.item_other ? c.item_other : c.item;
+      var isResolved = c.status === 'resolved';
       var d = new Date(c.created_at).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' });
-      var resolveBtn = onDuty ? '<button class="fc-btn-resolve" onclick="resolveFaultyComplaint(' + c.id + ')">✓ Mark Resolved</button>' : '';
+      var actionBtn = isResolved
+        ? '<button class="fc-btn-reopen" onclick="reopenFaultyComplaint(' + c.id + ')">Reopen</button>'
+        : '<button class="fc-btn-resolve" onclick="resolveFaultyComplaint(' + c.id + ')">✓ Mark Resolved</button>';
+      var resolvedLine = '';
+      if (isResolved && c.resolved_by) {
+        var resolvedAt = c.resolved_at ? new Date(c.resolved_at).toLocaleDateString('en-MY', { day: 'numeric', month: 'short' }) + ' ' + new Date(c.resolved_at).toLocaleTimeString('en-MY', { hour: 'numeric', minute: '2-digit', hour12: true }) : '';
+        resolvedLine = '<div style="font-size:10.5px;color:var(--text-light);margin-top:2px;">Resolved by ' + escHtml(c.resolved_by) + (resolvedAt ? ' · ' + resolvedAt : '') + '</div>';
+      }
       return '<div class="book-item">'
-        + '<div class="book-item-header"><div class="book-item-name">' + escHtml(itemLabel) + '</div>' + fcUrgencyBadge(c.urgency) + '</div>'
-        + '<div class="book-item-date">' + escHtml(c.location) + ' · ' + d + '</div>'
+        + '<div class="book-item-header"><div class="book-item-name">' + escHtml(itemLabel) + '</div>' + fcUrgencyBadge(c.urgency) + '&nbsp;' + fcStatusBadge(c.status) + '</div>'
+        + '<div class="book-item-date">' + escHtml(c.location) + ' · Submitted ' + d + '</div>'
         + '<div class="book-item-purpose">' + escHtml(c.description) + '</div>'
         + '<div style="font-size:10.5px;color:var(--text-light);margin-top:4px;">Submitted by ' + escHtml(c.staff_name) + '</div>'
-        + resolveBtn
+        + resolvedLine
+        + actionBtn
         + '</div>';
     }).join('');
   } catch (e) {
@@ -344,6 +330,16 @@ async function resolveFaultyComplaint(id) {
   try {
     await sbWrite('PATCH', 'faulty_complaints', { status: 'resolved', resolved_by: resolvedBy, resolved_at: new Date().toISOString() }, 'id=eq.' + id);
     syncFcResolveToSheet(id, 'resolve', resolvedBy);
+    loadTeamComplaints();
+  } catch (e) {
+    alert('Could not update: ' + e.message);
+  }
+}
+
+async function reopenFaultyComplaint(id) {
+  try {
+    await sbWrite('PATCH', 'faulty_complaints', { status: 'open', resolved_by: null, resolved_at: null }, 'id=eq.' + id);
+    syncFcResolveToSheet(id, 'reopen', null);
     loadTeamComplaints();
   } catch (e) {
     alert('Could not update: ' + e.message);
