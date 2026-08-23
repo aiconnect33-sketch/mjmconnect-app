@@ -291,11 +291,27 @@ function fcStatusBadge(s) {
   return s === 'resolved' ? '<span class="badge badge-success">Resolved</span>' : '<span class="badge badge-amber">Open</span>';
 }
 
+// Drops complaints resolved more than 5 days ago (they stay in Supabase and
+// the synced Sheet forever — this only affects what shows in the app), then
+// sorts open complaints first, resolved ones after (most recently resolved first).
+function fcFilterAndSort(data) {
+  var cutoff = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
+  return data.filter(function (c) {
+    return c.status !== 'resolved' || !c.resolved_at || new Date(c.resolved_at) >= cutoff;
+  }).sort(function (a, b) {
+    var aR = a.status === 'resolved', bR = b.status === 'resolved';
+    if (aR !== bR) return aR ? 1 : -1;
+    var field = aR ? 'resolved_at' : 'created_at';
+    return new Date(b[field] || 0) - new Date(a[field] || 0);
+  });
+}
+
 async function loadTeamComplaints() {
   var el = document.getElementById('fc-team-complaints');
   if (!el) return;
   try {
     var data = await sbGet('faulty_complaints', 'order=created_at.desc&limit=100');
+    if (data) data = fcFilterAndSort(data);
     if (!data || !data.length) { el.innerHTML = '<div class="book-empty">No complaints yet.</div>'; return; }
     el.innerHTML = data.map(function (c) {
       var itemLabel = c.item === 'Other Issues' && c.item_other ? c.item_other : c.item;
