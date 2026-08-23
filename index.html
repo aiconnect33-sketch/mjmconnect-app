@@ -567,11 +567,10 @@
   .fc-photo-swatch { width: 26px; height: 26px; border-radius: 6px; background: var(--coral-bg); flex-shrink: 0; }
   .fc-photo-thumb .fc-rm { cursor: pointer; color: var(--text-light); font-weight: 700; margin-left: 2px; }
   .fc-photo-thumb .fc-rm:hover { color: var(--red-text); }
-  .fc-duty-banner { display: flex; align-items: center; gap: 8px; border-radius: var(--radius-md); padding: 9px 12px; font-size: 12px; font-weight: 600; margin-bottom: 10px; }
-  .fc-duty-banner.on { background: var(--green-bg); color: var(--green-text); }
-  .fc-duty-banner.off { background: var(--bg); color: var(--text-secondary); border: 1px dashed var(--border); }
   .fc-btn-resolve { width: 100%; margin-top: 8px; background: var(--green-dark); color: #fff; border: none; border-radius: var(--radius-sm); padding: 8px; font-size: 12px; font-weight: 600; cursor: pointer; }
   .fc-btn-resolve:hover { filter: brightness(1.08); }
+  .fc-btn-reopen { width: 100%; margin-top: 8px; background: var(--surface); color: var(--amber-text); border: 1.5px solid var(--amber-text); border-radius: var(--radius-sm); padding: 8px; font-size: 12px; font-weight: 600; cursor: pointer; }
+  .fc-btn-reopen:hover { background: var(--amber-bg); }
 
   /* Timeline */
   .timeline-slot {
@@ -1195,7 +1194,6 @@
       </div>
 
       <div class="section-row"><div class="section-title">Team Complaints</div></div>
-      <div id="fc-duty-banner"></div>
       <div id="fc-team-complaints"><div class="book-empty">Loading...</div></div>
 
     </div><!-- /faulty -->
