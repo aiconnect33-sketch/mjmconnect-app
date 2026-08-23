@@ -1,5 +1,5 @@
-// MJMConnect Service Worker v1.0
-var CACHE_NAME = 'mjmconnect-v1';
+// MJMConnect Service Worker v2.0
+var CACHE_NAME = 'mjmconnect-v2';
 var ASSETS = [
   'login.html',
   'register.html',
@@ -40,7 +40,7 @@ self.addEventListener('fetch', function(e) {
   if (e.request.url.includes('supabase.co')) return;
 
   e.respondWith(
-    fetch(e.request)
+    fetch(e.request, { cache: 'no-store' })
       .then(function(res) {
         // Cache fresh response
         var resClone = res.clone();
