@@ -181,7 +181,10 @@ async function uploadFcPhoto(file) {
     headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY, 'Content-Type': file.type || 'application/octet-stream' },
     body: file
   });
-  if (!res.ok) throw new Error('Photo upload failed: ' + res.status);
+  if (!res.ok) {
+    var errText = await res.text().catch(function () { return ''; });
+    throw new Error('Photo upload failed: ' + res.status + (errText ? ' — ' + errText : ''));
+  }
   return SURL + '/storage/v1/object/public/' + FC_BUCKET + '/' + path;
 }
 
