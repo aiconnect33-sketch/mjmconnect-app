@@ -317,20 +317,22 @@ async function loadTeamComplaints() {
       var itemLabel = c.item === 'Other Issues' && c.item_other ? c.item_other : c.item;
       var isResolved = c.status === 'resolved';
       var d = new Date(c.created_at).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' });
-      var actionBtn = isResolved
-        ? '<button class="fc-btn-reopen" onclick="reopenFaultyComplaint(' + c.id + ')">Reopen</button>'
-        : '<button class="fc-btn-resolve" onclick="resolveFaultyComplaint(' + c.id + ')">✓ Mark Resolved</button>';
+      // Reopening is admin-only -- staff can resolve but not undo a resolution.
+      var actionBtn = isResolved ? '' : '<button class="fc-btn-resolve" onclick="resolveFaultyComplaint(' + c.id + ')">✓ Mark Resolved</button>';
       var resolvedLine = '';
       if (isResolved && c.resolved_by) {
         var resolvedAt = c.resolved_at ? new Date(c.resolved_at).toLocaleDateString('en-MY', { day: 'numeric', month: 'short' }) + ' ' + new Date(c.resolved_at).toLocaleTimeString('en-MY', { hour: 'numeric', minute: '2-digit', hour12: true }) : '';
-        resolvedLine = '<div style="font-size:10.5px;color:var(--text-light);margin-top:2px;">Resolved by ' + escHtml(c.resolved_by) + (resolvedAt ? ' · ' + resolvedAt : '') + '</div>';
+        resolvedLine = '<div class="fc-meta-line resolved"><i class="ti ti-circle-check"></i> Resolved by <b>&nbsp;' + escHtml(c.resolved_by) + '</b>&nbsp;' + (resolvedAt ? '· ' + resolvedAt : '') + '</div>';
       }
       return '<div class="book-item">'
-        + '<div class="book-item-header"><div class="book-item-name">' + escHtml(itemLabel) + '</div>' + fcUrgencyBadge(c.urgency) + '&nbsp;' + fcStatusBadge(c.status) + '</div>'
-        + '<div class="book-item-date">' + escHtml(c.location) + ' · Submitted ' + d + '</div>'
-        + '<div class="book-item-purpose">' + escHtml(c.description) + '</div>'
-        + '<div style="font-size:10.5px;color:var(--text-light);margin-top:4px;">Submitted by ' + escHtml(c.staff_name) + '</div>'
+        + '<div class="book-item-header"><div class="book-item-name">' + escHtml(itemLabel) + '</div><div>' + fcUrgencyBadge(c.urgency) + '&nbsp;' + fcStatusBadge(c.status) + '</div></div>'
+        + '<div class="fc-loc"><i class="ti ti-map-pin"></i> ' + escHtml(c.location) + '</div>'
+        + '<button class="fc-view-btn" aria-expanded="false" onclick="toggleFcDesc(this,' + c.id + ')"><i class="ti ti-chevron-right"></i> View details</button>'
+        + '<div class="fc-desc" id="fc-desc-' + c.id + '">' + escHtml(c.description) + '</div>'
+        + '<div class="fc-meta">'
+        + '<div class="fc-meta-line"><i class="ti ti-user"></i> Submitted by <b>&nbsp;' + escHtml(c.staff_name) + '</b>&nbsp;· ' + d + '</div>'
         + resolvedLine
+        + '</div>'
         + actionBtn
         + '</div>';
     }).join('');
@@ -339,6 +341,15 @@ async function loadTeamComplaints() {
   }
 }
 
+function toggleFcDesc(btn, id) {
+  var desc = document.getElementById('fc-desc-' + id);
+  if (!desc) return;
+  var open = desc.classList.toggle('open');
+  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  btn.innerHTML = '<i class="ti ti-chevron-right"></i> ' + (open ? 'Hide details' : 'View details');
+}
+
+// Reopening a resolved complaint is admin-only -- see admin.html.
 async function resolveFaultyComplaint(id) {
   var raw = sessionStorage.getItem('mjm_user');
   var u = raw ? JSON.parse(raw) : {};
@@ -346,16 +357,6 @@ async function resolveFaultyComplaint(id) {
   try {
     await sbWrite('PATCH', 'faulty_complaints', { status: 'resolved', resolved_by: resolvedBy, resolved_at: new Date().toISOString() }, 'id=eq.' + id);
     syncFcResolveToSheet(id, 'resolve', resolvedBy);
-    loadTeamComplaints();
-  } catch (e) {
-    alert('Could not update: ' + e.message);
-  }
-}
-
-async function reopenFaultyComplaint(id) {
-  try {
-    await sbWrite('PATCH', 'faulty_complaints', { status: 'open', resolved_by: null, resolved_at: null }, 'id=eq.' + id);
-    syncFcResolveToSheet(id, 'reopen', null);
     loadTeamComplaints();
   } catch (e) {
     alert('Could not update: ' + e.message);
