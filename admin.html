@@ -496,6 +496,16 @@ html, body {
 .fc-btn-resolve:hover { filter: brightness(1.1); }
 .fc-btn-reopen { background: var(--surface); border: 1.5px solid var(--amber-text); color: var(--amber-text); border-radius: var(--r-sm); padding: 6px 10px; font-size: 10.5px; font-weight: 700; cursor: pointer; }
 .fc-btn-reopen:hover { background: var(--amber-bg); }
+.fc-expand-btn {
+  display: inline-flex; align-items: center; gap: 5px; background: none; border: none; cursor: pointer;
+  font-family: inherit; font-size: 12px; font-weight: 600; color: var(--text); padding: 0;
+}
+.fc-expand-btn i { font-size: 11px; color: var(--text3); transition: transform 0.15s ease; }
+.fc-expand-btn[aria-expanded="true"] i { transform: rotate(90deg); }
+.fc-detail-row { display: none; }
+.fc-detail-row.open { display: table-row; }
+.fc-detail-row td { background: var(--bg); padding: 12px 12px 14px 30px; font-size: 12px; line-height: 1.6; color: var(--text); }
+.fc-detail-label { font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text3); margin-bottom: 3px; }
 
 /* ── CALENDAR CARD (Booking availability) ── */
 .cal-card {
@@ -4239,19 +4249,29 @@ html, body {
           ? '<button class="fc-btn-reopen" onclick="reopenFaultyComplaint(' + c.id + ')">Reopen</button>'
           : '<button class="fc-btn-resolve" onclick="resolveFaultyComplaint(' + c.id + ')">Mark Resolved</button>';
         var photoCell = c.photo_url ? ' <a href="' + escHtml(c.photo_url) + '" target="_blank" style="color:var(--blue-text);"><i class="ti ti-photo"></i></a>' : '';
+        var detailId = 'fc-detail-' + c.id;
+        var itemCell = '<button class="fc-expand-btn" aria-expanded="false" onclick="toggleFcRow(this,\'' + detailId + '\')"><i class="ti ti-chevron-right"></i>' + escHtml(itemLabel) + '</button>' + photoCell;
         return '<tr class="' + rowClass + '">'
           + '<td>' + escHtml(c.staff_name) + '</td>'
           + '<td style="color:var(--text2);font-size:11.5px;">' + escHtml(c.location) + '</td>'
-          + '<td style="font-weight:600;">' + escHtml(itemLabel) + photoCell + '</td>'
+          + '<td>' + itemCell + '</td>'
           + '<td>' + fcUrgencyBadge(c.urgency) + '</td>'
           + '<td style="color:var(--text2);font-size:11.5px;">' + submittedCell + '</td>'
           + '<td>' + statusCell + '</td>'
           + '<td>' + actionCell + '</td>'
-          + '</tr>';
+          + '</tr>'
+          + '<tr class="fc-detail-row" id="' + detailId + '"><td colspan="7"><div class="fc-detail-label">Description</div>' + escHtml(c.description) + '</td></tr>';
       }).join('');
     } catch (e) {
       rows.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px;">Could not load complaints.</td></tr>';
     }
+  }
+
+  function toggleFcRow(btn, rowId) {
+    var row = document.getElementById(rowId);
+    if (!row) return;
+    var open = row.classList.toggle('open');
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
   }
 
   async function resolveFaultyComplaint(id) {
