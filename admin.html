@@ -4216,6 +4216,14 @@ html, body {
     return s === 'resolved' ? '<span class="badge b-green">Resolved</span>' : '<span class="badge b-amber">Open</span>';
   }
 
+  // Consistent "27 Aug 2026, 8:11 AM" format for both Submitted and Resolved lines.
+  function fcDateTime(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    return d.toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' })
+      + ', ' + d.toLocaleTimeString('en-MY', { hour: 'numeric', minute: '2-digit', hour12: true });
+  }
+
   // Drops complaints resolved more than 5 days ago (they stay in Supabase and
   // the synced Sheet forever — this only affects what shows in the app), then
   // sorts open complaints first, resolved ones after (most recently resolved first).
@@ -4242,10 +4250,10 @@ html, body {
         var itemLabel = c.item === 'Other Issues' && c.item_other ? c.item_other : c.item;
         var isResolved = c.status === 'resolved';
         var cardClass = (c.urgency === 'immediate' && !isResolved) ? 'fc-card row-immediate' : 'fc-card';
-        var d = c.created_at ? new Date(c.created_at).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+        var d = fcDateTime(c.created_at);
         var resolvedLine = '';
         if (isResolved && c.resolved_by) {
-          var resolvedAt = c.resolved_at ? new Date(c.resolved_at).toLocaleDateString('en-MY', { day: 'numeric', month: 'short' }) + ' ' + new Date(c.resolved_at).toLocaleTimeString('en-MY', { hour: 'numeric', minute: '2-digit', hour12: true }) : '';
+          var resolvedAt = fcDateTime(c.resolved_at);
           resolvedLine = '<div class="fc-meta-line resolved"><i class="ti ti-circle-check"></i> Resolved by <b>&nbsp;' + escHtml(c.resolved_by) + '</b>&nbsp;' + (resolvedAt ? '· ' + resolvedAt : '') + '</div>';
         }
         var photoHtml = c.photo_url

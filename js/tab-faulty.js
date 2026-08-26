@@ -291,6 +291,14 @@ function fcStatusBadge(s) {
   return s === 'resolved' ? '<span class="badge badge-success">Resolved</span>' : '<span class="badge badge-amber">Open</span>';
 }
 
+// Consistent "27 Aug 2026, 8:11 AM" format for both Submitted and Resolved lines.
+function fcDateTime(iso) {
+  if (!iso) return '';
+  var d = new Date(iso);
+  return d.toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' })
+    + ', ' + d.toLocaleTimeString('en-MY', { hour: 'numeric', minute: '2-digit', hour12: true });
+}
+
 // Drops complaints resolved more than 5 days ago (they stay in Supabase and
 // the synced Sheet forever — this only affects what shows in the app), then
 // sorts open complaints first, resolved ones after (most recently resolved first).
@@ -316,12 +324,12 @@ async function loadTeamComplaints() {
     el.innerHTML = data.map(function (c) {
       var itemLabel = c.item === 'Other Issues' && c.item_other ? c.item_other : c.item;
       var isResolved = c.status === 'resolved';
-      var d = new Date(c.created_at).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' });
+      var d = fcDateTime(c.created_at);
       // Reopening is admin-only -- staff can resolve but not undo a resolution.
       var actionBtn = isResolved ? '' : '<button class="fc-btn-resolve" onclick="resolveFaultyComplaint(' + c.id + ')">✓ Mark Resolved</button>';
       var resolvedLine = '';
       if (isResolved && c.resolved_by) {
-        var resolvedAt = c.resolved_at ? new Date(c.resolved_at).toLocaleDateString('en-MY', { day: 'numeric', month: 'short' }) + ' ' + new Date(c.resolved_at).toLocaleTimeString('en-MY', { hour: 'numeric', minute: '2-digit', hour12: true }) : '';
+        var resolvedAt = fcDateTime(c.resolved_at);
         resolvedLine = '<div class="fc-meta-line resolved"><i class="ti ti-circle-check"></i> Resolved by <b>&nbsp;' + escHtml(c.resolved_by) + '</b>&nbsp;' + (resolvedAt ? '· ' + resolvedAt : '') + '</div>';
       }
       var photoHtml = c.photo_url
