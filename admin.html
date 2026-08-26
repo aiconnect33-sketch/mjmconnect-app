@@ -487,25 +487,36 @@ html, body {
 .fc-photo-swatch { width: 26px; height: 26px; border-radius: 6px; background: var(--coral-bg); flex-shrink: 0; }
 .fc-photo-thumb .fc-rm { cursor: pointer; color: var(--text3); font-weight: 700; margin-left: 2px; }
 .fc-photo-thumb .fc-rm:hover { color: var(--red-text); }
-.fc-table-wrap { overflow-x: auto; }
-.fc-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 640px; }
-.fc-table th { text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--text2); padding: 10px 12px; border-bottom: 2px solid var(--border); }
-.fc-table td { padding: 11px 12px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
-.fc-table tr.row-immediate td { background: var(--red-bg); }
-.fc-btn-resolve { background: var(--green); color: #fff; border: none; border-radius: var(--r-sm); padding: 6px 10px; font-size: 10.5px; font-weight: 700; cursor: pointer; }
+.fc-btn-resolve { width: 100%; margin-top: 4px; background: var(--green); color: #fff; border: none; border-radius: var(--r-sm); padding: 8px; font-size: 12px; font-weight: 700; cursor: pointer; }
 .fc-btn-resolve:hover { filter: brightness(1.1); }
-.fc-btn-reopen { background: var(--surface); border: 1.5px solid var(--amber-text); color: var(--amber-text); border-radius: var(--r-sm); padding: 6px 10px; font-size: 10.5px; font-weight: 700; cursor: pointer; }
+.fc-btn-reopen { width: 100%; margin-top: 4px; background: var(--surface); border: 1.5px solid var(--amber-text); color: var(--amber-text); border-radius: var(--r-sm); padding: 8px; font-size: 12px; font-weight: 700; cursor: pointer; }
 .fc-btn-reopen:hover { background: var(--amber-bg); }
-.fc-expand-btn {
-  display: inline-flex; align-items: center; gap: 5px; background: none; border: none; cursor: pointer;
-  font-family: inherit; font-size: 12px; font-weight: 600; color: var(--text); padding: 0;
+.fc-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 13px 14px; margin-bottom: 10px; }
+.fc-card.row-immediate { border-color: var(--red-text); }
+.fc-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 7px; }
+.fc-card-name { font-size: 13.5px; font-weight: 700; line-height: 1.3; }
+.fc-card-badges { display: flex; gap: 4px; flex-shrink: 0; }
+.fc-loc { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text2); margin-bottom: 9px; }
+.fc-loc i { font-size: 11px; opacity: 0.75; }
+.fc-view-btn {
+  display: flex; align-items: center; gap: 5px; width: 100%; background: var(--bg); border: 1px dashed var(--border);
+  border-radius: var(--r-sm); padding: 7px 10px; margin-bottom: 9px; font-family: inherit;
+  font-size: 11px; font-weight: 600; color: var(--green-text); cursor: pointer; text-align: left;
 }
-.fc-expand-btn i { font-size: 11px; color: var(--text3); transition: transform 0.15s ease; }
-.fc-expand-btn[aria-expanded="true"] i { transform: rotate(90deg); }
-.fc-detail-row { display: none; }
-.fc-detail-row.open { display: table-row; }
-.fc-detail-row td { background: var(--bg); padding: 12px 12px 14px 30px; font-size: 12px; line-height: 1.6; color: var(--text); }
-.fc-detail-label { font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text3); margin-bottom: 3px; }
+.fc-view-btn i { font-size: 10px; transition: transform 0.15s ease; }
+.fc-view-btn[aria-expanded="true"] i { transform: rotate(90deg); }
+.fc-desc {
+  font-size: 11.5px; line-height: 1.55; color: var(--text); background: var(--bg);
+  border-radius: var(--r-sm); padding: 8px 10px; margin: -3px 0 9px; border-left: 2.5px solid var(--border);
+  display: none;
+}
+.fc-desc.open { display: block; }
+.fc-meta { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+.fc-meta-line { display: flex; align-items: center; gap: 5px; font-size: 10.5px; color: var(--text3); }
+.fc-meta-line i { font-size: 10.5px; opacity: 0.7; }
+.fc-meta-line b { font-weight: 600; color: inherit; }
+.fc-meta-line.resolved { color: var(--green-text); }
+.fc-meta-line.resolved i { opacity: 1; color: var(--green-mid); }
 .fc-photo-view { display: block; margin-top: 8px; }
 .fc-photo-view img { display: block; max-width: 220px; max-height: 160px; border-radius: var(--r-sm); border: 1px solid var(--border); }
 
@@ -1783,14 +1794,7 @@ html, body {
       </div>
 
       <div class="sec-title" style="margin-bottom:8px;">All Complaints</div>
-      <div class="card" style="padding:0;overflow:hidden;">
-        <div class="fc-table-wrap">
-          <table class="fc-table">
-            <thead><tr><th>Staff</th><th>Location</th><th>Item</th><th>Urgency</th><th>Submitted</th><th>Status</th><th></th></tr></thead>
-            <tbody id="fc-admin-rows"><tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px;">Loading...</td></tr></tbody>
-          </table>
-        </div>
-      </div>
+      <div id="fc-admin-list"><div class="book-empty">Loading...</div></div>
 
     </div><!-- /faulty -->
 
@@ -4228,54 +4232,51 @@ html, body {
   }
 
   async function loadAllComplaints() {
-    var rows = document.getElementById('fc-admin-rows');
-    if (!rows) return;
+    var el = document.getElementById('fc-admin-list');
+    if (!el) return;
     try {
       var data = await sbGet('faulty_complaints', 'order=created_at.desc&limit=100');
       if (data) data = fcFilterAndSort(data);
-      if (!data || !data.length) {
-        rows.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px;">No complaints yet.</td></tr>';
-        return;
-      }
-      rows.innerHTML = data.map(function (c) {
+      if (!data || !data.length) { el.innerHTML = '<div class="book-empty">No complaints yet.</div>'; return; }
+      el.innerHTML = data.map(function (c) {
         var itemLabel = c.item === 'Other Issues' && c.item_other ? c.item_other : c.item;
         var isResolved = c.status === 'resolved';
-        var rowClass = (c.urgency === 'immediate' && !isResolved) ? 'row-immediate' : '';
-        var statusCell = fcStatusBadge(c.status);
+        var cardClass = (c.urgency === 'immediate' && !isResolved) ? 'fc-card row-immediate' : 'fc-card';
+        var d = c.created_at ? new Date(c.created_at).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+        var resolvedLine = '';
         if (isResolved && c.resolved_by) {
           var resolvedAt = c.resolved_at ? new Date(c.resolved_at).toLocaleDateString('en-MY', { day: 'numeric', month: 'short' }) + ' ' + new Date(c.resolved_at).toLocaleTimeString('en-MY', { hour: 'numeric', minute: '2-digit', hour12: true }) : '';
-          statusCell += '<div style="font-size:10px;color:var(--text3);margin-top:2px;">by ' + escHtml(c.resolved_by) + (resolvedAt ? ' · ' + resolvedAt : '') + '</div>';
+          resolvedLine = '<div class="fc-meta-line resolved"><i class="ti ti-circle-check"></i> Resolved by <b>&nbsp;' + escHtml(c.resolved_by) + '</b>&nbsp;' + (resolvedAt ? '· ' + resolvedAt : '') + '</div>';
         }
-        var submittedCell = c.created_at ? new Date(c.created_at).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
-        var actionCell = isResolved
-          ? '<button class="fc-btn-reopen" onclick="reopenFaultyComplaint(' + c.id + ')">Reopen</button>'
-          : '<button class="fc-btn-resolve" onclick="resolveFaultyComplaint(' + c.id + ')">Mark Resolved</button>';
-        var detailId = 'fc-detail-' + c.id;
-        var itemCell = '<button class="fc-expand-btn" aria-expanded="false" onclick="toggleFcRow(this,\'' + detailId + '\')"><i class="ti ti-chevron-right"></i>' + escHtml(itemLabel) + '</button>';
         var photoHtml = c.photo_url
           ? '<a class="fc-photo-view" href="' + escHtml(c.photo_url) + '" target="_blank"><img src="' + escHtml(c.photo_url) + '" alt="Attached photo"></a>'
           : '';
-        return '<tr class="' + rowClass + '">'
-          + '<td>' + escHtml(c.staff_name) + '</td>'
-          + '<td style="color:var(--text2);font-size:11.5px;">' + escHtml(c.location) + '</td>'
-          + '<td>' + itemCell + '</td>'
-          + '<td>' + fcUrgencyBadge(c.urgency) + '</td>'
-          + '<td style="color:var(--text2);font-size:11.5px;">' + submittedCell + '</td>'
-          + '<td>' + statusCell + '</td>'
-          + '<td>' + actionCell + '</td>'
-          + '</tr>'
-          + '<tr class="fc-detail-row" id="' + detailId + '"><td colspan="7"><div class="fc-detail-label">Description</div>' + escHtml(c.description) + photoHtml + '</td></tr>';
+        var actionBtn = isResolved
+          ? '<button class="fc-btn-reopen" onclick="reopenFaultyComplaint(' + c.id + ')">Reopen</button>'
+          : '<button class="fc-btn-resolve" onclick="resolveFaultyComplaint(' + c.id + ')">✓ Mark Resolved</button>';
+        return '<div class="' + cardClass + '">'
+          + '<div class="fc-card-head"><div class="fc-card-name">' + escHtml(itemLabel) + '</div><div class="fc-card-badges">' + fcUrgencyBadge(c.urgency) + fcStatusBadge(c.status) + '</div></div>'
+          + '<div class="fc-loc"><i class="ti ti-map-pin"></i> ' + escHtml(c.location) + '</div>'
+          + '<button class="fc-view-btn" aria-expanded="false" onclick="toggleFcDesc(this,' + c.id + ')"><i class="ti ti-chevron-right"></i> View details</button>'
+          + '<div class="fc-desc" id="fc-desc-' + c.id + '">' + escHtml(c.description) + photoHtml + '</div>'
+          + '<div class="fc-meta">'
+          + '<div class="fc-meta-line"><i class="ti ti-user"></i> Submitted by <b>&nbsp;' + escHtml(c.staff_name) + '</b>&nbsp;· ' + d + '</div>'
+          + resolvedLine
+          + '</div>'
+          + actionBtn
+          + '</div>';
       }).join('');
     } catch (e) {
-      rows.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px;">Could not load complaints.</td></tr>';
+      el.innerHTML = '<div class="book-empty">Could not load complaints.</div>';
     }
   }
 
-  function toggleFcRow(btn, rowId) {
-    var row = document.getElementById(rowId);
-    if (!row) return;
-    var open = row.classList.toggle('open');
+  function toggleFcDesc(btn, id) {
+    var desc = document.getElementById('fc-desc-' + id);
+    if (!desc) return;
+    var open = desc.classList.toggle('open');
     btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    btn.innerHTML = '<i class="ti ti-chevron-right"></i> ' + (open ? 'Hide details' : 'View details');
   }
 
   async function resolveFaultyComplaint(id) {
