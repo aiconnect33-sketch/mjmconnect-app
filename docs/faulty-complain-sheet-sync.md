@@ -104,7 +104,7 @@ function handleCreate(sheet, body) {
     }
   }
   sheet.appendRow([
-    body.timestamp || new Date().toISOString(),
+    formatMYTime(body.timestamp),
     body.id || '',
     body.staffName || '',
     body.location || '',
@@ -128,7 +128,7 @@ function handleStatusChange(sheet, body) {
       if (body.action === 'resolve') {
         sheet.getRange(row, STATUS_COL).setValue('Resolved');
         sheet.getRange(row, RESOLVED_BY_COL).setValue(body.resolvedBy || '');
-        sheet.getRange(row, RESOLVED_AT_COL).setValue(body.resolvedAt || new Date().toISOString());
+        sheet.getRange(row, RESOLVED_AT_COL).setValue(formatMYTime(body.resolvedAt));
       } else {
         sheet.getRange(row, STATUS_COL).setValue('Open');
         sheet.getRange(row, RESOLVED_BY_COL).setValue('');
@@ -137,5 +137,12 @@ function handleStatusChange(sheet, body) {
       break;
     }
   }
+}
+
+// Client sends UTC ISO timestamps (new Date().toISOString()) -- convert to
+// Malaysia time here rather than trusting each device's local clock/timezone.
+function formatMYTime(isoString) {
+  var d = isoString ? new Date(isoString) : new Date();
+  return Utilities.formatDate(d, 'Asia/Kuala_Lumpur', 'dd MMM yyyy, hh:mm a');
 }
 ```
