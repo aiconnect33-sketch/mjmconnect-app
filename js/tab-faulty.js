@@ -324,11 +324,14 @@ async function loadTeamComplaints() {
         var resolvedAt = c.resolved_at ? new Date(c.resolved_at).toLocaleDateString('en-MY', { day: 'numeric', month: 'short' }) + ' ' + new Date(c.resolved_at).toLocaleTimeString('en-MY', { hour: 'numeric', minute: '2-digit', hour12: true }) : '';
         resolvedLine = '<div class="fc-meta-line resolved"><i class="ti ti-circle-check"></i> Resolved by <b>&nbsp;' + escHtml(c.resolved_by) + '</b>&nbsp;' + (resolvedAt ? '· ' + resolvedAt : '') + '</div>';
       }
+      var photoHtml = c.photo_url
+        ? '<a class="fc-photo-view" href="' + escHtml(c.photo_url) + '" target="_blank"><img src="' + escHtml(c.photo_url) + '" alt="Attached photo"></a>'
+        : '';
       return '<div class="book-item">'
         + '<div class="book-item-header"><div class="book-item-name">' + escHtml(itemLabel) + '</div><div>' + fcUrgencyBadge(c.urgency) + '&nbsp;' + fcStatusBadge(c.status) + '</div></div>'
         + '<div class="fc-loc"><i class="ti ti-map-pin"></i> ' + escHtml(c.location) + '</div>'
         + '<button class="fc-view-btn" aria-expanded="false" onclick="toggleFcDesc(this,' + c.id + ')"><i class="ti ti-chevron-right"></i> View details</button>'
-        + '<div class="fc-desc" id="fc-desc-' + c.id + '">' + escHtml(c.description) + '</div>'
+        + '<div class="fc-desc" id="fc-desc-' + c.id + '">' + escHtml(c.description) + photoHtml + '</div>'
         + '<div class="fc-meta">'
         + '<div class="fc-meta-line"><i class="ti ti-user"></i> Submitted by <b>&nbsp;' + escHtml(c.staff_name) + '</b>&nbsp;· ' + d + '</div>'
         + resolvedLine
