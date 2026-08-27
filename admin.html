@@ -1288,9 +1288,27 @@ html, body {
         <span>Duty roster updated successfully.</span>
       </div>
 
-      <button class="btn-primary" onclick="showDutyForm()">
-        <i class="ti ti-plus"></i> Add Duty Assignment
-      </button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-primary" style="flex:1;" onclick="showDutyForm()">
+          <i class="ti ti-plus"></i> Add Duty Assignment
+        </button>
+        <button class="btn-icon" style="width:auto;padding:0 14px;" onclick="toggleDutyRolesPanelAdmin()" title="Manage Duty Roles">
+          <i class="ti ti-settings"></i>
+        </button>
+      </div>
+
+      <!-- Manage Duty Roles -->
+      <div class="inline-form" id="duty-roles-panel">
+        <div class="inline-form-title">
+          <span><i class="ti ti-briefcase"></i> &nbsp;Manage Duty Roles</span>
+          <button class="close-btn" onclick="toggleDutyRolesPanelAdmin()">&times;</button>
+        </div>
+        <div id="duty-roles-list-admin" style="margin-bottom:10px;"></div>
+        <div style="display:flex;gap:8px;">
+          <input class="form-input no-icon" type="text" id="duty-role-new-name-admin" placeholder="e.g. Pantry Restocking" style="flex:1;">
+          <button class="btn-primary" style="flex:none;width:auto;padding:0 16px;margin-bottom:0;" onclick="addDutyRoleAdmin()">+ Add</button>
+        </div>
+      </div>
 
       <!-- Add duty inline form -->
       <div class="inline-form" id="duty-form">
@@ -1299,13 +1317,14 @@ html, body {
           <button class="close-btn" onclick="hideDutyForm()">&times;</button>
         </div>
 
-        <!-- Duty Role: free text input with previous roles as suggestions -->
+        <!-- Duty Role: sourced from the managed Duty Roles list -->
         <div class="form-group">
           <label class="form-label">Duty Role</label>
           <div class="input-wrap">
             <i class="ti ti-briefcase input-icon"></i>
-            <input class="form-input" type="text" id="duty-role-input" placeholder="e.g. Reception, Maintenance…" list="duty-role-list" autocomplete="off">
-            <datalist id="duty-role-list"></datalist>
+            <select class="form-input" id="duty-role-input">
+              <option value="" disabled selected>Select duty role…</option>
+            </select>
           </div>
           <div class="field-error" id="duty-role-error">
             <i class="ti ti-alert-circle"></i> Duty role is required.
@@ -2334,9 +2353,9 @@ html, body {
       var tags = document.getElementById('duty-staff-tags');
       if (tags) tags.innerHTML = '';
       await loadDutyStaffDropdown();
+      await loadDutyRoleOptionsAdmin(r.duty_role || '');
       // Set form fields AFTER dropdown load so nothing overwrites them
       document.getElementById('duty-form-title').textContent = 'Edit Duty Assignment';
-      document.getElementById('duty-role-input').value       = r.duty_role  || '';
       document.getElementById('duty-date-from').value        = r.date_from  || '';
       document.getElementById('duty-date-to').value          = r.date_to    || '';
       // Fetch all member names in group and add as tags
@@ -2369,6 +2388,131 @@ html, body {
       loadDbDuty();
       if (typeof loadAdminLeaveDuty === 'function') loadAdminLeaveDuty();
     } catch(e) {}
+  }
+
+  // ── MANAGE DUTY ROLES ──
+  // duty_roster.duty_role stays plain text (no foreign key, matching the
+  // rest of this app) -- duty_roles is just the managed list the Duty Role
+  // dropdown is sourced from. Renaming cascades onto every duty_roster row
+  // using the old name; deleting is blocked while any row still uses it.
+  var dutyRoleOptionsAdmin = [];     // [{id, name}]
+  var dutyRoleUsageCountsAdmin = {}; // name -> count of duty_roster rows referencing it (all-time)
+  var editingDutyRoleIdAdmin = null;
+
+  async function loadDutyRoleOptionsAdmin(preserveRole) {
+    try {
+      dutyRoleOptionsAdmin = await sbFetch('GET', '/rest/v1/duty_roles?order=name.asc') || [];
+    } catch(e) { dutyRoleOptionsAdmin = []; }
+    var sel = document.getElementById('duty-role-input');
+    if (!sel) return;
+    var names = dutyRoleOptionsAdmin.map(function(r){ return r.name; });
+    if (preserveRole && names.indexOf(preserveRole) === -1) names.push(preserveRole);
+    sel.innerHTML = '<option value="" disabled' + (preserveRole ? '' : ' selected') + '>Select duty role…</option>'
+      + names.map(function(n){ return '<option value="' + escHtml(n) + '">' + escHtml(n) + '</option>'; }).join('');
+    if (preserveRole) sel.value = preserveRole;
+  }
+
+  async function loadDutyRoleUsageAdmin() {
+    dutyRoleUsageCountsAdmin = {};
+    try {
+      var rows = await sbFetch('GET', '/rest/v1/duty_roster?select=duty_role');
+      (rows || []).forEach(function(r) {
+        if (!r.duty_role) return;
+        dutyRoleUsageCountsAdmin[r.duty_role] = (dutyRoleUsageCountsAdmin[r.duty_role] || 0) + 1;
+      });
+    } catch(e) {}
+  }
+
+  function toggleDutyRolesPanelAdmin() {
+    var panel = document.getElementById('duty-roles-panel');
+    if (!panel) return;
+    var open = !panel.classList.contains('visible');
+    panel.classList.toggle('visible', open);
+    if (open) {
+      editingDutyRoleIdAdmin = null;
+      document.getElementById('duty-role-new-name-admin').value = '';
+      refreshDutyRolesPanelAdmin();
+    }
+  }
+
+  async function refreshDutyRolesPanelAdmin() {
+    var listEl = document.getElementById('duty-roles-list-admin');
+    if (!listEl) return;
+    listEl.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0;">Loading…</div>';
+    await Promise.all([loadDutyRoleOptionsAdmin(), loadDutyRoleUsageAdmin()]);
+    if (!dutyRoleOptionsAdmin.length) {
+      listEl.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0;">No duty roles yet — add one below.</div>';
+      return;
+    }
+    listEl.innerHTML = dutyRoleOptionsAdmin.map(function(r) {
+      if (editingDutyRoleIdAdmin === r.id) {
+        return '<div style="display:flex;gap:6px;align-items:center;padding:6px 0;border-bottom:0.5px solid var(--border);">'
+          + '<input class="form-input no-icon" type="text" id="duty-role-rename-input-admin" value="' + escHtml(r.name) + '" style="flex:1;">'
+          + '<button class="btn-primary" style="flex:none;width:auto;padding:0 12px;margin-bottom:0;" onclick="saveDutyRoleRenameAdmin(' + r.id + ',\'' + escJsAttr(r.name) + '\')">Save</button>'
+          + '</div>';
+      }
+      var count = dutyRoleUsageCountsAdmin[r.name] || 0;
+      var canDelete = count === 0;
+      var countLabel = count + ' duty assignment' + (count === 1 ? '' : 's');
+      var delTitle = canDelete ? 'Delete' : 'Used in ' + countLabel + ' — reassign or delete those first';
+      return '<div style="padding:8px 0;border-bottom:0.5px solid var(--border);">'
+        + '<div style="display:flex;align-items:center;gap:10px;">'
+        + '<div style="flex:1;font-size:13px;color:var(--text);font-weight:500;">' + escHtml(r.name) + '</div>'
+        + '<div class="btn-icon" onclick="startRenameDutyRoleAdmin(' + r.id + ')" title="Rename"><i class="ti ti-pencil"></i></div>'
+        + '<div class="btn-icon' + (canDelete ? ' danger' : '') + '" style="' + (canDelete ? '' : 'color:var(--text3);cursor:not-allowed;') + '" title="' + escHtml(delTitle) + '"'
+        + (canDelete ? ' onclick="deleteDutyRoleAdmin(' + r.id + ',\'' + escJsAttr(r.name) + '\')"' : '')
+        + '><i class="ti ti-trash"></i></div>'
+        + '</div>'
+        + (count > 0 ? '<div style="font-size:10.5px;color:var(--text3);margin-top:2px;">Used in ' + countLabel + '</div>' : '')
+        + '</div>';
+    }).join('');
+  }
+
+  function startRenameDutyRoleAdmin(id) {
+    editingDutyRoleIdAdmin = id;
+    refreshDutyRolesPanelAdmin();
+  }
+
+  async function saveDutyRoleRenameAdmin(id, oldName) {
+    var input = document.getElementById('duty-role-rename-input-admin');
+    var newName = input ? input.value.trim() : '';
+    if (!newName) { alert('Please enter a role name.'); return; }
+    if (newName === oldName) { editingDutyRoleIdAdmin = null; refreshDutyRolesPanelAdmin(); return; }
+    if (dutyRoleOptionsAdmin.some(function(r){ return r.id !== id && r.name.toLowerCase() === newName.toLowerCase(); })) {
+      alert('A duty role with that name already exists.'); return;
+    }
+    try {
+      await sbFetch('PATCH', '/rest/v1/duty_roles?id=eq.' + id, { name: newName }, { 'Prefer': '' });
+      await sbFetch('PATCH', '/rest/v1/duty_roster?duty_role=eq.' + encodeURIComponent(oldName), { duty_role: newName }, { 'Prefer': '' });
+      logAudit('duty', String(id), 'edited', newName, [{ label: 'Role name', from: oldName, to: newName }], null);
+    } catch(e) { alert('Could not rename duty role. Please try again.'); return; }
+    editingDutyRoleIdAdmin = null;
+    await refreshDutyRolesPanelAdmin();
+    loadDbDuty();
+  }
+
+  async function deleteDutyRoleAdmin(id, name) {
+    if ((dutyRoleUsageCountsAdmin[name] || 0) > 0) return;
+    if (!confirm('Delete the duty role "' + name + '"?')) return;
+    try {
+      await sbFetch('DELETE', '/rest/v1/duty_roles?id=eq.' + id, null, { 'Prefer': '' });
+      logAudit('duty', String(id), 'deleted', name, { role: name }, null);
+    } catch(e) { alert('Could not delete duty role. Please try again.'); return; }
+    refreshDutyRolesPanelAdmin();
+  }
+
+  async function addDutyRoleAdmin() {
+    var input = document.getElementById('duty-role-new-name-admin');
+    var name = input ? input.value.trim() : '';
+    if (!name) { alert('Please enter a role name.'); return; }
+    if (dutyRoleOptionsAdmin.some(function(r){ return r.name.toLowerCase() === name.toLowerCase(); })) {
+      alert('A duty role with that name already exists.'); return;
+    }
+    try {
+      await sbFetch('POST', '/rest/v1/duty_roles', { name: name });
+    } catch(e) { alert('Could not add duty role. Please try again.'); return; }
+    input.value = '';
+    refreshDutyRolesPanelAdmin();
   }
 
   function showDutyForm() {
@@ -2423,17 +2567,7 @@ html, body {
         data.forEach(function(s){ dutyStaffEmailMap[s.full_name] = s.email || null; });
       }
     } catch(e) {}
-    // Load existing duty roles into datalist
-    try {
-      var roleData = await sbFetch('GET', '/rest/v1/duty_roster?select=duty_role&limit=200');
-      var dl = document.getElementById('duty-role-list');
-      if (dl && roleData && roleData.length) {
-        var unique = [];
-        roleData.forEach(function(r){ if (r.duty_role && unique.indexOf(r.duty_role) === -1) unique.push(r.duty_role); });
-        unique.sort();
-        dl.innerHTML = unique.map(function(role){ return '<option value="' + escHtml(role) + '">'; }).join('');
-      }
-    } catch(e) {}
+    await loadDutyRoleOptionsAdmin();
   }
 
   function filterDutyStaff() {
