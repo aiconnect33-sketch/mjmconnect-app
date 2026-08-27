@@ -5,7 +5,7 @@ async function loadDuty() {
   var today = localDateStr();
   var avColors = ['av-green','av-amber','av-coral','av-blue','av-purple','av-red'];
 
-  // ── DUTY TAB: upcoming + active, past auto-removed ──
+  // ── DUTY TAB: collapsed to "who's on now" per role, tap to expand ──
   var tabEl = document.getElementById('duty-tab-list');
   var canEdit = typeof hasEditPermission === 'function' && hasEditPermission('duty');
   var addTrigger = document.getElementById('duty-add-trigger');
@@ -13,58 +13,96 @@ async function loadDuty() {
 
   if (tabEl) {
     try {
-      var url2 = SURL + '/rest/v1/duty_roster?date_to=gte.' + today + '&order=date_from.asc,duty_role.asc&limit=200';
+      // Sorted by role first so each role's date ranges land together in one section.
+      var url2 = SURL + '/rest/v1/duty_roster?date_to=gte.' + today + '&order=duty_role.asc,date_from.asc&limit=200';
       var res2 = await fetch(url2, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
       var data2 = await res2.json();
       if (!data2 || !data2.length) {
         tabEl.innerHTML = '<div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">No upcoming duty assignments.</div>';
         return;
       }
-      // Group by role + date range
-      var groups2 = {};
-      var groupOrder = [];
+      // Two-level grouping: role -> date-range groups within that role.
+      var roles = {};
+      var roleOrder = [];
       data2.forEach(function(r) {
-        var key = (r.duty_role || '') + '||' + (r.date_from || '') + '||' + (r.date_to || '');
-        if (!groups2[key]) { groups2[key] = { role: r.duty_role, date_from: r.date_from, date_to: r.date_to, members: [], ids: [] }; groupOrder.push(key); }
-        groups2[key].members.push(r);
-        groups2[key].ids.push(r.id);
+        var role = r.duty_role || 'General Duty';
+        if (!roles[role]) { roles[role] = { groups: {}, order: [] }; roleOrder.push(role); }
+        var rr = roles[role];
+        var key = (r.date_from || '') + '||' + (r.date_to || '');
+        if (!rr.groups[key]) { rr.groups[key] = { date_from: r.date_from, date_to: r.date_to, members: [], ids: [] }; rr.order.push(key); }
+        rr.groups[key].members.push(r);
+        rr.groups[key].ids.push(r.id);
       });
-      tabEl.innerHTML = groupOrder.map(function(key, gi) {
-        var g = groups2[key];
-        var from = g.date_from ? new Date(g.date_from+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'}) : '';
-        var to   = g.date_to   ? new Date(g.date_to+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'}) : '';
-        var dateLabel  = from === to ? from : from + ' – ' + to;
-        var isActive   = g.date_from <= today && today <= (g.date_to || g.date_from);
-        var badgeCls   = isActive ? 'badge-success' : 'badge badge-info';
-        var badgeLabel = isActive ? 'Active' : 'Upcoming';
-        var memberNames = g.members.map(function(m){ return m.staff_name; }).join(', ');
-        var delBtn = canEdit
-          ? '<div style="cursor:pointer;color:var(--red-text);" onclick="deleteDutyAssignment(\'' + escJsAttr(g.ids.join(',')) + '\',\'' + escJsAttr(g.role || 'General Duty') + '\',\'' + escJsAttr(dateLabel) + '\',\'' + escJsAttr(memberNames) + '\')"><i class="ti ti-trash"></i></div>'
-          : '';
-        return '<div class="card" style="margin-bottom:10px;">'
-          + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">'
-          + '<div style="font-size:12px;font-weight:600;color:var(--text-primary);">' + escHtml(g.role || 'General Duty') + '</div>'
-          + '<div style="display:flex;align-items:center;gap:8px;"><span class="badge ' + badgeCls + '">' + badgeLabel + '</span>' + delBtn + '</div></div>'
-          + '<div style="font-size:11px;color:var(--text-secondary);margin-bottom:8px;">' + dateLabel + '</div>'
-          + g.members.map(function(r, mi) {
-            var ini    = r.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
-            var avCls  = avColors[(gi + mi) % avColors.length];
-            var editBtn = canEdit
-              ? '<div style="cursor:pointer;color:var(--text-secondary);margin-left:6px;" onclick="editDutyAssignment(\'' + escJsAttr(r.id) + '\',\'' + escJsAttr(r.staff_name) + '\',\'' + escJsAttr(r.duty_role || '') + '\',\'' + escJsAttr(r.date_from) + '\',\'' + escJsAttr(r.date_to) + '\')"><i class="ti ti-pencil"></i></div>'
-              : '';
-            return '<div class="person-row" style="padding:5px 0;">'
-              + '<div class="avatar ' + avCls + '" style="font-size:10px;">' + ini + '</div>'
-              + '<div style="flex:1;"><div class="person-name" style="font-size:12px;">' + escHtml(r.staff_name) + '</div></div>'
-              + '<span class="badge ' + badgeCls + '">' + badgeLabel + '</span>'
-              + editBtn
-              + '</div>';
-          }).join('')
+
+      tabEl.innerHTML = roleOrder.map(function(role, ri) {
+        var rr = roles[role];
+        var roleGroups = rr.order.map(function(k) { return rr.groups[k]; });
+        var activeGroups = roleGroups.filter(function(g) { return g.date_from <= today && today <= (g.date_to || g.date_from); });
+
+        var currentHtml;
+        if (activeGroups.length) {
+          var activeNames = [];
+          activeGroups.forEach(function(g) { g.members.forEach(function(m) { activeNames.push(m.staff_name); }); });
+          var label = activeNames.length > 2 ? (activeNames[0] + ' +' + (activeNames.length - 1)) : activeNames.join(', ');
+          var ini = (activeNames[0] || '').split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
+          currentHtml = '<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-secondary);flex-shrink:0;">'
+            + '<div class="avatar ' + avColors[ri % avColors.length] + '" style="width:19px;height:19px;font-size:8.5px;">' + ini + '</div>'
+            + escHtml(label) + '</div>';
+        } else {
+          currentHtml = '<div style="font-size:11px;color:var(--text-secondary);flex-shrink:0;">No one on duty now</div>';
+        }
+
+        var bodyHtml = roleGroups.map(function(g, gi) {
+          var from = g.date_from ? new Date(g.date_from+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'}) : '';
+          var to   = g.date_to   ? new Date(g.date_to+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'}) : '';
+          var dateLabel  = from === to ? from : from + ' – ' + to;
+          var isActive   = g.date_from <= today && today <= (g.date_to || g.date_from);
+          var badgeCls   = isActive ? 'badge-success' : 'badge-info';
+          var badgeLabel = isActive ? 'Active' : 'Upcoming';
+          var memberNames = g.members.map(function(m){ return m.staff_name; }).join(', ');
+          var delBtn = canEdit
+            ? '<div style="cursor:pointer;color:var(--red-text);" onclick="event.stopPropagation();deleteDutyAssignment(\'' + escJsAttr(g.ids.join(',')) + '\',\'' + escJsAttr(role) + '\',\'' + escJsAttr(dateLabel) + '\',\'' + escJsAttr(memberNames) + '\')"><i class="ti ti-trash"></i></div>'
+            : '';
+          return '<div style="' + (gi > 0 ? 'border-top:1px solid var(--border);padding-top:9px;margin-top:9px;' : '') + '">'
+            + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">'
+            + '<div style="font-size:11px;color:var(--text-secondary);">' + dateLabel + '</div>'
+            + '<div style="display:flex;align-items:center;gap:8px;"><span class="badge ' + badgeCls + '">' + badgeLabel + '</span>' + delBtn + '</div></div>'
+            + g.members.map(function(r, mi) {
+              var pIni   = r.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
+              var avCls  = avColors[(gi + mi) % avColors.length];
+              var editBtn = canEdit
+                ? '<div style="cursor:pointer;color:var(--text-secondary);margin-left:6px;" onclick="event.stopPropagation();editDutyAssignment(\'' + escJsAttr(r.id) + '\',\'' + escJsAttr(r.staff_name) + '\',\'' + escJsAttr(r.duty_role || '') + '\',\'' + escJsAttr(r.date_from) + '\',\'' + escJsAttr(r.date_to) + '\')"><i class="ti ti-pencil"></i></div>'
+                : '';
+              return '<div class="person-row" style="padding:5px 0;">'
+                + '<div class="avatar ' + avCls + '" style="font-size:10px;">' + pIni + '</div>'
+                + '<div style="flex:1;"><div class="person-name" style="font-size:12px;">' + escHtml(r.staff_name) + '</div></div>'
+                + editBtn
+                + '</div>';
+            }).join('')
+            + '</div>';
+        }).join('');
+
+        return '<div class="card" style="margin-bottom:10px;padding:0;overflow:hidden;">'
+          + '<div style="display:flex;align-items:center;gap:8px;padding:12px 14px;cursor:pointer;" onclick="toggleDutySection(this)">'
+          + '<i class="ti ti-chevron-right" style="font-size:11px;color:var(--text-secondary);flex-shrink:0;transition:transform .15s ease;"></i>'
+          + '<div style="flex:1;font-size:12px;font-weight:600;color:var(--text-primary);">' + escHtml(role) + '</div>'
+          + currentHtml
+          + '</div>'
+          + '<div style="display:none;padding:0 14px 12px 33px;">' + bodyHtml + '</div>'
           + '</div>';
       }).join('');
     } catch(e) {
       tabEl.innerHTML = '<div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">Could not load duty roster.</div>';
     }
   }
+}
+
+function toggleDutySection(headerEl) {
+  var body = headerEl.nextElementSibling;
+  var chev = headerEl.querySelector('.ti-chevron-right');
+  var open = body.style.display !== 'block';
+  body.style.display = open ? 'block' : 'none';
+  if (chev) chev.style.transform = open ? 'rotate(90deg)' : 'rotate(0deg)';
 }
 
 // ── DUTY — STAFF EDIT (Duty module permission) ──
