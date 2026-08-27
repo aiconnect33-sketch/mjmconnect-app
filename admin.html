@@ -2314,7 +2314,7 @@ html, body {
   var editingDutyOriginal = null; // { role, from, to } snapshot at edit-open time, for audit diffs
 
   async function editDutyGroup(btn) {
-    var card = btn.closest('.card');
+    var card = btn.closest('.duty-group');
     if (!card) return;
     var allIds = card.getAttribute('data-group-ids');
     if (!allIds) return;
@@ -2350,13 +2350,13 @@ html, body {
   }
 
   async function deleteDutyGroup(btn) {
-    var card = btn.closest('.card');
+    var card = btn.closest('.duty-group');
     if (!card) return;
     var allIds = card.getAttribute('data-group-ids');
     if (!allIds) return;
     var ids = allIds.split(',').filter(Boolean);
     if (!confirm('Delete this entire duty team?')) return;
-    var role = card.querySelector('.card-label') ? card.querySelector('.card-label').textContent : 'General Duty';
+    var role = card.getAttribute('data-role') || 'General Duty';
     var dateLabel = card.getAttribute('data-date-label') || '';
     var staffNames = Array.prototype.map.call(card.querySelectorAll('.duty-slot .p-name'), function(el){ return el.textContent; }).join(', ');
     try {
@@ -2364,8 +2364,10 @@ html, body {
         return sbFetch('DELETE', '/rest/v1/duty_roster?id=eq.' + id, null, { 'Prefer': '' });
       }));
       logAudit('duty', ids.join(','), 'deleted', role, { role: role, dates: dateLabel, staff: staffNames }, null);
-      card.style.transition = 'opacity 0.2s'; card.style.opacity = '0';
-      setTimeout(function(){ card.remove(); loadAdminLeaveDuty(); }, 220);
+      // Removing this date-range group can also empty the role section
+      // above it -- reload rather than surgically diffing the DOM.
+      loadDbDuty();
+      if (typeof loadAdminLeaveDuty === 'function') loadAdminLeaveDuty();
     } catch(e) {}
   }
 
@@ -4490,12 +4492,14 @@ html, body {
   }
 
   // ── LOAD DUTY FROM SUPABASE ──
+  // Collapsed to "who's on now" per role, tap to expand into that role's
+  // full active/upcoming schedule (mirrors js/tab-duty.js on the staff side).
   async function loadDbDuty() {
     var el = document.getElementById('duty-db-list');
     if (!el) return;
     var today = localDateStr();
     try {
-      var data = await sbFetch('GET', '/rest/v1/duty_roster?date_to=gte.' + today + '&order=date_from.asc,duty_role.asc&limit=200');
+      var data = await sbFetch('GET', '/rest/v1/duty_roster?date_to=gte.' + today + '&order=duty_role.asc,date_from.asc&limit=200');
       if (!data) return;
       var cntEl = document.getElementById('duty-count');
       if (cntEl) cntEl.textContent = data.length ? '(' + data.length + ')' : '';
@@ -4503,43 +4507,82 @@ html, body {
         el.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:14px 0;">No upcoming duty assignments.</div>';
         return;
       }
-      // Group by role + date range
-      var groups = {};
-      data.forEach(function(r) {
-        var key = escHtml(r.duty_role) + '||' + (r.date_from || '') + '||' + (r.date_to || '');
-        if (!groups[key]) groups[key] = { role: r.duty_role, date_from: r.date_from, date_to: r.date_to, members: [] };
-        groups[key].members.push(r);
-      });
+      // Two-level grouping: role -> date-range groups within that role.
       var avColors = ['av-g','av-a','av-b','av-c','av-p','av-r'];
-      el.innerHTML = Object.keys(groups).map(function(key, gi) {
-        var g = groups[key];
-        var from = g.date_from ? new Date(g.date_from + 'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'}) : '';
-        var to   = g.date_to   ? new Date(g.date_to   + 'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'}) : '';
-        var dateLabel = from === to ? from : from + ' – ' + to;
-        var isActive = g.date_from <= today && today <= (g.date_to || g.date_from);
-        var allIds = g.members.map(function(r){ return r.id; }).join(',');
-        return '<div class="card" style="margin-bottom:10px;" data-group-ids="' + allIds + '" data-date-label="' + escHtml(dateLabel) + '">'
-          + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
-          + '<div class="card-label" style="margin:0;">' + escHtml(g.role) + '</div>'
-          + '<div style="display:flex;align-items:center;gap:6px;">'
-          + '<span class="badge ' + (isActive ? 'b-green' : 'b-blue') + '">' + (isActive ? 'Active' : 'Upcoming') + '</span>'
-          + '<div class="btn-icon" onclick="editDutyGroup(this)" title="Edit"><i class="ti ti-pencil"></i></div>'
-          + '<div class="btn-icon danger" onclick="deleteDutyGroup(this)" title="Delete"><i class="ti ti-trash"></i></div>'
-          + '</div></div>'
-          + '<div style="font-size:11px;color:var(--text3);margin-bottom:8px;"><i class="ti ti-calendar" style="font-size:11px;"></i> ' + dateLabel + '</div>'
-          + g.members.map(function(r, mi) {
-            var ini = r.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
-            var avCls = avColors[(gi + mi) % avColors.length];
-            return '<div class="duty-slot" data-duty-id="' + r.id + '">'
-              + '<div class="duty-person"><div class="av ' + avCls + '">' + ini + '</div>'
-              + '<div><div class="p-name">' + escHtml(r.staff_name) + '</div></div></div>'
-              + '</div>';
-          }).join('')
+      var roles = {};
+      var roleOrder = [];
+      data.forEach(function(r) {
+        var role = r.duty_role || 'General Duty';
+        if (!roles[role]) { roles[role] = { groups: {}, order: [] }; roleOrder.push(role); }
+        var rr = roles[role];
+        var key = (r.date_from || '') + '||' + (r.date_to || '');
+        if (!rr.groups[key]) { rr.groups[key] = { date_from: r.date_from, date_to: r.date_to, members: [] }; rr.order.push(key); }
+        rr.groups[key].members.push(r);
+      });
+
+      el.innerHTML = roleOrder.map(function(role, ri) {
+        var rr = roles[role];
+        var roleGroups = rr.order.map(function(k) { return rr.groups[k]; });
+        var activeGroups = roleGroups.filter(function(g) { return g.date_from <= today && today <= (g.date_to || g.date_from); });
+
+        var currentHtml;
+        if (activeGroups.length) {
+          var activeNames = [];
+          activeGroups.forEach(function(g) { g.members.forEach(function(m) { activeNames.push(m.staff_name); }); });
+          var label = activeNames.length > 2 ? (activeNames[0] + ' +' + (activeNames.length - 1)) : activeNames.join(', ');
+          var ini = (activeNames[0] || '').split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
+          currentHtml = '<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);flex-shrink:0;">'
+            + '<div class="av ' + avColors[ri % avColors.length] + '" style="width:19px;height:19px;font-size:8.5px;">' + ini + '</div>'
+            + escHtml(label) + '</div>';
+        } else {
+          currentHtml = '<div style="font-size:11px;color:var(--text2);flex-shrink:0;">No one on duty now</div>';
+        }
+
+        var bodyHtml = roleGroups.map(function(g, gi) {
+          var from = g.date_from ? new Date(g.date_from + 'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'}) : '';
+          var to   = g.date_to   ? new Date(g.date_to   + 'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'}) : '';
+          var dateLabel = from === to ? from : from + ' – ' + to;
+          var isActive = g.date_from <= today && today <= (g.date_to || g.date_from);
+          var allIds = g.members.map(function(r){ return r.id; }).join(',');
+          return '<div class="duty-group" style="' + (gi > 0 ? 'border-top:1px solid var(--border);padding-top:9px;margin-top:9px;' : '') + '" data-group-ids="' + allIds + '" data-date-label="' + escHtml(dateLabel) + '" data-role="' + escHtml(role) + '">'
+            + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
+            + '<div style="font-size:11px;color:var(--text3);"><i class="ti ti-calendar" style="font-size:11px;"></i> ' + dateLabel + '</div>'
+            + '<div style="display:flex;align-items:center;gap:6px;">'
+            + '<span class="badge ' + (isActive ? 'b-green' : 'b-blue') + '">' + (isActive ? 'Active' : 'Upcoming') + '</span>'
+            + '<div class="btn-icon" onclick="event.stopPropagation();editDutyGroup(this)" title="Edit"><i class="ti ti-pencil"></i></div>'
+            + '<div class="btn-icon danger" onclick="event.stopPropagation();deleteDutyGroup(this)" title="Delete"><i class="ti ti-trash"></i></div>'
+            + '</div></div>'
+            + g.members.map(function(r, mi) {
+              var ini = r.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
+              var avCls = avColors[(gi + mi) % avColors.length];
+              return '<div class="duty-slot" data-duty-id="' + r.id + '">'
+                + '<div class="duty-person"><div class="av ' + avCls + '">' + ini + '</div>'
+                + '<div><div class="p-name">' + escHtml(r.staff_name) + '</div></div></div>'
+                + '</div>';
+            }).join('')
+            + '</div>';
+        }).join('');
+
+        return '<div class="card" style="margin-bottom:10px;padding:0;overflow:hidden;">'
+          + '<div style="display:flex;align-items:center;gap:8px;padding:12px 14px;cursor:pointer;" onclick="toggleDutySection(this)">'
+          + '<i class="ti ti-chevron-right" style="font-size:11px;color:var(--text2);flex-shrink:0;transition:transform .15s ease;"></i>'
+          + '<div class="card-label" style="margin:0;flex:1;">' + escHtml(role) + '</div>'
+          + currentHtml
+          + '</div>'
+          + '<div style="display:none;padding:0 14px 12px 33px;">' + bodyHtml + '</div>'
           + '</div>';
       }).join('');
     } catch(e) {
       el.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:14px 0;">Could not load duty roster.</div>';
     }
+  }
+
+  function toggleDutySection(headerEl) {
+    var body = headerEl.nextElementSibling;
+    var chev = headerEl.querySelector('.ti-chevron-right');
+    var open = body.style.display !== 'block';
+    body.style.display = open ? 'block' : 'none';
+    if (chev) chev.style.transform = open ? 'rotate(90deg)' : 'rotate(0deg)';
   }
 
   async function deleteDutyDb(btn) {
