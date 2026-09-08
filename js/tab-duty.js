@@ -131,8 +131,7 @@ async function loadDutyStaffOptions(preserveName) {
 async function showDutyForm() {
   editingDutyId = null;
   document.getElementById('duty-form-title').textContent = 'New Duty Assignment';
-  await loadDutyStaffOptions();
-  document.getElementById('duty-form-role').value = '';
+  await Promise.all([loadDutyStaffOptions(), loadDutyRoleOptions()]);
   document.getElementById('duty-form-from').value = '';
   document.getElementById('duty-form-to').value   = '';
   document.getElementById('duty-form').style.display = 'block';
@@ -150,8 +149,7 @@ async function editDutyAssignment(id, name, role, from, to) {
   editingDutyId = id;
   editingDutyOriginal = { name: name, role: role, from: from, to: to };
   document.getElementById('duty-form-title').textContent = 'Edit Duty Assignment';
-  await loadDutyStaffOptions(name);
-  document.getElementById('duty-form-role').value = role;
+  await Promise.all([loadDutyStaffOptions(name), loadDutyRoleOptions(role)]);
   document.getElementById('duty-form-from').value = from;
   document.getElementById('duty-form-to').value   = to;
   document.getElementById('duty-form').style.display = 'block';
@@ -164,24 +162,23 @@ async function saveDutyAssignment() {
   var role = document.getElementById('duty-form-role').value.trim();
   var from = document.getElementById('duty-form-from').value;
   var to   = document.getElementById('duty-form-to').value;
-  if (!name || !from || !to) { alert('Please fill in staff name and dates.'); return; }
+  if (!name || !role || !from || !to) { alert('Please fill in staff name, duty role, and dates.'); return; }
   if (from > to) { alert('The "From" date must be before the "To" date.'); return; }
   try {
     if (editingDutyId) {
-      await sbWrite('PATCH', 'duty_roster', { staff_name: name, duty_role: role || 'General Duty', date_from: from, date_to: to, period: from + ' to ' + to }, 'id=eq.' + editingDutyId);
+      await sbWrite('PATCH', 'duty_roster', { staff_name: name, duty_role: role, date_from: from, date_to: to, period: from + ' to ' + to }, 'id=eq.' + editingDutyId);
       var diffs = [];
       if (editingDutyOriginal) {
         var o = editingDutyOriginal;
-        var newRole = role || 'General Duty';
         if (o.name !== name) diffs.push({ label: 'Staff', from: o.name, to: name });
-        if ((o.role || 'General Duty') !== newRole) diffs.push({ label: 'Role', from: o.role || 'General Duty', to: newRole });
+        if ((o.role || 'General Duty') !== role) diffs.push({ label: 'Role', from: o.role || 'General Duty', to: role });
         if (o.from !== from || o.to !== to) diffs.push({ label: 'Dates', from: o.from + ' – ' + o.to, to: from + ' – ' + to });
       }
-      if (diffs.length) logAudit('duty', editingDutyId, 'edited', role || 'General Duty', diffs, null);
+      if (diffs.length) logAudit('duty', editingDutyId, 'edited', role, diffs, null);
       editingDutyId = null;
       editingDutyOriginal = null;
     } else {
-      await sbWrite('POST', 'duty_roster', { staff_name: name, duty_role: role || 'General Duty', date_from: from, date_to: to, period: from + ' to ' + to });
+      await sbWrite('POST', 'duty_roster', { staff_name: name, duty_role: role, date_from: from, date_to: to, period: from + ' to ' + to });
     }
     hideDutyForm();
     loadDuty();
@@ -197,4 +194,131 @@ async function deleteDutyAssignment(idsStr, role, dateLabel, namesCsv) {
     logAudit('duty', ids.join(','), 'deleted', role || 'General Duty', { role: role || 'General Duty', dates: dateLabel || '', staff: namesCsv || '' }, null);
     loadDuty();
   } catch(e) { alert('Could not delete duty assignment. Please try again.'); }
+}
+
+// ── MANAGE DUTY ROLES (Duty module permission) ──
+// duty_roster.duty_role stays a plain text column (matches how the rest of
+// this app avoids foreign keys) — duty_roles is just the managed list that
+// the Add/Edit Duty Role dropdown is sourced from. Renaming a role here
+// cascades a text update onto every duty_roster row using the old name;
+// deleting is blocked while any row still references it.
+var dutyRoleOptions = [];       // [{id, name}]
+var dutyRoleUsageCounts = {};   // name -> count of duty_roster rows referencing it (all-time)
+var editingDutyRoleId = null;
+
+async function loadDutyRoleOptions(preserveRole) {
+  try {
+    dutyRoleOptions = await sbGet('duty_roles', 'order=name.asc') || [];
+  } catch(e) { dutyRoleOptions = []; }
+  var sel = document.getElementById('duty-form-role');
+  if (!sel) return;
+  var names = dutyRoleOptions.map(function(r){ return r.name; });
+  if (preserveRole && names.indexOf(preserveRole) === -1) names.push(preserveRole);
+  sel.innerHTML = '<option value="" disabled' + (preserveRole ? '' : ' selected') + '>Select duty role…</option>'
+    + names.map(function(n){ return '<option value="' + escHtml(n) + '">' + escHtml(n) + '</option>'; }).join('');
+  if (preserveRole) sel.value = preserveRole;
+}
+
+async function loadDutyRoleUsage() {
+  dutyRoleUsageCounts = {};
+  try {
+    var rows = await sbGet('duty_roster', 'select=duty_role');
+    (rows || []).forEach(function(r) {
+      if (!r.duty_role) return;
+      dutyRoleUsageCounts[r.duty_role] = (dutyRoleUsageCounts[r.duty_role] || 0) + 1;
+    });
+  } catch(e) {}
+}
+
+function toggleDutyRolesPanel() {
+  if (!hasEditPermission('duty')) return;
+  var panel = document.getElementById('duty-roles-panel');
+  if (!panel) return;
+  var open = panel.style.display !== 'block';
+  panel.style.display = open ? 'block' : 'none';
+  if (open) {
+    editingDutyRoleId = null;
+    document.getElementById('duty-role-new-name').value = '';
+    refreshDutyRolesPanel();
+  }
+}
+
+async function refreshDutyRolesPanel() {
+  var listEl = document.getElementById('duty-roles-list');
+  if (!listEl) return;
+  listEl.innerHTML = '<div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:8px 0;">Loading…</div>';
+  await Promise.all([loadDutyRoleOptions(), loadDutyRoleUsage()]);
+  if (!dutyRoleOptions.length) {
+    listEl.innerHTML = '<div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:8px 0;">No duty roles yet — add one below.</div>';
+    return;
+  }
+  listEl.innerHTML = dutyRoleOptions.map(function(r) {
+    if (editingDutyRoleId === r.id) {
+      return '<div style="display:flex;gap:6px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);">'
+        + '<input class="book-form-input" type="text" id="duty-role-rename-input" value="' + escHtml(r.name) + '" style="flex:1;">'
+        + '<button class="book-btn-primary" style="flex:none;width:auto;padding:0 12px;margin-bottom:0;" onclick="saveDutyRoleRename(' + r.id + ',\'' + escJsAttr(r.name) + '\')">Save</button>'
+        + '</div>';
+    }
+    var count = dutyRoleUsageCounts[r.name] || 0;
+    var canDelete = count === 0;
+    var countLabel = count + ' duty assignment' + (count === 1 ? '' : 's');
+    var delTitle = canDelete ? 'Delete' : 'Used in ' + countLabel + ' — reassign or delete those first';
+    return '<div style="padding:8px 0;border-bottom:1px solid var(--border);">'
+      + '<div style="display:flex;align-items:center;gap:10px;">'
+      + '<div style="flex:1;font-size:13px;color:var(--text-primary);font-weight:500;">' + escHtml(r.name) + '</div>'
+      + '<div style="cursor:pointer;color:var(--text-secondary);" onclick="startRenameDutyRole(' + r.id + ')" title="Rename"><i class="ti ti-pencil"></i></div>'
+      + '<div style="color:' + (canDelete ? 'var(--red-text)' : 'var(--text-light)') + ';cursor:' + (canDelete ? 'pointer' : 'not-allowed') + ';" title="' + escHtml(delTitle) + '"'
+      + (canDelete ? ' onclick="deleteDutyRole(' + r.id + ',\'' + escJsAttr(r.name) + '\')"' : '')
+      + '><i class="ti ti-trash"></i></div>'
+      + '</div>'
+      + (count > 0 ? '<div style="font-size:10.5px;color:var(--text-light);margin-top:2px;">Used in ' + countLabel + '</div>' : '')
+      + '</div>';
+  }).join('');
+}
+
+function startRenameDutyRole(id) {
+  editingDutyRoleId = id;
+  refreshDutyRolesPanel();
+}
+
+async function saveDutyRoleRename(id, oldName) {
+  var input = document.getElementById('duty-role-rename-input');
+  var newName = input ? input.value.trim() : '';
+  if (!newName) { alert('Please enter a role name.'); return; }
+  if (newName === oldName) { editingDutyRoleId = null; refreshDutyRolesPanel(); return; }
+  if (dutyRoleOptions.some(function(r){ return r.id !== id && r.name.toLowerCase() === newName.toLowerCase(); })) {
+    alert('A duty role with that name already exists.'); return;
+  }
+  try {
+    await sbWrite('PATCH', 'duty_roles', { name: newName }, 'id=eq.' + id);
+    await sbWrite('PATCH', 'duty_roster', { duty_role: newName }, 'duty_role=eq.' + encodeURIComponent(oldName));
+    logAudit('duty', String(id), 'edited', newName, [{ label: 'Role name', from: oldName, to: newName }], null);
+  } catch(e) { alert('Could not rename duty role. Please try again.'); return; }
+  editingDutyRoleId = null;
+  await refreshDutyRolesPanel();
+  loadDuty();
+}
+
+async function deleteDutyRole(id, name) {
+  if ((dutyRoleUsageCounts[name] || 0) > 0) return;
+  if (!confirm('Delete the duty role "' + name + '"?')) return;
+  try {
+    await sbWrite('DELETE', 'duty_roles', null, 'id=eq.' + id);
+    logAudit('duty', String(id), 'deleted', name, { role: name }, null);
+  } catch(e) { alert('Could not delete duty role. Please try again.'); return; }
+  refreshDutyRolesPanel();
+}
+
+async function addDutyRole() {
+  var input = document.getElementById('duty-role-new-name');
+  var name = input ? input.value.trim() : '';
+  if (!name) { alert('Please enter a role name.'); return; }
+  if (dutyRoleOptions.some(function(r){ return r.name.toLowerCase() === name.toLowerCase(); })) {
+    alert('A duty role with that name already exists.'); return;
+  }
+  try {
+    await sbWrite('POST', 'duty_roles', { name: name });
+  } catch(e) { alert('Could not add duty role. Please try again.'); return; }
+  input.value = '';
+  refreshDutyRolesPanel();
 }

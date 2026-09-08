@@ -872,7 +872,21 @@
     <!-- ── DUTY ── -->
     <div class="screen-section" id="screen-duty">
       <div id="duty-add-trigger" style="display:none;margin-bottom:10px;">
-        <button class="book-btn-primary" style="width:100%;" onclick="showDutyForm()"><i class="ti ti-plus"></i> New Duty Assignment</button>
+        <div style="display:flex;gap:8px;">
+          <button class="book-btn-primary" style="flex:1;margin-bottom:0;" onclick="showDutyForm()"><i class="ti ti-plus"></i> New Duty Assignment</button>
+          <button class="book-btn-ghost" style="flex:none;width:44px;padding:0;margin-bottom:0;display:flex;align-items:center;justify-content:center;" onclick="toggleDutyRolesPanel()" title="Manage Duty Roles"><i class="ti ti-settings"></i></button>
+        </div>
+      </div>
+      <div id="duty-roles-panel" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin-bottom:12px;">
+        <div class="book-form-title">
+          <span>Manage Duty Roles</span>
+          <button class="book-close-btn" onclick="toggleDutyRolesPanel()">&times;</button>
+        </div>
+        <div id="duty-roles-list" style="margin-bottom:10px;"></div>
+        <div style="display:flex;gap:8px;">
+          <input class="book-form-input" type="text" id="duty-role-new-name" placeholder="e.g. Pantry Restocking" style="flex:1;">
+          <button class="book-btn-primary" style="flex:none;width:auto;padding:0 16px;margin-bottom:0;" onclick="addDutyRole()">+ Add</button>
+        </div>
       </div>
       <div id="duty-form" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin-bottom:12px;">
         <div class="book-form-title" id="duty-form-title">New Duty Assignment</div>
@@ -884,7 +898,9 @@
         </div>
         <div class="book-form-group">
           <label class="book-form-label">Duty Role</label>
-          <input class="book-form-input" type="text" id="duty-form-role" placeholder="e.g. Front Desk">
+          <select class="book-form-input" id="duty-form-role">
+            <option value="" disabled selected>Select duty role…</option>
+          </select>
         </div>
         <div style="display:flex;gap:10px;">
           <div class="book-form-group" style="flex:1;">
