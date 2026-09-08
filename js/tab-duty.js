@@ -8,8 +8,15 @@ async function loadDuty() {
   // ── DUTY TAB: collapsed to "who's on now" per role, tap to expand ──
   var tabEl = document.getElementById('duty-tab-list');
   var canEdit = typeof hasEditPermission === 'function' && hasEditPermission('duty');
+  // Creating/editing duty assignments and managing the duty role list are
+  // separate permissions -- someone can have one without the other.
+  var canManageDutyRoles = typeof hasEditPermission === 'function' && hasEditPermission('dutyRoles');
   var addTrigger = document.getElementById('duty-add-trigger');
-  if (addTrigger) addTrigger.style.display = canEdit ? 'block' : 'none';
+  if (addTrigger) addTrigger.style.display = (canEdit || canManageDutyRoles) ? 'block' : 'none';
+  var addBtn = document.getElementById('duty-add-btn');
+  if (addBtn) addBtn.style.display = canEdit ? 'flex' : 'none';
+  var rolesGearBtn = document.getElementById('duty-roles-gear-btn');
+  if (rolesGearBtn) rolesGearBtn.style.display = canManageDutyRoles ? 'flex' : 'none';
 
   if (tabEl) {
     try {
@@ -231,7 +238,7 @@ async function loadDutyRoleUsage() {
 }
 
 function toggleDutyRolesPanel() {
-  if (!hasEditPermission('duty')) return;
+  if (!hasEditPermission('dutyRoles')) return;
   var panel = document.getElementById('duty-roles-panel');
   if (!panel) return;
   var open = panel.style.display !== 'block';
@@ -277,11 +284,13 @@ async function refreshDutyRolesPanel() {
 }
 
 function startRenameDutyRole(id) {
+  if (!hasEditPermission('dutyRoles')) return;
   editingDutyRoleId = id;
   refreshDutyRolesPanel();
 }
 
 async function saveDutyRoleRename(id, oldName) {
+  if (!hasEditPermission('dutyRoles')) return;
   var input = document.getElementById('duty-role-rename-input');
   var newName = input ? input.value.trim() : '';
   if (!newName) { alert('Please enter a role name.'); return; }
@@ -300,6 +309,7 @@ async function saveDutyRoleRename(id, oldName) {
 }
 
 async function deleteDutyRole(id, name) {
+  if (!hasEditPermission('dutyRoles')) return;
   if ((dutyRoleUsageCounts[name] || 0) > 0) return;
   if (!confirm('Delete the duty role "' + name + '"?')) return;
   try {
@@ -310,6 +320,7 @@ async function deleteDutyRole(id, name) {
 }
 
 async function addDutyRole() {
+  if (!hasEditPermission('dutyRoles')) return;
   var input = document.getElementById('duty-role-new-name');
   var name = input ? input.value.trim() : '';
   if (!name) { alert('Please enter a role name.'); return; }

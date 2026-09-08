@@ -873,8 +873,8 @@
     <div class="screen-section" id="screen-duty">
       <div id="duty-add-trigger" style="display:none;margin-bottom:10px;">
         <div style="display:flex;gap:8px;">
-          <button class="book-btn-primary" style="flex:1;margin-bottom:0;" onclick="showDutyForm()"><i class="ti ti-plus"></i> New Duty Assignment</button>
-          <button class="book-btn-ghost" style="flex:none;width:44px;padding:0;margin-bottom:0;display:flex;align-items:center;justify-content:center;" onclick="toggleDutyRolesPanel()" title="Manage Duty Roles"><i class="ti ti-settings"></i></button>
+          <button id="duty-add-btn" class="book-btn-primary" style="flex:1;margin-bottom:0;display:none;" onclick="showDutyForm()"><i class="ti ti-plus"></i> New Duty Assignment</button>
+          <button id="duty-roles-gear-btn" class="book-btn-ghost" style="flex:none;width:44px;padding:0;margin-bottom:0;display:none;align-items:center;justify-content:center;" onclick="toggleDutyRolesPanel()" title="Manage Duty Roles"><i class="ti ti-settings"></i></button>
         </div>
       </div>
       <div id="duty-roles-panel" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin-bottom:12px;">
