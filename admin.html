@@ -445,6 +445,39 @@ html, body {
 .book-cancel-btn i { font-size: 13px; }
 
 /* ── FAULTY COMPLAIN TAB ── */
+.fc-label-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; }
+.fc-label-row .book-form-label { margin-bottom: 0; }
+.fc-edit-toggle {
+  width: 20px; height: 20px; border-radius: 50%; border: none; flex-shrink: 0; cursor: pointer;
+  background: var(--green-bg); color: var(--green-text); font-size: 10px;
+  display: flex; align-items: center; justify-content: center;
+}
+.fc-edit-toggle.active { background: var(--green-mid); color: #fff; }
+.fc-edit-panel {
+  border: 1.5px dashed var(--green-mid); border-radius: var(--r-md); background: var(--green-bg);
+  padding: 9px 9px 10px;
+}
+.fc-chip-wrap { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.fc-chip {
+  display: flex; align-items: center; gap: 6px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 20px; padding: 5px 5px 5px 11px; font-size: 11.5px; color: var(--text); line-height: 1.3;
+}
+.fc-chip .fc-chip-x {
+  width: 15px; height: 15px; border-radius: 50%; background: var(--bg); color: var(--text2);
+  font-size: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer;
+}
+.fc-chip .fc-chip-x.disabled { cursor: not-allowed; opacity: 0.5; }
+.fc-edit-add-row { display: flex; gap: 6px; margin-bottom: 8px; }
+.fc-edit-add-row input {
+  flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm);
+  padding: 7px 9px; font-size: 12px; color: var(--text); font-family: inherit;
+}
+.fc-edit-add-row button {
+  flex-shrink: 0; background: var(--green-mid); color: #fff; border: none; border-radius: var(--r-sm);
+  padding: 7px 12px; font-size: 11.5px; font-weight: 700;
+}
+.fc-edit-panel-foot { display: flex; justify-content: flex-end; }
+.fc-edit-done { flex-shrink: 0; background: var(--green); color: #fff; border: none; border-radius: var(--r-sm); padding: 6px 13px; font-size: 11px; font-weight: 700; }
 .fc-readonly-chip {
   display: flex; align-items: center; gap: 7px; background: var(--green-bg); color: var(--green-text);
   border-radius: var(--r-md); padding: 9px 12px; font-size: 13px; font-weight: 600;
@@ -752,6 +785,7 @@ html, body {
 .audit-ic.announcements { background: var(--purple-bg); color: var(--purple-text); }
 .audit-ic.duty { background: var(--blue-bg); color: var(--blue-text); }
 .audit-ic.events { background: var(--green-bg); color: var(--green-text); }
+.audit-ic.faulty { background: var(--coral-bg); color: var(--coral-text); }
 .audit-main { flex: 1; min-width: 0; }
 .audit-line1 { font-size: 12.5px; color: var(--text); line-height: 1.4; }
 .audit-action-deleted { color: var(--red-text); font-weight: 700; }
@@ -1759,20 +1793,28 @@ html, body {
         </div>
 
         <div class="book-form-group">
-          <label class="book-form-label">Location</label>
+          <div class="fc-label-row">
+            <label class="book-form-label">Location</label>
+            <button type="button" class="fc-edit-toggle" id="fc-loc-edit-toggle" onclick="toggleFcOptionsEdit('loc')" title="Edit locations"><i class="ti ti-pencil"></i></button>
+          </div>
           <div class="fc-select placeholder" id="fc-loc-field" onclick="toggleFcList('loc')">
             <span id="fc-loc-label">Tap to select location</span><i class="ti ti-chevron-down fc-chev"></i>
           </div>
           <div class="fc-option-list" id="fc-loc-list" style="display:none;"></div>
+          <div class="fc-edit-panel" id="fc-loc-edit-panel" style="display:none;"></div>
           <div class="book-field-error" id="fc-loc-err"><i class="ti ti-alert-circle"></i>Please select a location.</div>
         </div>
 
         <div class="book-form-group">
-          <label class="book-form-label">Item</label>
+          <div class="fc-label-row">
+            <label class="book-form-label">Item</label>
+            <button type="button" class="fc-edit-toggle" id="fc-item-edit-toggle" onclick="toggleFcOptionsEdit('item')" title="Edit items"><i class="ti ti-pencil"></i></button>
+          </div>
           <div class="fc-select placeholder" id="fc-item-field" onclick="toggleFcList('item')">
             <span id="fc-item-label">Tap to select item</span><i class="ti ti-chevron-down fc-chev"></i>
           </div>
           <div class="fc-option-list" id="fc-item-list" style="display:none;"></div>
+          <div class="fc-edit-panel" id="fc-item-edit-panel" style="display:none;"></div>
           <input class="book-form-input" type="text" id="fc-item-other" placeholder="Please state the item" style="display:none;margin-top:8px;">
           <div class="book-field-error" id="fc-item-err"><i class="ti ti-alert-circle"></i>Please select an item.</div>
         </div>
@@ -2968,7 +3010,8 @@ html, body {
     { key: 'announcements', label: 'Announcements' },
     { key: 'duty',          label: 'Duty' },
     { key: 'dutyRoles',     label: 'Duty Roles' },
-    { key: 'events',        label: 'Events' }
+    { key: 'events',        label: 'Events' },
+    { key: 'faulty',        label: 'Faulty Complain' }
   ];
   var permModalEmail = null;
   var permModalState = {};
@@ -3027,9 +3070,10 @@ html, body {
   // AUDIT LOG (Super Admin — Settings > Oversight)
   // ══════════════════════════════════════
   var AUDIT_MODULES = {
-    announcements: { label: 'Announcements', singular: 'Announcement', icon: 'ti-speakerphone' },
-    duty:          { label: 'Duty',          singular: 'Duty',          icon: 'ti-calendar-event' },
-    events:        { label: 'Events',        singular: 'Event',         icon: 'ti-confetti' }
+    announcements: { label: 'Announcements',    singular: 'Announcement', icon: 'ti-speakerphone' },
+    duty:          { label: 'Duty',             singular: 'Duty',          icon: 'ti-calendar-event' },
+    events:        { label: 'Events',           singular: 'Event',         icon: 'ti-confetti' },
+    faulty:        { label: 'Faulty Complain',  singular: 'Option',        icon: 'ti-tool' }
   };
   var auditEntries = [];
   var auditFilter = 'all';
@@ -3065,7 +3109,7 @@ html, body {
   }
 
   function renderAuditFilters() {
-    var opts = [['all','All'],['announcements','Announcements'],['duty','Duty'],['events','Events']];
+    var opts = [['all','All'],['announcements','Announcements'],['duty','Duty'],['events','Events'],['faulty','Faulty Complain']];
     document.getElementById('audit-filters').innerHTML = opts.map(function(o) {
       return '<div class="audit-filter-chip' + (auditFilter === o[0] ? ' active' : '') + '" onclick="setAuditFilter(\'' + o[0] + '\')">' + o[1] + '</div>';
     }).join('');
@@ -3283,7 +3327,7 @@ html, body {
   var SKEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhieHpib3drdWNwcWxoeGRvbWFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5OTEwMjYsImV4cCI6MjEwMjU2NzAyNn0.tZMdtKy92OUdLEOxKkO2XAa2bgXzkEeQtCAjtYF8yGA';
   var SVCKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhieHpib3drdWNwcWxoeGRvbWFwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4Njk5MTAyNiwiZXhwIjoyMTAyNTY3MDI2fQ.D7j3EkxjNswBWNraJwrqhoUhSwo4AGv7pXNXVG89STU'; // service role — used only for sending invites
   // Mirrors js/core.js's DEFAULT_PERMISSIONS (admin.html doesn't include core.js)
-  var DEFAULT_PERMISSIONS = { announcements: 'view', duty: 'view', dutyRoles: 'view', events: 'view' };
+  var DEFAULT_PERMISSIONS = { announcements: 'view', duty: 'view', dutyRoles: 'view', events: 'view', faulty: 'view' };
 
   async function sbFetch(method, path, body, extra_headers) {
     var headers = { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
@@ -4097,19 +4141,16 @@ html, body {
   var FC_SHEET_SECRET = 'UOhnuGd169-c7WkKtKZcMvq6S9i-Se-O';
   var FC_BUCKET = 'faulty-photos';
 
-  var FC_LOCATIONS = [
-    "1st Floor (From Entrance to Herrick's office)",
-    "1st Floor (Newly refurbished area)",
-    "2nd Floor - New Wing (From Ryan's office to Mr. Pui's office)",
-    "2nd Floor - Old Wing (From the stairs to Coco's office)"
-  ];
-  var FC_ITEMS = [
-    "Printer - Paper jam", "Printer - Scanning / printing issue", "Printer - Cartridge replacement",
-    "Washroom - Clogging toilet", "Washroom - Bidet issues", "Washroom - broken toilet seat",
-    "Washroom - building issues such as leaking pipes / basin", "Lighting issues", "Air conditioner issues",
-    "Water dispenser issues", "Chair issues", "Table / drawer issues", "Cabinet issues", "Electrical issues",
-    "Other Issues (Please state item and describe the issue)"
-  ];
+  // Location/Item option lists live in Supabase (fc_locations, fc_items) so
+  // they can be edited in-app via the pencil icon next to each field. Admin
+  // has unconditional full access here, so the pencils are always shown --
+  // no permission check needed (matches Manage Duty Roles on this page).
+  // "Other Issues" stays a fixed, non-deletable entry defined here -- the
+  // free-text box below depends on this exact string.
+  var FC_ITEM_OTHER = "Other Issues (Please state item and describe the issue)";
+  var fcLocationOptions = [];  // [{id, name}]
+  var fcItemOptions = [];      // [{id, name}]
+  var fcOptionsEditing = null; // 'loc' | 'item' | null
 
   var faultyTabInited = false;
   var fcState = { loc: null, item: null, itemOther: '', urgency: null, photoFile: null, photoObjectUrl: null };
@@ -4122,10 +4163,15 @@ html, body {
     var nameEl = document.getElementById('fc-staff-name');
     if (nameEl) nameEl.textContent = u.name || u.email || 'Unknown';
 
-    renderFcOptionList('fc-loc-list', FC_LOCATIONS);
-    renderFcOptionList('fc-item-list', FC_ITEMS);
-
+    loadFcOptions();
     loadAllComplaints();
+  }
+
+  async function loadFcOptions() {
+    try { fcLocationOptions = await sbFetch('GET', '/rest/v1/fc_locations?order=name.asc') || []; } catch (e) { fcLocationOptions = []; }
+    try { fcItemOptions = await sbFetch('GET', '/rest/v1/fc_items?order=name.asc') || []; } catch (e) { fcItemOptions = []; }
+    renderFcOptionList('fc-loc-list', fcLocationOptions.map(function (r) { return r.name; }));
+    renderFcOptionList('fc-item-list', fcItemOptions.map(function (r) { return r.name; }).concat([FC_ITEM_OTHER]));
   }
 
   function renderFcOptionList(listId, options) {
@@ -4153,7 +4199,99 @@ html, body {
     var opening = list.style.display === 'none';
     document.querySelectorAll('.fc-option-list').forEach(function (l) { l.style.display = 'none'; });
     document.querySelectorAll('.fc-select').forEach(function (f) { f.classList.remove('open'); });
+    document.querySelectorAll('.fc-edit-panel').forEach(function (p) { p.style.display = 'none'; });
+    document.querySelectorAll('.fc-edit-toggle').forEach(function (t) { t.classList.remove('active'); });
+    fcOptionsEditing = null;
     if (opening) { list.style.display = 'block'; field.classList.add('open'); }
+  }
+
+  // ── Manage Locations / Items inline (admin has unconditional access) ──
+  function toggleFcOptionsEdit(which) {
+    var opening = fcOptionsEditing !== which;
+    fcOptionsEditing = opening ? which : null;
+    document.querySelectorAll('.fc-option-list').forEach(function (l) { l.style.display = 'none'; });
+    document.querySelectorAll('.fc-select').forEach(function (f) { f.classList.remove('open'); });
+    ['loc', 'item'].forEach(function (w) {
+      var panel = document.getElementById('fc-' + w + '-edit-panel');
+      var toggle = document.getElementById('fc-' + w + '-edit-toggle');
+      var isOpen = fcOptionsEditing === w;
+      if (panel) panel.style.display = isOpen ? 'block' : 'none';
+      if (toggle) toggle.classList.toggle('active', isOpen);
+    });
+    if (opening) { renderFcEditPanel(which); loadFcOptionUsage(which); }
+  }
+
+  function fcOptionsFor(which) { return which === 'loc' ? fcLocationOptions : fcItemOptions; }
+  function fcTableFor(which) { return which === 'loc' ? 'fc_locations' : 'fc_items'; }
+  function fcComplaintFieldFor(which) { return which === 'loc' ? 'location' : 'item'; }
+
+  function renderFcEditPanel(which) {
+    var panel = document.getElementById('fc-' + which + '-edit-panel');
+    if (!panel) return;
+    var options = fcOptionsFor(which);
+    var chips = options.map(function (o) {
+      var count = fcOptionUsageCounts[o.name] || 0;
+      var canDelete = count === 0;
+      var title = canDelete ? 'Remove' : 'Used by ' + count + ' complaint' + (count === 1 ? '' : 's') + ' — can\'t remove';
+      return '<div class="fc-chip">' + escHtml(o.name)
+        + '<span class="fc-chip-x' + (canDelete ? '' : ' disabled') + '" title="' + escHtml(title) + '"'
+        + (canDelete ? ' onclick="removeFcOption(\'' + which + '\',' + o.id + ',\'' + escJsAttr(o.name) + '\')"' : '')
+        + '>✕</span></div>';
+    }).join('');
+    if (which === 'item') {
+      chips += '<div class="fc-chip" style="opacity:0.7;" title="Always available — not editable">' + escHtml(FC_ITEM_OTHER) + '</div>';
+    }
+    panel.innerHTML = '<div class="fc-chip-wrap">' + (chips || '<span style="font-size:11px;color:var(--text3);">No options yet — add one below.</span>') + '</div>'
+      + '<div class="fc-edit-add-row">'
+      + '<input type="text" id="fc-' + which + '-new-name" placeholder="e.g. ' + (which === 'loc' ? '3rd Floor - Meeting Rooms' : 'Elevator issues') + '">'
+      + '<button onclick="addFcOption(\'' + which + '\')">+ Add</button>'
+      + '</div>'
+      + '<div class="fc-edit-panel-foot"><button class="fc-edit-done" onclick="toggleFcOptionsEdit(\'' + which + '\')">Done</button></div>';
+  }
+
+  // Renders once immediately (with whatever usage counts are cached so far,
+  // possibly none yet), then loadFcOptionUsage fetches fresh counts and
+  // re-renders. loadFcOptionUsage must NOT be called from renderFcEditPanel
+  // itself -- the two would otherwise call each other forever.
+  var fcOptionUsageCounts = {};
+  async function loadFcOptionUsage(which) {
+    try {
+      var rows = await sbFetch('GET', '/rest/v1/faulty_complaints?select=' + fcComplaintFieldFor(which));
+      fcOptionUsageCounts = {};
+      (rows || []).forEach(function (r) {
+        var val = r[fcComplaintFieldFor(which)];
+        if (!val) return;
+        fcOptionUsageCounts[val] = (fcOptionUsageCounts[val] || 0) + 1;
+      });
+    } catch (e) { fcOptionUsageCounts = {}; }
+    if (fcOptionsEditing === which) renderFcEditPanel(which);
+  }
+
+  async function addFcOption(which) {
+    var input = document.getElementById('fc-' + which + '-new-name');
+    var name = input ? input.value.trim() : '';
+    if (!name) { alert('Please enter a name.'); return; }
+    var options = fcOptionsFor(which);
+    if (options.some(function (o) { return o.name.toLowerCase() === name.toLowerCase(); }) || name.toLowerCase() === FC_ITEM_OTHER.toLowerCase()) {
+      alert('That option already exists.'); return;
+    }
+    try {
+      await sbFetch('POST', '/rest/v1/' + fcTableFor(which), { name: name });
+      logAudit('faulty', null, 'added', name, [{ label: which === 'loc' ? 'Location' : 'Item', from: '', to: name }], null);
+    } catch (e) { alert('Could not add option. Please try again.'); return; }
+    await loadFcOptions();
+    renderFcEditPanel(which);
+  }
+
+  async function removeFcOption(which, id, name) {
+    if ((fcOptionUsageCounts[name] || 0) > 0) return;
+    if (!confirm('Remove "' + name + '"?')) return;
+    try {
+      await sbFetch('DELETE', '/rest/v1/' + fcTableFor(which) + '?id=eq.' + id, null, { 'Prefer': '' });
+      logAudit('faulty', String(id), 'deleted', name, { list: which === 'loc' ? 'Location' : 'Item', value: name }, null);
+    } catch (e) { alert('Could not remove option. Please try again.'); return; }
+    await loadFcOptions();
+    renderFcEditPanel(which);
   }
 
   function selectFcOption(which, val) {
