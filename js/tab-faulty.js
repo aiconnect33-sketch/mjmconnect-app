@@ -10,19 +10,14 @@ var FC_SHEET_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbyLH1jLjsnpu
 var FC_SHEET_SECRET = 'UOhnuGd169-c7WkKtKZcMvq6S9i-Se-O';
 var FC_BUCKET = 'faulty-photos';
 
-var FC_LOCATIONS = [
-  "1st Floor (From Entrance to Herrick's office)",
-  "1st Floor (Newly refurbished area)",
-  "2nd Floor - New Wing (From Ryan's office to Mr. Pui's office)",
-  "2nd Floor - Old Wing (From the stairs to Coco's office)"
-];
-var FC_ITEMS = [
-  "Printer - Paper jam", "Printer - Scanning / printing issue", "Printer - Cartridge replacement",
-  "Washroom - Clogging toilet", "Washroom - Bidet issues", "Washroom - broken toilet seat",
-  "Washroom - building issues such as leaking pipes / basin", "Lighting issues", "Air conditioner issues",
-  "Water dispenser issues", "Chair issues", "Table / drawer issues", "Cabinet issues", "Electrical issues",
-  "Other Issues (Please state item and describe the issue)"
-];
+// Location/Item option lists live in Supabase (fc_locations, fc_items) so
+// they can be edited in-app via the pencil icon next to each field, instead
+// of requiring a code change. "Other Issues" stays a fixed, non-deletable
+// entry defined here -- the free-text box below depends on this exact string.
+var FC_ITEM_OTHER = "Other Issues (Please state item and describe the issue)";
+var fcLocationOptions = [];  // [{id, name}]
+var fcItemOptions = [];      // [{id, name}]
+var fcOptionsEditing = null; // 'loc' | 'item' | null -- only one panel open at a time
 
 var faultyTabInited = false;
 var fcState = { loc: null, item: null, itemOther: '', urgency: null, photoFile: null, photoObjectUrl: null };
@@ -35,10 +30,21 @@ function initFaultyTab() {
   var nameEl = document.getElementById('fc-staff-name');
   if (nameEl) nameEl.textContent = u.name || u.email || 'Unknown';
 
-  renderFcOptionList('fc-loc-list', FC_LOCATIONS);
-  renderFcOptionList('fc-item-list', FC_ITEMS);
+  var canEditOptions = typeof hasEditPermission === 'function' && hasEditPermission('faulty');
+  var locToggle = document.getElementById('fc-loc-edit-toggle');
+  var itemToggle = document.getElementById('fc-item-edit-toggle');
+  if (locToggle) locToggle.style.display = canEditOptions ? 'flex' : 'none';
+  if (itemToggle) itemToggle.style.display = canEditOptions ? 'flex' : 'none';
 
+  loadFcOptions();
   loadTeamComplaints();
+}
+
+async function loadFcOptions() {
+  try { fcLocationOptions = await sbGet('fc_locations', 'order=name.asc') || []; } catch (e) { fcLocationOptions = []; }
+  try { fcItemOptions = await sbGet('fc_items', 'order=name.asc') || []; } catch (e) { fcItemOptions = []; }
+  renderFcOptionList('fc-loc-list', fcLocationOptions.map(function (r) { return r.name; }));
+  renderFcOptionList('fc-item-list', fcItemOptions.map(function (r) { return r.name; }).concat([FC_ITEM_OTHER]));
 }
 
 // Option rows carry their value in data-val; clicks are handled by the
@@ -50,6 +56,101 @@ function renderFcOptionList(listId, options) {
   el.innerHTML = options.map(function (o) {
     return '<div class="fc-option-row" data-val="' + escHtml(o) + '">' + escHtml(o) + '</div>';
   }).join('');
+}
+
+// ── Manage Locations / Items inline (Faulty Complain permission, edit level) ──
+// Edited right on the Report an Issue form via the pencil icon next to each
+// field, rather than a separate admin screen -- see fc-loc-edit-panel /
+// fc-item-edit-panel. Only one panel is open at a time to keep the form tidy.
+function toggleFcOptionsEdit(which) {
+  if (!hasEditPermission('faulty')) return;
+  var opening = fcOptionsEditing !== which;
+  fcOptionsEditing = opening ? which : null;
+  document.querySelectorAll('.fc-option-list').forEach(function (l) { l.style.display = 'none'; });
+  document.querySelectorAll('.fc-select').forEach(function (f) { f.classList.remove('open'); });
+  ['loc', 'item'].forEach(function (w) {
+    var panel = document.getElementById('fc-' + w + '-edit-panel');
+    var toggle = document.getElementById('fc-' + w + '-edit-toggle');
+    var isOpen = fcOptionsEditing === w;
+    if (panel) panel.style.display = isOpen ? 'block' : 'none';
+    if (toggle) toggle.classList.toggle('active', isOpen);
+  });
+  if (opening) { renderFcEditPanel(which); loadFcOptionUsage(which); }
+}
+
+function fcOptionsFor(which) { return which === 'loc' ? fcLocationOptions : fcItemOptions; }
+function fcTableFor(which) { return which === 'loc' ? 'fc_locations' : 'fc_items'; }
+function fcComplaintFieldFor(which) { return which === 'loc' ? 'location' : 'item'; }
+
+function renderFcEditPanel(which) {
+  var panel = document.getElementById('fc-' + which + '-edit-panel');
+  if (!panel) return;
+  var options = fcOptionsFor(which);
+  var chips = options.map(function (o) {
+    var count = fcOptionUsageCounts[o.name] || 0;
+    var canDelete = count === 0;
+    var title = canDelete ? 'Remove' : 'Used by ' + count + ' complaint' + (count === 1 ? '' : 's') + ' — can\'t remove';
+    return '<div class="fc-chip">' + escHtml(o.name)
+      + '<span class="fc-chip-x' + (canDelete ? '' : ' disabled') + '" title="' + escHtml(title) + '"'
+      + (canDelete ? ' onclick="removeFcOption(\'' + which + '\',' + o.id + ',\'' + escJsAttr(o.name) + '\')"' : '')
+      + '>✕</span></div>';
+  }).join('');
+  if (which === 'item') {
+    chips += '<div class="fc-chip" style="opacity:0.7;" title="Always available — not editable">' + escHtml(FC_ITEM_OTHER) + '</div>';
+  }
+  panel.innerHTML = '<div class="fc-chip-wrap">' + (chips || '<span style="font-size:11px;color:var(--text-light);">No options yet — add one below.</span>') + '</div>'
+    + '<div class="fc-edit-add-row">'
+    + '<input type="text" id="fc-' + which + '-new-name" placeholder="e.g. ' + (which === 'loc' ? '3rd Floor - Meeting Rooms' : 'Elevator issues') + '">'
+    + '<button onclick="addFcOption(\'' + which + '\')">+ Add</button>'
+    + '</div>'
+    + '<div class="fc-edit-panel-foot"><button class="fc-edit-done" onclick="toggleFcOptionsEdit(\'' + which + '\')">Done</button></div>';
+}
+
+// Renders once immediately (with whatever usage counts are cached so far,
+// possibly none yet), then loadFcOptionUsage fetches fresh counts and
+// re-renders. loadFcOptionUsage must NOT be called from renderFcEditPanel
+// itself -- the two would otherwise call each other forever.
+var fcOptionUsageCounts = {};
+async function loadFcOptionUsage(which) {
+  try {
+    var rows = await sbGet('faulty_complaints', 'select=' + fcComplaintFieldFor(which));
+    fcOptionUsageCounts = {};
+    (rows || []).forEach(function (r) {
+      var val = r[fcComplaintFieldFor(which)];
+      if (!val) return;
+      fcOptionUsageCounts[val] = (fcOptionUsageCounts[val] || 0) + 1;
+    });
+  } catch (e) { fcOptionUsageCounts = {}; }
+  if (fcOptionsEditing === which) renderFcEditPanel(which);
+}
+
+async function addFcOption(which) {
+  if (!hasEditPermission('faulty')) return;
+  var input = document.getElementById('fc-' + which + '-new-name');
+  var name = input ? input.value.trim() : '';
+  if (!name) { alert('Please enter a name.'); return; }
+  var options = fcOptionsFor(which);
+  if (options.some(function (o) { return o.name.toLowerCase() === name.toLowerCase(); }) || name.toLowerCase() === FC_ITEM_OTHER.toLowerCase()) {
+    alert('That option already exists.'); return;
+  }
+  try {
+    await sbWrite('POST', fcTableFor(which), { name: name });
+    logAudit('faulty', null, 'added', name, [{ label: which === 'loc' ? 'Location' : 'Item', from: '', to: name }], null);
+  } catch (e) { alert('Could not add option. Please try again.'); return; }
+  await loadFcOptions();
+  renderFcEditPanel(which);
+}
+
+async function removeFcOption(which, id, name) {
+  if (!hasEditPermission('faulty')) return;
+  if ((fcOptionUsageCounts[name] || 0) > 0) return;
+  if (!confirm('Remove "' + name + '"?')) return;
+  try {
+    await sbWrite('DELETE', fcTableFor(which), null, 'id=eq.' + id);
+    logAudit('faulty', String(id), 'deleted', name, { list: which === 'loc' ? 'Location' : 'Item', value: name }, null);
+  } catch (e) { alert('Could not remove option. Please try again.'); return; }
+  await loadFcOptions();
+  renderFcEditPanel(which);
 }
 
 document.addEventListener('click', function (e) {
@@ -69,6 +170,9 @@ function toggleFcList(which) {
   var opening = list.style.display === 'none';
   document.querySelectorAll('.fc-option-list').forEach(function (l) { l.style.display = 'none'; });
   document.querySelectorAll('.fc-select').forEach(function (f) { f.classList.remove('open'); });
+  document.querySelectorAll('.fc-edit-panel').forEach(function (p) { p.style.display = 'none'; });
+  document.querySelectorAll('.fc-edit-toggle').forEach(function (t) { t.classList.remove('active'); });
+  fcOptionsEditing = null;
   if (opening) { list.style.display = 'block'; field.classList.add('open'); }
 }
 
