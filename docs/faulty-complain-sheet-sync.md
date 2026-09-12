@@ -13,12 +13,32 @@ Current live setup (as of the aiconnect33-sketch migration):
 ## What the app sends
 
 - `action: 'create'` on every new submission — `secret, id, timestamp, staffName,
-  location, item, itemOther, description, urgency, photoName, photoMime, photoBase64`
+  location, item, itemOther, description, urgency, photoName, photoMime, photoBase64,
+  notifyEmails` (array of emails for whoever's on duty today under a duty role
+  flagged `notify_faulty` in Supabase — usually just Maintenance; empty if none)
 - `action: 'resolve'` / `action: 'reopen'` when staff toggles a complaint's status —
   `secret, action, id, resolvedBy, resolvedAt`
 
 Requests are fire-and-forget (`mode: 'no-cors'`), so the app never blocks or
 fails on this sync — it only matters for keeping the Sheet up to date.
+
+## Updating the already-deployed script (e.g. for the notify-email addition)
+
+The script is already deployed and live — you don't need to redo the whole
+one-time setup below, just update the code in place:
+
+1. Go to `script.google.com/home` (same account as the current deployment),
+   open the existing project.
+2. Replace the code with the latest `Code.gs` below (it now sends a
+   notify email when `notifyEmails` is non-empty).
+3. Optionally set `SITE_URL` at the top if you want the email to include an
+   "Open in MJMConnect" button.
+4. **Deploy → Manage deployments → pick the existing Web app → Edit (pencil)
+   → Version: New version → Deploy.** Re-using the existing deployment keeps
+   the same `.../exec` URL, so `FC_SHEET_WEBHOOK_URL` in the app doesn't
+   need to change.
+5. The first time it actually sends an email, Google may re-prompt for
+   permission (Gmail send is a new scope this version needs) — approve it.
 
 ## One-time setup (re-run if migrating to a new Google account again)
 
@@ -52,6 +72,9 @@ fails on this sync — it only matters for keeping the Sheet up to date.
 var SHEET_ID = '1xZDXiaLnkBH7ZC4U0Dov1UN4qyhGDnZbOXqfvSr-V0g';
 var FOLDER_ID = '1iPSxednlNHX_h8mtcWamJj70hTacGfYb';
 var SECRET = 'UOhnuGd169-c7WkKtKZcMvq6S9i-Se-O'; // must match FC_SHEET_SECRET in js/tab-faulty.js
+var SITE_URL = ''; // e.g. 'https://your-mjmconnect-site.example.com' -- if set, the
+                    // notify email includes an "Open in MJMConnect" link; left blank
+                    // (the default), the link is simply omitted from the email.
 
 var HEADERS = ['Timestamp', 'ID', 'Staff Name', 'Location', 'Item', 'Item (Other)',
   'Description', 'Urgency', 'Status', 'Photo Link', 'Resolved By', 'Resolved At'];
@@ -117,6 +140,56 @@ function handleCreate(sheet, body) {
     '',
     ''
   ]);
+  if (body.notifyEmails && body.notifyEmails.length) {
+    try { sendFaultyNotifyEmail(body, photoLink); } catch (err) { /* best-effort only */ }
+  }
+}
+
+// Emails whoever's on duty today under a notify-flagged duty role (resolved
+// client-side in js/tab-faulty.js / admin.html -- see notifyEmails there).
+function sendFaultyNotifyEmail(body, photoLink) {
+  var itemLabel = (body.item === 'Other Issues' && body.itemOther) ? body.itemOther : (body.item || '');
+  var subject = 'New Faulty Complain — ' + itemLabel;
+  var textLines = [
+    'A new Faulty Complain was just submitted.',
+    '',
+    'Location: ' + (body.location || ''),
+    'Item: ' + itemLabel,
+    'Urgency: ' + (body.urgency || ''),
+    'Reported by: ' + (body.staffName || ''),
+    '',
+    'Description:',
+    body.description || ''
+  ];
+  if (photoLink) textLines.push('', 'Photo: ' + photoLink);
+  if (SITE_URL) textLines.push('', 'Open in MJMConnect: ' + SITE_URL);
+
+  var rowsHtml = [
+    ['Location', body.location || ''],
+    ['Item', itemLabel],
+    ['Urgency', body.urgency || ''],
+    ['Reported by', body.staffName || '']
+  ].map(function (r) {
+    return '<div style="margin-bottom:4px;"><b>' + r[0] + ':</b> ' + escapeHtml(r[1]) + '</div>';
+  }).join('');
+  var htmlBody = '<div style="font-family:sans-serif;font-size:14px;color:#111C18;">'
+    + '<p>A new Faulty Complain was just submitted.</p>'
+    + rowsHtml
+    + '<div style="margin:10px 0;"><b>Description:</b><br>' + escapeHtml(body.description || '') + '</div>'
+    + (photoLink ? '<div style="margin-bottom:14px;"><a href="' + photoLink + '">View attached photo</a></div>' : '')
+    + (SITE_URL ? '<a href="' + SITE_URL + '" style="display:inline-block;background:#075E54;color:#fff;text-decoration:none;padding:10px 16px;border-radius:6px;font-weight:bold;">Open in MJMConnect</a>' : '')
+    + '</div>';
+
+  MailApp.sendEmail({
+    to: body.notifyEmails.join(','),
+    subject: subject,
+    body: textLines.join('\n'),
+    htmlBody: htmlBody
+  });
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 function handleStatusChange(sheet, body) {
