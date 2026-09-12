@@ -99,15 +99,6 @@
     position: relative; display: flex; flex-direction: column;
     min-height: 100vh;
   }
-  .status-bar {
-    background: var(--green-dark); color: #fff;
-    font-size: 11px; font-weight: 500;
-    padding: 10px 20px 6px;
-    display: flex; justify-content: space-between; align-items: center;
-    flex-shrink: 0;
-  }
-  .status-bar .status-icons { display: flex; align-items: center; gap: 5px; }
-  .status-bar .status-icons i { font-size: 13px; }
   .top-bar {
     background: var(--green-dark);
     padding: 4px 16px 14px;
@@ -682,16 +673,6 @@
 
   <!-- APP HEADER (hidden on the Menu screen; see showMenuScreen()/showMainScreen() below) -->
   <div id="app-top-header">
-    <!-- STATUS BAR -->
-    <div class="status-bar">
-      <span id="js-clock">9:41</span>
-      <div class="status-icons">
-        <i class="ti ti-wifi"></i>
-        <i class="ti ti-signal-4g"></i>
-        <i class="ti ti-battery-3"></i>
-      </div>
-    </div>
-
     <!-- TOP BAR -->
     <div class="top-bar">
       <div class="wordmark">

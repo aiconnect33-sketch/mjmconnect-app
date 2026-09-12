@@ -77,17 +77,6 @@ html, body {
   position: relative;
 }
 
-/* ── STATUS BAR ── */
-.sb {
-  background: var(--green);
-  color: #E1F5EE;
-  font-size: 11px; font-weight: 500;
-  padding: 10px 18px 6px;
-  display: flex; justify-content: space-between; align-items: center;
-  flex-shrink: 0;
-}
-.sb-icons { display: flex; gap: 5px; align-items: center; }
-.sb-icons i { font-size: 13px; }
 
 /* ── TOP BAR ── */
 .topbar {
@@ -966,15 +955,6 @@ html, body {
 
 <div class="phone-wrap">
 <div class="phone">
-
-  <!-- STATUS BAR -->
-  <div class="sb">
-    <span id="js-clock">9:41</span>
-    <div class="sb-icons">
-      <i class="ti ti-wifi"></i>
-      <i class="ti ti-battery-3"></i>
-    </div>
-  </div>
 
   <!-- TOP BAR -->
   <div class="topbar">
@@ -2091,17 +2071,6 @@ html, body {
 </div>
 
 <script>
-  // ── CLOCK ──
-  function tick() {
-    var now = new Date();
-    var h = now.getHours(), m = now.getMinutes();
-    var ap = h >= 12 ? 'PM' : 'AM';
-    h = h % 12 || 12;
-    document.getElementById('js-clock').textContent =
-      h + ':' + String(m).padStart(2,'0') + ' ' + ap;
-  }
-  tick(); setInterval(tick, 10000);
-
   // ── TAB SWITCHING ──
   function switchTab(btn, name) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
