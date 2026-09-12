@@ -9,6 +9,8 @@ Current live setup (as of the aiconnect33-sketch migration):
 - Spreadsheet: `1xZDXiaLnkBH7ZC4U0Dov1UN4qyhGDnZbOXqfvSr-V0g`, owned by `aiconnect33@gmail.com`
 - Drive folder: `1iPSxednlNHX_h8mtcWamJj70hTacGfYb`, owned by `aiconnect33@gmail.com`
 - Apps Script project: standalone (not bound to the sheet), under `aiconnect33@gmail.com`
+- Site URL (used in the notify email's "Open in MJMConnect" button):
+  `https://aiconnect33-sketch.github.io/mjmconnect-app/` (GitHub Pages, deployed from `main`)
 
 ## What the app sends
 
@@ -72,9 +74,9 @@ one-time setup below, just update the code in place:
 var SHEET_ID = '1xZDXiaLnkBH7ZC4U0Dov1UN4qyhGDnZbOXqfvSr-V0g';
 var FOLDER_ID = '1iPSxednlNHX_h8mtcWamJj70hTacGfYb';
 var SECRET = 'UOhnuGd169-c7WkKtKZcMvq6S9i-Se-O'; // must match FC_SHEET_SECRET in js/tab-faulty.js
-var SITE_URL = ''; // e.g. 'https://your-mjmconnect-site.example.com' -- if set, the
-                    // notify email includes an "Open in MJMConnect" link; left blank
-                    // (the default), the link is simply omitted from the email.
+var SITE_URL = 'https://aiconnect33-sketch.github.io/mjmconnect-app/'; // if set, the
+                    // notify email includes an "Open in MJMConnect" link; leave blank
+                    // ('') to omit that link from the email entirely.
 
 var HEADERS = ['Timestamp', 'ID', 'Staff Name', 'Location', 'Item', 'Item (Other)',
   'Description', 'Urgency', 'Status', 'Photo Link', 'Resolved By', 'Resolved At'];
