@@ -88,6 +88,16 @@ function logAudit(module, recordId, action, itemTitle, details, originalBy) {
   } catch(e) {}
 }
 
+// ── Clock ──
+function tick() {
+  var now = new Date();
+  var h = now.getHours(), m = now.getMinutes();
+  var ap = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  document.getElementById('js-clock').textContent = h + ':' + String(m).padStart(2,'0') + ' ' + ap;
+}
+tick(); setInterval(tick, 10000);
+
 // ── Tab / Nav switching ──
 function switchTab(btn, name) {
   document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
