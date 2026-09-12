@@ -4385,6 +4385,24 @@ html, body {
     return SURL + '/storage/v1/object/public/' + FC_BUCKET + '/' + path;
   }
 
+  // Same recipient-resolution logic as js/tab-faulty.js (staff app) -- see
+  // its comment for why role/staff are matched via notify_faulty + staff_email
+  // rather than by name, so a later rename of either can't break this.
+  async function resolveFaultyNotifyEmails() {
+    var emails = {};
+    try {
+      var roles = await sbFetch('GET', '/rest/v1/duty_roles?notify_faulty=eq.true&select=name');
+      if (!roles || !roles.length) return [];
+      var today = localDateStr();
+      for (var i = 0; i < roles.length; i++) {
+        var rows = await sbFetch('GET', '/rest/v1/duty_roster?duty_role=eq.' + encodeURIComponent(roles[i].name) +
+          '&date_from=lte.' + today + '&date_to=gte.' + today + '&select=staff_email');
+        (rows || []).forEach(function (r) { if (r.staff_email) emails[r.staff_email] = true; });
+      }
+    } catch (e) { /* best-effort only */ }
+    return Object.keys(emails);
+  }
+
   async function syncFcToSheet(payload, file, id) {
     if (!FC_SHEET_WEBHOOK_URL) return;
     try {
@@ -4395,7 +4413,8 @@ html, body {
         timestamp: new Date().toISOString(),
         staffName: payload.staff_name, location: payload.location, item: payload.item,
         itemOther: payload.item_other, description: payload.description, urgency: payload.urgency,
-        photoName: null, photoMime: null, photoBase64: null
+        photoName: null, photoMime: null, photoBase64: null,
+        notifyEmails: await resolveFaultyNotifyEmails()
       };
       if (file) {
         body.photoName = file.name;

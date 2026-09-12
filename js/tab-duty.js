@@ -116,6 +116,8 @@ function toggleDutySection(headerEl) {
 var editingDutyId = null;
 var editingDutyOriginal = null;
 var dutyStaffOptions = [];
+var dutyStaffEmailMap = {}; // full_name -> email, captured onto duty_roster.staff_email at save time
+                             // so a later profile rename can't break Faulty Complain notify (see admin.html)
 
 // Staff Name is a picker sourced from registered accounts only (matches
 // Admin's behaviour) -- not free text, so duty can't be assigned to
@@ -125,9 +127,11 @@ async function loadDutyStaffOptions(preserveName) {
   var sel = document.getElementById('duty-form-name');
   if (!sel) return;
   try {
-    var data = await sbGet('profiles', 'role=neq.pending&order=full_name.asc&select=full_name');
+    var data = await sbGet('profiles', 'role=neq.pending&order=full_name.asc&select=full_name,email');
     dutyStaffOptions = (data || []).map(function(p){ return p.full_name; }).filter(Boolean);
-  } catch(e) { dutyStaffOptions = []; }
+    dutyStaffEmailMap = {};
+    (data || []).forEach(function(p){ if (p.full_name) dutyStaffEmailMap[p.full_name] = p.email || null; });
+  } catch(e) { dutyStaffOptions = []; dutyStaffEmailMap = {}; }
   var names = dutyStaffOptions.slice();
   if (preserveName && names.indexOf(preserveName) === -1) names.push(preserveName);
   sel.innerHTML = '<option value="" disabled' + (preserveName ? '' : ' selected') + '>Select staff…</option>'
@@ -173,7 +177,7 @@ async function saveDutyAssignment() {
   if (from > to) { alert('The "From" date must be before the "To" date.'); return; }
   try {
     if (editingDutyId) {
-      await sbWrite('PATCH', 'duty_roster', { staff_name: name, duty_role: role, date_from: from, date_to: to, period: from + ' to ' + to }, 'id=eq.' + editingDutyId);
+      await sbWrite('PATCH', 'duty_roster', { staff_name: name, staff_email: dutyStaffEmailMap[name] || null, duty_role: role, date_from: from, date_to: to, period: from + ' to ' + to }, 'id=eq.' + editingDutyId);
       var diffs = [];
       if (editingDutyOriginal) {
         var o = editingDutyOriginal;
@@ -185,7 +189,7 @@ async function saveDutyAssignment() {
       editingDutyId = null;
       editingDutyOriginal = null;
     } else {
-      await sbWrite('POST', 'duty_roster', { staff_name: name, duty_role: role, date_from: from, date_to: to, period: from + ' to ' + to });
+      await sbWrite('POST', 'duty_roster', { staff_name: name, staff_email: dutyStaffEmailMap[name] || null, duty_role: role, date_from: from, date_to: to, period: from + ' to ' + to });
     }
     hideDutyForm();
     loadDuty();

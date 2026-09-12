@@ -272,10 +272,34 @@ async function uploadFcPhoto(file) {
   return SURL + '/storage/v1/object/public/' + FC_BUCKET + '/' + path;
 }
 
+// Finds who should be emailed about a new complaint: any duty_roles row
+// flagged notify_faulty=true, resolved to its CURRENT name (survives that
+// role being renamed later), then whoever's staff_email is on duty_roster
+// for that role today (survives a staff member being renamed later too --
+// their email was captured onto the assignment at save time, not re-looked-up
+// here). Best-effort: an empty/failed result just means no email goes out,
+// it never blocks the complaint itself from saving.
+async function resolveFaultyNotifyEmails() {
+  var emails = {};
+  try {
+    var roles = await sbGet('duty_roles', 'notify_faulty=eq.true&select=name');
+    if (!roles || !roles.length) return [];
+    var today = localDateStr();
+    for (var i = 0; i < roles.length; i++) {
+      var rows = await sbGet('duty_roster',
+        'duty_role=eq.' + encodeURIComponent(roles[i].name) +
+        '&date_from=lte.' + today + '&date_to=gte.' + today + '&select=staff_email');
+      (rows || []).forEach(function (r) { if (r.staff_email) emails[r.staff_email] = true; });
+    }
+  } catch (e) { /* best-effort only */ }
+  return Object.keys(emails);
+}
+
 // Best-effort — mirrors the submission into a Google Sheet (and the photo
-// into a Drive folder) via a small Apps Script Web App. Fire-and-forget:
-// no-cors means we can't read the response, so this never blocks or fails
-// the real submission, which already succeeded in Supabase by this point.
+// into a Drive folder), and emails whoever's on duty for a notify-flagged
+// role, via a small Apps Script Web App. Fire-and-forget: no-cors means we
+// can't read the response, so this never blocks or fails the real
+// submission, which already succeeded in Supabase by this point.
 async function syncFcToSheet(payload, file, id) {
   if (!FC_SHEET_WEBHOOK_URL) return;
   try {
@@ -286,7 +310,8 @@ async function syncFcToSheet(payload, file, id) {
       timestamp: new Date().toISOString(),
       staffName: payload.staff_name, location: payload.location, item: payload.item,
       itemOther: payload.item_other, description: payload.description, urgency: payload.urgency,
-      photoName: null, photoMime: null, photoBase64: null
+      photoName: null, photoMime: null, photoBase64: null,
+      notifyEmails: await resolveFaultyNotifyEmails()
     };
     if (file) {
       body.photoName = file.name;
