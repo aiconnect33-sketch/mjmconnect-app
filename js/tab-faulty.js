@@ -199,9 +199,11 @@ function setFcUrgency(u) {
   if (err) err.classList.remove('visible');
 }
 
-// ── Photo attach: two real file inputs (camera vs. library/files) ──
+// ── Photo attach: one file input -- on mobile this already offers the
+// device's own "Take Photo" option alongside Photo Library / Choose File
+// (native OS picker), so a separate Take Photo button was redundant.
 document.addEventListener('change', function (e) {
-  if (!e.target.matches('#fc-photo-camera, #fc-photo-file')) return;
+  if (!e.target.matches('#fc-photo-file')) return;
   var file = e.target.files && e.target.files[0];
   if (!file) return;
   fcState.photoFile = file;
@@ -238,9 +240,7 @@ function resetFcPhoto() {
   if (fcState.photoObjectUrl) { URL.revokeObjectURL(fcState.photoObjectUrl); fcState.photoObjectUrl = null; }
   var area = document.getElementById('fc-photo-area');
   if (!area) return;
-  area.innerHTML = '<label class="fc-btn-attach" for="fc-photo-camera"><i class="ti ti-camera"></i> Take Photo</label>'
-    + '<input type="file" id="fc-photo-camera" accept="image/*" capture="environment" style="display:none;">'
-    + '<label class="fc-btn-attach" for="fc-photo-file"><i class="ti ti-paperclip"></i> Add File</label>'
+  area.innerHTML = '<label class="fc-btn-attach" for="fc-photo-file"><i class="ti ti-paperclip"></i> Add File</label>'
     + '<input type="file" id="fc-photo-file" accept="image/*,video/*" style="display:none;">';
 }
 

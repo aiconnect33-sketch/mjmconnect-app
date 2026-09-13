@@ -1828,8 +1828,6 @@ html, body {
         <div class="book-form-group">
           <label class="book-form-label">Photo / Video Attachment</label>
           <div class="fc-photo-attach" id="fc-photo-area">
-            <label class="fc-btn-attach" for="fc-photo-camera"><i class="ti ti-camera"></i> Take Photo</label>
-            <input type="file" id="fc-photo-camera" accept="image/*" capture="environment" style="display:none;">
             <label class="fc-btn-attach" for="fc-photo-file"><i class="ti ti-paperclip"></i> Add File</label>
             <input type="file" id="fc-photo-file" accept="image/*,video/*" style="display:none;">
           </div>
@@ -4318,7 +4316,7 @@ html, body {
   }
 
   document.addEventListener('change', function (e) {
-    if (!e.target.matches('#fc-photo-camera, #fc-photo-file')) return;
+    if (!e.target.matches('#fc-photo-file')) return;
     var file = e.target.files && e.target.files[0];
     if (!file) return;
     fcState.photoFile = file;
@@ -4355,9 +4353,7 @@ html, body {
     if (fcState.photoObjectUrl) { URL.revokeObjectURL(fcState.photoObjectUrl); fcState.photoObjectUrl = null; }
     var area = document.getElementById('fc-photo-area');
     if (!area) return;
-    area.innerHTML = '<label class="fc-btn-attach" for="fc-photo-camera"><i class="ti ti-camera"></i> Take Photo</label>'
-      + '<input type="file" id="fc-photo-camera" accept="image/*" capture="environment" style="display:none;">'
-      + '<label class="fc-btn-attach" for="fc-photo-file"><i class="ti ti-paperclip"></i> Add File</label>'
+    area.innerHTML = '<label class="fc-btn-attach" for="fc-photo-file"><i class="ti ti-paperclip"></i> Add File</label>'
       + '<input type="file" id="fc-photo-file" accept="image/*,video/*" style="display:none;">';
   }
 
