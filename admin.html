@@ -354,6 +354,36 @@ html, body {
 }
 .duration-pill.active { background: var(--green); color: #fff; }
 
+/* ── TIME OFF (self-service, mirrors the staff app's Time Off tab) ── */
+.to-meter-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 12px 13px; margin-bottom: 10px; }
+.to-meter-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+.to-meter-label { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text2); }
+.to-meter-value { font-variant-numeric: tabular-nums; font-size: 13px; font-weight: 700; color: var(--text); }
+.to-meter-value.warn { color: var(--amber-text); }
+.to-meter-value.over { color: var(--red-text); }
+.to-meter-track { height: 7px; border-radius: 20px; background: var(--bg); overflow: hidden; }
+.to-meter-fill { height: 100%; border-radius: 20px; background: var(--blue-text); }
+.to-meter-fill.warn { background: var(--amber-text); }
+.to-meter-fill.over { background: var(--red-text); }
+
+.to-out-banner { background: var(--blue-bg); border: 1.5px dashed var(--blue-text); border-radius: var(--r-lg); padding: 15px; text-align: center; margin-bottom: 10px; }
+.to-out-banner .to-pulse-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--blue-text); display: inline-block; margin-right: 6px; }
+.to-out-banner .to-status-line { font-size: 12px; font-weight: 700; color: var(--blue-text); margin-bottom: 4px; }
+.to-out-banner .to-reason-line { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+.to-out-banner .to-time-line { font-size: 11px; color: var(--text2); margin-bottom: 14px; }
+
+.to-warn { border-radius: var(--r-lg); padding: 13px 14px; margin-top: 10px; margin-bottom: 10px; font-size: 11.5px; line-height: 1.6; }
+.to-warn.red { background: var(--red-bg); color: var(--red-text); border: 1px solid rgba(163,45,45,0.25); }
+.to-warn b { display: block; font-size: 12.5px; margin-bottom: 3px; }
+
+.to-history-row { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); padding: 11px 12px; margin-bottom: 8px; }
+.to-history-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; gap: 8px; }
+.to-history-reason { font-size: 12.5px; font-weight: 700; color: var(--text); }
+.to-history-time { font-size: 10.5px; color: var(--text2); }
+.to-correct-row { display: flex; gap: 6px; margin-top: 8px; align-items: center; }
+.to-correct-row input { flex: 1; border: 1px solid var(--blue-text); border-radius: 8px; padding: 6px 8px; font-size: 12px; font-family: inherit; }
+.to-edit-icon { flex-shrink: 0; cursor: pointer; color: var(--text3); font-size: 14px; padding: 4px 6px; margin: -4px -6px; }
+
 /* ── BOOKING TAB (native to Admin) ── */
 .book-inline-form {
   background: var(--green-bg); border: 1px solid #C2E6D8;
@@ -1505,6 +1535,60 @@ html, body {
     <div class="screen-section" id="screen-timeoff">
 
       <div class="sec-hdr">
+        <div class="sec-title">My Time Off</div>
+      </div>
+      <div id="admin-timeoff-status">
+        <div class="card"><div style="font-size:12px;color:var(--text3);text-align:center;padding:14px 0;">Loading...</div></div>
+      </div>
+
+      <div class="inline-form" id="admin-timeoff-planahead-form">
+        <div class="inline-form-title">Plan Ahead<button class="close-btn" onclick="adminHidePlanAheadForm()">&times;</button></div>
+        <div class="form-group">
+          <label class="form-label">Reason</label>
+          <input class="form-input no-icon" id="admin-timeoff-pa-reason" placeholder="e.g. Medical appointment">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div class="form-group">
+            <label class="form-label">Expected Date</label>
+            <input class="form-input no-icon" type="date" id="admin-timeoff-pa-date">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Expected Time</label>
+            <input class="form-input no-icon" type="time" id="admin-timeoff-pa-time">
+          </div>
+        </div>
+        <button class="btn-primary" onclick="adminSavePlanAheadReminder()">Save Reminder</button>
+        <button class="btn-ghost" onclick="adminHidePlanAheadForm()">Cancel</button>
+      </div>
+
+      <div class="inline-form" id="admin-timeoff-backfill-form">
+        <div class="inline-form-title">Log a Missed Time Off<button class="close-btn" onclick="adminHideBackfillForm()">&times;</button></div>
+        <div class="form-group">
+          <label class="form-label">Reason</label>
+          <input class="form-input no-icon" id="admin-timeoff-bf-reason" placeholder="e.g. Rushed out, forgot to tap Time Out">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Date</label>
+          <input class="form-input no-icon" type="date" id="admin-timeoff-bf-date">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div class="form-group">
+            <label class="form-label">Time Out</label>
+            <input class="form-input no-icon" type="time" id="admin-timeoff-bf-out">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Time In</label>
+            <input class="form-input no-icon" type="time" id="admin-timeoff-bf-in">
+          </div>
+        </div>
+        <button class="btn-primary" style="background:var(--red-text);" onclick="adminSaveBackfillEntry()">Log This Time Off</button>
+        <button class="btn-ghost" onclick="adminHideBackfillForm()">Cancel</button>
+      </div>
+
+      <div id="admin-timeoff-my-records">
+      </div>
+
+      <div class="sec-hdr" style="margin-top:16px;">
         <div class="sec-title">This Month — Overview</div>
       </div>
       <div id="timeoff-overview">
@@ -2140,7 +2224,7 @@ html, body {
     if (name === 'invite')   loadInviteLog();
     if (name === 'event')    loadDbEvents();
     if (name === 'estatetrip') loadDbEstateTrips();
-    if (name === 'timeoff')  loadDbTimeOff();
+    if (name === 'timeoff')  { loadDbTimeOff(); loadAdminTimeOffSelf(); }
   }
   // ── BOTTOM NAV ──
   function switchNav(name) {
@@ -2158,7 +2242,7 @@ html, body {
     if (name === 'invite')   loadInviteLog();
     if (name === 'event')    loadDbEvents();
     if (name === 'estatetrip') loadDbEstateTrips();
-    if (name === 'timeoff')  loadDbTimeOff();
+    if (name === 'timeoff')  { loadDbTimeOff(); loadAdminTimeOffSelf(); }
     if (name === 'book')     initBookTab();
     if (name === 'faulty')   initFaultyTab();
   }
@@ -2175,7 +2259,7 @@ html, body {
     if (name === 'invite')   loadInviteLog();
     if (name === 'event')    loadDbEvents();
     if (name === 'estatetrip') loadDbEstateTrips();
-    if (name === 'timeoff')  loadDbTimeOff();
+    if (name === 'timeoff')  { loadDbTimeOff(); loadAdminTimeOffSelf(); }
     if (name === 'book')     initBookTab();
     if (name === 'faulty')   initFaultyTab();
   }
@@ -4876,6 +4960,266 @@ html, body {
         }).join('') + '</div>';
       }
     } catch (e) { /* Supabase not reachable */ }
+  }
+
+  // ── TIME OFF — SELF-SERVICE FOR ADMIN (mirrors js/tab-timeoff.js in the staff app) ──
+  function adminFormatClock(d) {
+    var h = d.getHours(), m = d.getMinutes();
+    var ap = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return h + ':' + String(m).padStart(2, '0') + ' ' + ap;
+  }
+
+  async function loadAdminTimeOffSelf() {
+    var statusEl = document.getElementById('admin-timeoff-status');
+    var recordsEl = document.getElementById('admin-timeoff-my-records');
+    if (!statusEl && !recordsEl) return;
+    var me = JSON.parse(sessionStorage.getItem('mjm_user') || '{}');
+    if (!me.email) return;
+    var today = localDateStr();
+    try {
+      var monthStart = today.slice(0, 8) + '01';
+      var myRecords = await sbFetch('GET', '/rest/v1/time_off_records?staff_email=eq.' + encodeURIComponent(me.email) + '&time_out=gte.' + monthStart + '&order=time_out.desc&limit=200');
+      if (!myRecords) myRecords = [];
+      var dueReminders = await sbFetch('GET', '/rest/v1/time_off_reminders?staff_email=eq.' + encodeURIComponent(me.email) + '&used=eq.false&planned_date=lte.' + today + '&order=planned_date.asc&limit=5');
+      if (!dueReminders) dueReminders = [];
+
+      var openRecord = myRecords.find(function (r) { return !r.time_in; });
+      var monthlyMinutes = myRecords.reduce(function (sum, r) {
+        if (r.entry_type === 'voided' || !r.duration_minutes) return sum;
+        return sum + r.duration_minutes;
+      }, 0);
+
+      if (statusEl) statusEl.innerHTML = renderAdminTimeOffStatus(openRecord, monthlyMinutes, dueReminders);
+      if (recordsEl) recordsEl.innerHTML = renderAdminTimeOffRecords(myRecords, today);
+    } catch (e) {
+      if (statusEl) statusEl.innerHTML = '<div class="card"><div style="font-size:12px;color:var(--text3);text-align:center;padding:14px 0;">Could not load your Time Off status.</div></div>';
+      if (recordsEl) recordsEl.innerHTML = '';
+    }
+  }
+
+  function renderAdminTimeOffStatus(openRecord, monthlyMinutes, dueReminders) {
+    var pct = Math.min(100, Math.round((monthlyMinutes / 240) * 100));
+    var mCls = monthlyMinutes > 240 ? 'over' : (monthlyMinutes >= 180 ? 'warn' : '');
+    var html = '<div class="to-meter-card">'
+      + '<div class="to-meter-top"><span class="to-meter-label">This Month</span>'
+      + '<span class="to-meter-value ' + mCls + '">' + fmtTimeOffDuration(monthlyMinutes) + ' <span style="color:var(--text3);font-weight:500;">/ 4h 00m</span></span></div>'
+      + '<div class="to-meter-track"><div class="to-meter-fill ' + mCls + '" style="width:' + pct + '%;"></div></div>'
+      + '</div>';
+
+    if (openRecord) {
+      var out = new Date(openRecord.time_out);
+      var elapsed = fmtTimeOffDuration((Date.now() - out.getTime()) / 60000);
+      html += '<div class="to-out-banner">'
+        + '<div class="to-status-line"><span class="to-pulse-dot"></span>YOU\'RE CURRENTLY OUT</div>'
+        + '<div class="to-reason-line">' + escHtml(openRecord.reason) + '</div>'
+        + '<div class="to-time-line">Out since ' + adminFormatClock(out) + ' · ' + elapsed + ' so far</div>'
+        + '<button class="btn-primary" style="margin-bottom:0;" onclick="adminTimeInNow(' + openRecord.id + ')">I\'m Back — Time In</button>'
+        + '</div>';
+    } else {
+      html += '<div class="card">'
+        + '<div class="form-group"><label class="form-label">Reason</label>'
+        + '<input class="form-input no-icon" id="admin-timeoff-reason" placeholder="e.g. Bank errand, clinic appointment..."></div>'
+        + '<button class="btn-primary" onclick="adminTimeOutNow()">Time Out Now</button>'
+        + '<button class="btn-ghost" onclick="adminShowPlanAheadForm()">Plan Ahead</button>'
+        + '</div>';
+    }
+
+    dueReminders.forEach(function (r) {
+      var disabled = !!openRecord;
+      html += '<div class="to-out-banner" style="border-color:var(--amber-text);background:var(--amber-bg);' + (disabled ? 'opacity:0.65;' : '') + '">'
+        + '<div class="to-status-line" style="color:var(--amber-text);"><span class="to-pulse-dot" style="background:var(--amber-text);"></span>UPCOMING — ' + escHtml(r.planned_time.slice(0, 5)) + '</div>'
+        + '<div class="to-reason-line">' + escHtml(r.reason) + '</div>'
+        + '<div class="to-time-line">Planned ahead · tap below when you actually leave</div>'
+        + (disabled
+          ? '<button class="btn-primary" style="background:var(--text3);margin-bottom:0;" disabled>Time In your other one first</button>'
+          : '<button class="btn-primary" style="background:var(--blue-text);margin-bottom:0;" onclick="adminConvertReminder(' + r.id + ')">Time Out Now</button>')
+        + '</div>';
+    });
+
+    html += '<button class="btn-ghost" style="border:none;color:var(--text2);font-size:11.5px;" onclick="adminShowBackfillForm()">Forgot to tap either button? Log a Missed Time Off</button>';
+    return html;
+  }
+
+  function renderAdminTimeOffRecords(records, today) {
+    if (!records.length) return '<div style="font-size:12px;color:var(--text3);text-align:center;padding:14px 0;">No Time Off logged this month.</div>';
+    var html = '';
+    records.forEach(function (r) {
+      var out = new Date(r.time_out);
+      var dateLabel = localDateStr(out) === today ? 'Today' : out.toLocaleDateString('en-MY', { day: 'numeric', month: 'short' });
+      var timeLabel = adminFormatClock(out) + (r.time_in ? ' → ' + adminFormatClock(new Date(r.time_in)) : ' → still out');
+      var voided = r.entry_type === 'voided';
+      var badge = voided
+        ? '<span class="badge" style="background:var(--bg);color:var(--text3);">Voided</span>'
+        : (r.duration_minutes > 150 ? '<span class="badge b-red">' + fmtTimeOffDuration(r.duration_minutes) + '</span>' : '<span class="badge b-blue">' + fmtTimeOffDuration(r.duration_minutes || 0) + '</span>');
+      var entryNote = r.entry_type === 'edited' ? ' <span style="color:var(--amber-text);font-weight:700;">(edited)</span>'
+        : r.entry_type === 'backfilled' ? ' <span style="color:var(--red-text);font-weight:700;">(backfilled)</span>'
+        : voided ? ' <span style="color:var(--text3);">— moved to Annual Leave</span>' : '';
+
+      var canCorrect = !voided && r.time_in && (r.entry_type === 'live' || r.entry_type === 'edited') && localDateStr(new Date(r.time_in)) === today;
+      var editIcon = canCorrect
+        ? '<div class="to-edit-icon" onclick="adminToggleTimeOffCorrection(' + r.id + ')" title="Correct Time In"><i class="ti ti-pencil"></i></div>'
+        : '';
+
+      html += '<div class="to-history-row" style="' + (voided ? 'opacity:0.6;' : '') + '">'
+        + '<div class="to-history-top">'
+        + '<div style="flex:1;min-width:0;display:flex;align-items:center;gap:6px;">'
+        + '<div class="to-history-reason" style="' + (voided ? 'text-decoration:line-through;' : '') + '">' + escHtml(r.reason) + '</div>' + editIcon
+        + '</div>' + badge + '</div>'
+        + '<div class="to-history-time">' + dateLabel + ' · ' + timeLabel + entryNote + '</div>';
+
+      if (canCorrect) {
+        var hh = String(new Date(r.time_in).getHours()).padStart(2, '0');
+        var mm = String(new Date(r.time_in).getMinutes()).padStart(2, '0');
+        html += '<div class="to-correct-row" id="admin-to-correct-row-' + r.id + '" style="display:none;">'
+          + '<input type="time" id="admin-to-correct-' + r.id + '" value="' + hh + ':' + mm + '">'
+          + '<button class="btn-primary" style="width:auto;margin:0;padding:8px 12px;" onclick="adminSaveTimeOffCorrection(' + r.id + ')">Save</button>'
+          + '</div>';
+      }
+      if (!voided && r.duration_minutes > 150) {
+        html += '<div class="to-warn red">'
+          + '<b>⚠ This trip ran ' + fmtTimeOffDuration(r.duration_minutes) + ' — over the 2.5h single-application limit.</b>'
+          + 'The whole trip needs to go through Annual Leave instead of Time Off.'
+          + '<button style="width:100%;margin-top:10px;background:var(--red-text);color:#fff;border:none;border-radius:var(--r-sm);padding:9px;font-size:11.5px;font-weight:700;" onclick="adminVoidTimeOff(' + r.id + ')">↩ Cancel This Trip</button>'
+          + '</div>';
+      }
+      html += '</div>';
+    });
+    return html;
+  }
+
+  function adminToggleTimeOffCorrection(id) {
+    var row = document.getElementById('admin-to-correct-row-' + id);
+    if (!row) return;
+    row.style.display = row.style.display === 'none' ? 'flex' : 'none';
+  }
+
+  async function adminTimeOutNow() {
+    var me = JSON.parse(sessionStorage.getItem('mjm_user') || '{}');
+    var reasonEl = document.getElementById('admin-timeoff-reason');
+    var reason = reasonEl ? reasonEl.value.trim() : '';
+    if (!reason) { alert('Please describe the reason for this Time Off.'); return; }
+    try {
+      var existing = await sbFetch('GET', '/rest/v1/time_off_records?staff_email=eq.' + encodeURIComponent(me.email) + '&time_in=is.null&limit=1');
+      if (existing && existing.length) { alert('You already have an open Time Off. Time In on that one first.'); return; }
+      await sbFetch('POST', '/rest/v1/time_off_records', { staff_name: me.name || me.email, staff_email: me.email, reason: reason, time_out: new Date().toISOString() });
+      loadAdminTimeOffSelf();
+      if (typeof loadDbTimeOff === 'function') loadDbTimeOff();
+      if (typeof loadAdminLeaveDuty === 'function') loadAdminLeaveDuty();
+    } catch (e) { alert('Could not start Time Off. Please try again.'); }
+  }
+
+  async function adminTimeInNow(id) {
+    try {
+      var rows = await sbFetch('GET', '/rest/v1/time_off_records?id=eq.' + id);
+      var record = rows && rows[0];
+      if (!record) return;
+      var timeIn = new Date();
+      var duration = Math.round((timeIn.getTime() - new Date(record.time_out).getTime()) / 60000);
+      await sbFetch('PATCH', '/rest/v1/time_off_records?id=eq.' + id, { time_in: timeIn.toISOString(), duration_minutes: duration }, { 'Prefer': '' });
+      loadAdminTimeOffSelf();
+      if (typeof loadDbTimeOff === 'function') loadDbTimeOff();
+      if (typeof loadAdminLeaveDuty === 'function') loadAdminLeaveDuty();
+    } catch (e) { alert('Could not record Time In. Please try again.'); }
+  }
+
+  async function adminSaveTimeOffCorrection(id) {
+    var input = document.getElementById('admin-to-correct-' + id);
+    if (!input || !input.value) return;
+    try {
+      var rows = await sbFetch('GET', '/rest/v1/time_off_records?id=eq.' + id);
+      var record = rows && rows[0];
+      if (!record) return;
+      var oldTimeIn = new Date(record.time_in);
+      var parts = input.value.split(':');
+      var newTimeIn = new Date(oldTimeIn.getFullYear(), oldTimeIn.getMonth(), oldTimeIn.getDate(), parseInt(parts[0], 10), parseInt(parts[1], 10));
+      var duration = Math.round((newTimeIn.getTime() - new Date(record.time_out).getTime()) / 60000);
+      if (duration < 0) { alert('Time In cannot be before Time Out.'); return; }
+      var patch = { time_in: newTimeIn.toISOString(), duration_minutes: duration, entry_type: 'edited', corrected_at: new Date().toISOString() };
+      if (!record.original_time_in) patch.original_time_in = record.time_in;
+      await sbFetch('PATCH', '/rest/v1/time_off_records?id=eq.' + id, patch, { 'Prefer': '' });
+      loadAdminTimeOffSelf();
+      if (typeof loadDbTimeOff === 'function') loadDbTimeOff();
+    } catch (e) { alert('Could not save the correction. Please try again.'); }
+  }
+
+  async function adminVoidTimeOff(id) {
+    if (!confirm('Cancel this trip and apply Annual Leave instead? The record stays on file marked Voided, and the full duration is returned to your monthly buffer. You\'ll need to apply for Annual Leave separately to cover the day.')) return;
+    try {
+      await sbFetch('PATCH', '/rest/v1/time_off_records?id=eq.' + id, { entry_type: 'voided' }, { 'Prefer': '' });
+      loadAdminTimeOffSelf();
+      if (typeof loadDbTimeOff === 'function') loadDbTimeOff();
+      if (typeof loadAdminLeaveDuty === 'function') loadAdminLeaveDuty();
+    } catch (e) { alert('Could not cancel this trip. Please try again.'); }
+  }
+
+  function adminShowPlanAheadForm() {
+    document.getElementById('admin-timeoff-pa-reason').value = '';
+    document.getElementById('admin-timeoff-pa-date').value = localDateStr();
+    document.getElementById('admin-timeoff-pa-time').value = '';
+    document.getElementById('admin-timeoff-planahead-form').classList.add('visible');
+    document.getElementById('admin-timeoff-planahead-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  function adminHidePlanAheadForm() {
+    document.getElementById('admin-timeoff-planahead-form').classList.remove('visible');
+  }
+  async function adminSavePlanAheadReminder() {
+    var me = JSON.parse(sessionStorage.getItem('mjm_user') || '{}');
+    var reason = document.getElementById('admin-timeoff-pa-reason').value.trim();
+    var date = document.getElementById('admin-timeoff-pa-date').value;
+    var time = document.getElementById('admin-timeoff-pa-time').value;
+    if (!reason || !date || !time) { alert('Please fill in the reason, date, and time.'); return; }
+    try {
+      await sbFetch('POST', '/rest/v1/time_off_reminders', { staff_name: me.name || me.email, staff_email: me.email, reason: reason, planned_date: date, planned_time: time });
+      adminHidePlanAheadForm();
+      loadAdminTimeOffSelf();
+    } catch (e) { alert('Could not save the reminder. Please try again.'); }
+  }
+
+  async function adminConvertReminder(id) {
+    var me = JSON.parse(sessionStorage.getItem('mjm_user') || '{}');
+    try {
+      var existing = await sbFetch('GET', '/rest/v1/time_off_records?staff_email=eq.' + encodeURIComponent(me.email) + '&time_in=is.null&limit=1');
+      if (existing && existing.length) { alert('You already have an open Time Off. Time In on that one first.'); return; }
+      var rows = await sbFetch('GET', '/rest/v1/time_off_reminders?id=eq.' + id);
+      var reminder = rows && rows[0];
+      if (!reminder) return;
+      await sbFetch('POST', '/rest/v1/time_off_records', { staff_name: reminder.staff_name, staff_email: reminder.staff_email, reason: reminder.reason, time_out: new Date().toISOString() });
+      await sbFetch('PATCH', '/rest/v1/time_off_reminders?id=eq.' + id, { used: true }, { 'Prefer': '' });
+      loadAdminTimeOffSelf();
+      if (typeof loadDbTimeOff === 'function') loadDbTimeOff();
+    } catch (e) { alert('Could not start this Time Off. Please try again.'); }
+  }
+
+  function adminShowBackfillForm() {
+    document.getElementById('admin-timeoff-bf-reason').value = '';
+    document.getElementById('admin-timeoff-bf-date').value = localDateStr();
+    document.getElementById('admin-timeoff-bf-out').value = '';
+    document.getElementById('admin-timeoff-bf-in').value = '';
+    document.getElementById('admin-timeoff-backfill-form').classList.add('visible');
+    document.getElementById('admin-timeoff-backfill-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  function adminHideBackfillForm() {
+    document.getElementById('admin-timeoff-backfill-form').classList.remove('visible');
+  }
+  async function adminSaveBackfillEntry() {
+    var me = JSON.parse(sessionStorage.getItem('mjm_user') || '{}');
+    var reason = document.getElementById('admin-timeoff-bf-reason').value.trim();
+    var date = document.getElementById('admin-timeoff-bf-date').value;
+    var outT = document.getElementById('admin-timeoff-bf-out').value;
+    var inT = document.getElementById('admin-timeoff-bf-in').value;
+    if (!reason || !date || !outT || !inT) { alert('Please fill in the reason, date, and both times.'); return; }
+    var outParts = outT.split(':'), inParts = inT.split(':');
+    var timeOut = new Date(date + 'T00:00:00'); timeOut.setHours(parseInt(outParts[0], 10), parseInt(outParts[1], 10));
+    var timeIn = new Date(date + 'T00:00:00'); timeIn.setHours(parseInt(inParts[0], 10), parseInt(inParts[1], 10));
+    if (timeIn <= timeOut) { alert('Time In must be after Time Out.'); return; }
+    var duration = Math.round((timeIn.getTime() - timeOut.getTime()) / 60000);
+    try {
+      await sbFetch('POST', '/rest/v1/time_off_records', { staff_name: me.name || me.email, staff_email: me.email, reason: reason, time_out: timeOut.toISOString(), time_in: timeIn.toISOString(), duration_minutes: duration, entry_type: 'backfilled' });
+      adminHideBackfillForm();
+      loadAdminTimeOffSelf();
+      if (typeof loadDbTimeOff === 'function') loadDbTimeOff();
+    } catch (e) { alert('Could not log this Time Off. Please try again.'); }
   }
 
   // ── LOAD DUTY FROM SUPABASE ──
