@@ -155,15 +155,22 @@ function renderTimeOffRecords(records, today) {
       : r.entry_type === 'backfilled' ? ' <span style="color:var(--red-text);font-weight:700;">(backfilled)</span>'
       : voided ? ' <span style="color:var(--text-light);">— moved to Annual Leave</span>' : '';
 
+    var canCorrect = !voided && r.time_in && (r.entry_type === 'live' || r.entry_type === 'edited') && localDateStr(new Date(r.time_in)) === today;
+    var editIcon = canCorrect
+      ? '<div class="to-edit-icon" onclick="toggleTimeOffCorrection(' + r.id + ')" title="Correct Time In"><i class="ti ti-pencil"></i></div>'
+      : '';
+
     html += '<div class="to-history-row" style="' + (voided ? 'opacity:0.6;' : '') + '">'
-      + '<div class="to-history-top"><div class="to-history-reason" style="' + (voided ? 'text-decoration:line-through;' : '') + '">' + escHtml(r.reason) + '</div>' + badge + '</div>'
+      + '<div class="to-history-top">'
+      + '<div style="flex:1;min-width:0;display:flex;align-items:center;gap:6px;">'
+      + '<div class="to-history-reason" style="' + (voided ? 'text-decoration:line-through;' : '') + '">' + escHtml(r.reason) + '</div>' + editIcon
+      + '</div>' + badge + '</div>'
       + '<div class="to-history-time">' + dateLabel + ' · ' + timeLabel + entryNote + '</div>';
 
-    var canCorrect = !voided && r.time_in && (r.entry_type === 'live' || r.entry_type === 'edited') && localDateStr(new Date(r.time_in)) === today;
     if (canCorrect) {
       var hh = String(new Date(r.time_in).getHours()).padStart(2, '0');
       var mm = String(new Date(r.time_in).getMinutes()).padStart(2, '0');
-      html += '<div class="to-correct-row">'
+      html += '<div class="to-correct-row" id="to-correct-row-' + r.id + '" style="display:none;">'
         + '<input type="time" id="to-correct-' + r.id + '" value="' + hh + ':' + mm + '">'
         + '<button class="book-btn-primary" style="width:auto;margin:0;padding:8px 12px;" onclick="saveTimeOffCorrection(' + r.id + ')">Save</button>'
         + '</div>';
@@ -209,6 +216,12 @@ async function timeInNow(id) {
     await sbWrite('PATCH', 'time_off_records', { time_in: timeIn.toISOString(), duration_minutes: duration }, 'id=eq.' + id);
     loadTimeOff();
   } catch (e) { alert('Could not record Time In. Please try again.'); }
+}
+
+function toggleTimeOffCorrection(id) {
+  var row = document.getElementById('to-correct-row-' + id);
+  if (!row) return;
+  row.style.display = row.style.display === 'none' ? 'flex' : 'none';
 }
 
 async function saveTimeOffCorrection(id) {
