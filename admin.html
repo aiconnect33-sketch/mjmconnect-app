@@ -35,6 +35,8 @@
   --purple-text: #534AB7;
   --coral-bg:    #FAECE7;
   --coral-text:  #993C1D;
+  --estate-bg:   #DCF5ED;
+  --estate-text: #159B78;
   --bg:          #F4F6F5;
   --surface:     #FFFFFF;
   --border:      #D8E4E0;
@@ -1063,6 +1065,11 @@ html, body {
 
       <!-- Today's Estate Trip -->
       <div id="admin-estatetrip-today">
+        <div class="home-summary-card"><div style="font-size:12px;color:var(--text3);text-align:center;flex:1;">Loading...</div></div>
+      </div>
+
+      <!-- Currently out on Time Off -->
+      <div id="admin-timeoff-today">
         <div class="home-summary-card"><div style="font-size:12px;color:var(--text3);text-align:center;flex:1;">Loading...</div></div>
       </div>
 
@@ -5345,7 +5352,7 @@ html, body {
         if (trips && trips.length) {
           var tnames = trips.map(function(r){ return r.staff_name; }).join(', ');
           tripEl.innerHTML = '<div class="home-summary-card" onclick="switchTabByName(\'estatetrip\')">'
-            + '<div class="home-summary-ic" style="background:var(--blue-bg);color:var(--blue-text);"><i class="ti ti-car"></i></div>'
+            + '<div class="home-summary-ic" style="background:var(--estate-bg);color:var(--estate-text);"><i class="ti ti-car"></i></div>'
             + '<div style="flex:1;min-width:0;"><div class="home-summary-title">Today\'s Estate Trip</div>'
             + '<div class="home-summary-sub">' + escHtml(tnames) + '</div></div>'
             + '<div class="home-summary-count">' + trips.length + '</div>'
@@ -5353,6 +5360,24 @@ html, body {
             + '</div>';
         } else {
           tripEl.innerHTML = '<div class="card"><div style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0;">No estate trips today.</div></div>';
+        }
+      }
+    } catch(e) {}
+    try {
+      var toEl = document.getElementById('admin-timeoff-today');
+      if (toEl && window.location.protocol !== 'file:') {
+        var out = await sbFetch('GET', '/rest/v1/time_off_records?time_in=is.null&entry_type=neq.voided&order=time_out.asc&limit=20');
+        if (out && out.length) {
+          var onames = out.map(function(r){ return r.staff_name; }).join(', ');
+          toEl.innerHTML = '<div class="home-summary-card" onclick="switchTabByName(\'timeoff\')">'
+            + '<div class="home-summary-ic" style="background:var(--blue-bg);color:var(--blue-text);"><i class="ti ti-clock"></i></div>'
+            + '<div style="flex:1;min-width:0;"><div class="home-summary-title">Currently Out</div>'
+            + '<div class="home-summary-sub">' + escHtml(onames) + '</div></div>'
+            + '<div class="home-summary-count">' + out.length + '</div>'
+            + '<i class="ti ti-chevron-right home-summary-chev"></i>'
+            + '</div>';
+        } else {
+          toEl.innerHTML = '<div class="card"><div style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0;">No one out right now.</div></div>';
         }
       }
     } catch(e) {}
