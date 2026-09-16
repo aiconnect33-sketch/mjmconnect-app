@@ -65,11 +65,15 @@ async function loadTimeOff() {
 
   try {
     var monthStart = today.slice(0, 8) + '01';
-    var url2 = SURL + '/rest/v1/time_off_records?staff_email=eq.' + encodeURIComponent(me.email)
-      + '&time_out=gte.' + monthStart + '&order=time_out.desc&limit=200';
+    // Team-wide, like Leave's own tab list — everyone's Time Off this month,
+    // not just mine. Ownership (for the personal meter and the Cancel button)
+    // is worked out client-side by filtering this same list by email, rather
+    // than firing a second request.
+    var url2 = SURL + '/rest/v1/time_off_records?time_out=gte.' + monthStart + '&order=time_out.desc&limit=300';
     var res2 = await fetch(url2, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
-    var myRecords = await res2.json();
-    if (!myRecords) myRecords = [];
+    var allRecords = await res2.json();
+    if (!allRecords) allRecords = [];
+    var myRecords = allRecords.filter(function (r) { return r.staff_email && r.staff_email.toLowerCase() === myEmailLow; });
 
     var url3 = SURL + '/rest/v1/time_off_reminders?staff_email=eq.' + encodeURIComponent(me.email)
       + '&used=eq.false&planned_date=lte.' + today + '&order=planned_date.asc&limit=5';
@@ -84,7 +88,7 @@ async function loadTimeOff() {
     }, 0);
 
     if (statusEl) statusEl.innerHTML = renderTimeOffStatus(openRecord, monthlyMinutes, dueReminders);
-    if (recordsEl) recordsEl.innerHTML = renderTimeOffRecords(myRecords, today);
+    if (recordsEl) recordsEl.innerHTML = renderTimeOffRecords(allRecords, today, myEmailLow);
   } catch (e) {
     if (statusEl) statusEl.innerHTML = '<div class="card"><div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">Could not load your Time Off status.</div></div>';
     if (recordsEl) recordsEl.innerHTML = '';
@@ -137,11 +141,12 @@ function renderTimeOffStatus(openRecord, monthlyMinutes, dueReminders) {
   return html;
 }
 
-function renderTimeOffRecords(records, today) {
+function renderTimeOffRecords(records, today, myEmailLow) {
   if (!records.length) return '<div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">No Time Off logged this month.</div>';
 
-  var html = '<div class="section-row"><div class="section-title">This Month</div></div>';
+  var html = '<div class="section-row"><div class="section-title">This Month — Everyone</div></div>';
   records.forEach(function (r) {
+    var isMine = r.staff_email && r.staff_email.toLowerCase() === myEmailLow;
     var out = new Date(r.time_out);
     var dateLabel = localDateStr(out) === today ? 'Today' : out.toLocaleDateString('en-MY', { day: 'numeric', month: 'short' });
     var timeLabel = formatClock(out) + (r.time_in ? ' → ' + formatClock(new Date(r.time_in)) : ' → still out');
@@ -154,15 +159,16 @@ function renderTimeOffRecords(records, today) {
     var entryNote = r.entry_type === 'edited' ? ' <span style="color:var(--amber-text);font-weight:700;">(edited)</span>'
       : r.entry_type === 'backfilled' ? ' <span style="color:var(--red-text);font-weight:700;">(backfilled)</span>'
       : voided ? ' <span style="color:var(--text-light);">— moved to Annual Leave</span>' : '';
+    var reasonLabel = isMine ? escHtml(r.reason) : (escHtml(r.staff_name) + ' — ' + escHtml(r.reason));
 
     html += '<div class="to-history-row" style="' + (voided ? 'opacity:0.6;' : '') + '">'
       + '<div class="to-history-top">'
       + '<div style="flex:1;min-width:0;">'
-      + '<div class="to-history-reason" style="' + (voided ? 'text-decoration:line-through;' : '') + '">' + escHtml(r.reason) + '</div>'
+      + '<div class="to-history-reason" style="' + (voided ? 'text-decoration:line-through;' : '') + '">' + reasonLabel + '</div>'
       + '</div>' + badge + '</div>'
       + '<div class="to-history-time">' + dateLabel + ' · ' + timeLabel + entryNote + '</div>';
 
-    if (!voided && r.duration_minutes > TIMEOFF_PER_TRIP_CAP_MIN) {
+    if (isMine && !voided && r.duration_minutes > TIMEOFF_PER_TRIP_CAP_MIN) {
       html += '<div class="to-warn red">'
         + '<b>⚠ This trip ran ' + formatDuration(r.duration_minutes) + ' — over the 2.5h single-application limit.</b>'
         + 'The whole trip needs to go through Annual Leave instead of Time Off.'
