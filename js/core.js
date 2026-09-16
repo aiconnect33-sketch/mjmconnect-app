@@ -188,6 +188,7 @@ window.addEventListener('DOMContentLoaded', function() {
     loadDuty();
     loadStaffEvents();
     if (typeof loadEstateTrips === 'function') loadEstateTrips();
+    if (typeof loadTimeOff === 'function') loadTimeOff();
     if (typeof loadNotifications === 'function') loadNotifications();
   }
   // Always init calendar

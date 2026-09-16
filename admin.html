@@ -1009,6 +1009,7 @@ html, body {
     <button class="tab-btn" onclick="switchTab(this,'event')">Event</button>
     <button class="tab-btn" onclick="switchTab(this,'duty')">Duty</button>
     <button class="tab-btn" onclick="switchTab(this,'estatetrip')">Estate Trip</button>
+    <button class="tab-btn" onclick="switchTab(this,'timeoff')">Time Off</button>
   </div>
 
   <!-- SCREEN BODY -->
@@ -1072,7 +1073,7 @@ html, body {
           <div class="qa-ic" style="background:var(--green-bg);color:var(--green-text);"><i class="ti ti-calendar-check"></i></div>
           <div class="qa-label">Leave</div>
         </div>
-        <div class="qa-item" onclick="window.open('https://docs.google.com/forms/d/e/1FAIpQLScxTncnL4ekGi6qmxw6mEXsu4cS-n_c9Z6s5IDLUptJf0L09Q/viewform','_blank')">
+        <div class="qa-item" onclick="switchTabByName('timeoff')">
           <div class="qa-ic" style="background:var(--blue-bg);color:var(--blue-text);"><i class="ti ti-clock"></i></div>
           <div class="qa-label">Time Off</div>
         </div>
@@ -1490,6 +1491,25 @@ html, body {
       </div>
 
     </div><!-- /estatetrip -->
+
+    <!-- ═══════════════════════════
+         TIME OFF
+    ═══════════════════════════ -->
+    <div class="screen-section" id="screen-timeoff">
+
+      <div class="sec-hdr">
+        <div class="sec-title">This Month — Overview</div>
+      </div>
+      <div id="timeoff-overview">
+      </div>
+
+      <div class="sec-hdr" style="margin-top:16px;">
+        <div class="sec-title">This Month — All Records</div>
+      </div>
+      <div id="timeoff-list">
+      </div>
+
+    </div><!-- /timeoff -->
 
     <!-- ═══════════════════════════
          EVENT
@@ -2113,11 +2133,12 @@ html, body {
     if (name === 'invite')   loadInviteLog();
     if (name === 'event')    loadDbEvents();
     if (name === 'estatetrip') loadDbEstateTrips();
+    if (name === 'timeoff')  loadDbTimeOff();
   }
   // ── BOTTOM NAV ──
   function switchNav(name) {
     var tabs = document.querySelectorAll('.tab-btn');
-    var map  = { dashboard:0, announce:1, leave:2, event:3, duty:4, estatetrip:5 };
+    var map  = { dashboard:0, announce:1, leave:2, event:3, duty:4, estatetrip:5, timeoff:6 };
     tabs.forEach(function(t){ t.classList.remove('active'); });
     if (map[name] !== undefined) tabs[map[name]].classList.add('active');
     document.querySelectorAll('.screen-section').forEach(function(s){ s.classList.remove('active'); });
@@ -2130,12 +2151,13 @@ html, body {
     if (name === 'invite')   loadInviteLog();
     if (name === 'event')    loadDbEvents();
     if (name === 'estatetrip') loadDbEstateTrips();
+    if (name === 'timeoff')  loadDbTimeOff();
     if (name === 'book')     initBookTab();
     if (name === 'faulty')   initFaultyTab();
   }
   function switchTabByName(name) {
     var tabs = document.querySelectorAll('.tab-btn');
-    var map  = { dashboard:0, announce:1, leave:2, event:3, duty:4, estatetrip:5 };
+    var map  = { dashboard:0, announce:1, leave:2, event:3, duty:4, estatetrip:5, timeoff:6 };
     tabs.forEach(function(t){ t.classList.remove('active'); });
     if (map[name] !== undefined) tabs[map[name]].classList.add('active');
     document.querySelectorAll('.screen-section').forEach(function(s){ s.classList.remove('active'); });
@@ -2146,6 +2168,7 @@ html, body {
     if (name === 'invite')   loadInviteLog();
     if (name === 'event')    loadDbEvents();
     if (name === 'estatetrip') loadDbEstateTrips();
+    if (name === 'timeoff')  loadDbTimeOff();
     if (name === 'book')     initBookTab();
     if (name === 'faulty')   initFaultyTab();
   }
@@ -4781,6 +4804,71 @@ html, body {
     row.style.transition = 'opacity 0.2s'; row.style.opacity = '0';
     setTimeout(function(){ row.remove(); }, 220);
     if (typeof loadAdminCalendar === 'function') loadAdminCalendar();
+  }
+
+  // ── LOAD TIME OFF FROM SUPABASE (view-only: overview + full record list) ──
+  function fmtTimeOffDuration(mins) {
+    mins = Math.max(0, Math.round(mins));
+    var h = Math.floor(mins / 60), m = mins % 60;
+    if (h <= 0) return m + 'm';
+    return h + 'h ' + String(m).padStart(2, '0') + 'm';
+  }
+
+  async function loadDbTimeOff() {
+    var overviewEl = document.getElementById('timeoff-overview');
+    var listEl = document.getElementById('timeoff-list');
+    if (!overviewEl && !listEl) return;
+    var today = localDateStr();
+    var monthStart = today.slice(0, 8) + '01';
+    try {
+      var data = await sbFetch('GET', '/rest/v1/time_off_records?time_out=gte.' + monthStart + '&order=time_out.desc&limit=500');
+      if (!data) return;
+      if (!data.length) {
+        if (overviewEl) overviewEl.innerHTML = '<div class="card"><div style="font-size:12px;color:var(--text3);text-align:center;padding:14px 0;">No Time Off logged this month.</div></div>';
+        if (listEl) listEl.innerHTML = '';
+        return;
+      }
+
+      var byStaff = {};
+      data.forEach(function (r) {
+        if (!byStaff[r.staff_name]) byStaff[r.staff_name] = { minutes: 0, count: 0 };
+        byStaff[r.staff_name].count++;
+        if (r.entry_type !== 'voided' && r.duration_minutes) byStaff[r.staff_name].minutes += r.duration_minutes;
+      });
+      var staffList = Object.keys(byStaff).map(function (name) { return { name: name, minutes: byStaff[name].minutes, count: byStaff[name].count }; });
+      staffList.sort(function (a, b) { return b.minutes - a.minutes; });
+
+      if (overviewEl) {
+        overviewEl.innerHTML = '<div class="card">' + staffList.map(function (s) {
+          var ini = s.name.split(' ').filter(Boolean).slice(0, 2).map(function (p) { return p[0].toUpperCase(); }).join('');
+          var status = s.minutes >= 240 ? { label: 'Over', cls: 'b-red' } : s.minutes >= 180 ? { label: 'Near limit', cls: 'b-amber' } : { label: 'Within', cls: 'b-green' };
+          return '<div class="person-row">'
+            + '<div class="av av-g">' + ini + '</div>'
+            + '<div style="flex:1;"><div class="p-name">' + escHtml(s.name) + '</div><div class="p-sub">' + s.count + ' time-off' + (s.count === 1 ? '' : 's') + '</div></div>'
+            + '<div style="text-align:right;"><div style="font-weight:700;">' + fmtTimeOffDuration(s.minutes) + '</div>'
+            + '<span class="badge ' + status.cls + '">' + status.label + '</span></div>'
+            + '</div>';
+        }).join('') + '</div>';
+      }
+
+      if (listEl) {
+        listEl.innerHTML = '<div class="card">' + data.map(function (r) {
+          var out = new Date(r.time_out);
+          var dLabel = out.toLocaleDateString('en-MY', { day: 'numeric', month: 'short' });
+          var timeLabel = out.toLocaleTimeString('en-MY', { hour: 'numeric', minute: '2-digit' })
+            + (r.time_in ? ' → ' + new Date(r.time_in).toLocaleTimeString('en-MY', { hour: 'numeric', minute: '2-digit' }) : ' → still out');
+          var voided = r.entry_type === 'voided';
+          var badge = voided
+            ? '<span class="badge" style="background:var(--bg);color:var(--text3);">Voided</span>'
+            : (r.duration_minutes > 150 ? '<span class="badge b-red">' + fmtTimeOffDuration(r.duration_minutes) + '</span>' : '<span class="badge b-blue">' + fmtTimeOffDuration(r.duration_minutes || 0) + '</span>');
+          return '<div class="person-row" style="' + (voided ? 'opacity:0.6;' : '') + '">'
+            + '<div style="flex:1;"><div class="p-name" style="' + (voided ? 'text-decoration:line-through;' : '') + '">' + escHtml(r.staff_name) + ' — ' + escHtml(r.reason) + '</div>'
+            + '<div class="p-sub">' + dLabel + ' · ' + timeLabel + (r.entry_type === 'edited' ? ' · edited' : r.entry_type === 'backfilled' ? ' · backfilled' : '') + '</div></div>'
+            + badge
+            + '</div>';
+        }).join('') + '</div>';
+      }
+    } catch (e) { /* Supabase not reachable */ }
   }
 
   // ── LOAD DUTY FROM SUPABASE ──
