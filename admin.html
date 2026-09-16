@@ -4965,11 +4965,14 @@ html, body {
             + '<div class="to-history-time">' + dLabel + ' · ' + timeLabel + (r.entry_type === 'edited' ? ' · edited' : r.entry_type === 'backfilled' ? ' · backfilled' : '') + '</div>';
 
           if (canCorrect) {
-            var hh = String(new Date(r.time_in).getHours()).padStart(2, '0');
-            var mm = String(new Date(r.time_in).getMinutes()).padStart(2, '0');
-            row += '<div class="to-correct-row" id="admin-to-correct-row-' + r.id + '" style="display:none;">'
-              + '<input type="time" id="admin-to-correct-' + r.id + '" value="' + hh + ':' + mm + '">'
-              + '<button class="btn-primary" style="width:auto;margin:0;padding:8px 12px;" onclick="adminSaveTimeOffCorrection(' + r.id + ')">Save</button>'
+            var outHH = String(new Date(r.time_out).getHours()).padStart(2, '0');
+            var outMM = String(new Date(r.time_out).getMinutes()).padStart(2, '0');
+            var inHH = String(new Date(r.time_in).getHours()).padStart(2, '0');
+            var inMM = String(new Date(r.time_in).getMinutes()).padStart(2, '0');
+            row += '<div class="to-correct-row" id="admin-to-correct-row-' + r.id + '" style="display:none;flex-wrap:wrap;">'
+              + '<div style="flex:1;min-width:90px;"><label style="font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase;">Time Out</label><input type="time" id="admin-to-correct-out-' + r.id + '" value="' + outHH + ':' + outMM + '" style="width:100%;"></div>'
+              + '<div style="flex:1;min-width:90px;"><label style="font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase;">Time In</label><input type="time" id="admin-to-correct-in-' + r.id + '" value="' + inHH + ':' + inMM + '" style="width:100%;"></div>'
+              + '<button class="btn-primary" style="width:auto;margin:0;padding:8px 12px;align-self:flex-end;" onclick="adminSaveTimeOffCorrection(' + r.id + ')">Save</button>'
               + '</div>';
           }
           row += '</div>';
@@ -5086,11 +5089,14 @@ html, body {
         + '<div class="to-history-time">' + dateLabel + ' · ' + timeLabel + entryNote + '</div>';
 
       if (canCorrect) {
-        var hh = String(new Date(r.time_in).getHours()).padStart(2, '0');
-        var mm = String(new Date(r.time_in).getMinutes()).padStart(2, '0');
-        html += '<div class="to-correct-row" id="admin-to-correct-row-' + r.id + '" style="display:none;">'
-          + '<input type="time" id="admin-to-correct-' + r.id + '" value="' + hh + ':' + mm + '">'
-          + '<button class="btn-primary" style="width:auto;margin:0;padding:8px 12px;" onclick="adminSaveTimeOffCorrection(' + r.id + ')">Save</button>'
+        var outHH = String(new Date(r.time_out).getHours()).padStart(2, '0');
+        var outMM = String(new Date(r.time_out).getMinutes()).padStart(2, '0');
+        var inHH = String(new Date(r.time_in).getHours()).padStart(2, '0');
+        var inMM = String(new Date(r.time_in).getMinutes()).padStart(2, '0');
+        html += '<div class="to-correct-row" id="admin-to-correct-row-' + r.id + '" style="display:none;flex-wrap:wrap;">'
+          + '<div style="flex:1;min-width:90px;"><label style="font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase;">Time Out</label><input type="time" id="admin-to-correct-out-' + r.id + '" value="' + outHH + ':' + outMM + '" style="width:100%;"></div>'
+          + '<div style="flex:1;min-width:90px;"><label style="font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase;">Time In</label><input type="time" id="admin-to-correct-in-' + r.id + '" value="' + inHH + ':' + inMM + '" style="width:100%;"></div>'
+          + '<button class="btn-primary" style="width:auto;margin:0;padding:8px 12px;align-self:flex-end;" onclick="adminSaveTimeOffCorrection(' + r.id + ')">Save</button>'
           + '</div>';
       }
       if (!voided && r.duration_minutes > 150) {
@@ -5141,18 +5147,23 @@ html, body {
   }
 
   async function adminSaveTimeOffCorrection(id) {
-    var input = document.getElementById('admin-to-correct-' + id);
-    if (!input || !input.value) return;
+    var outInput = document.getElementById('admin-to-correct-out-' + id);
+    var inInput = document.getElementById('admin-to-correct-in-' + id);
+    if (!outInput || !inInput || !outInput.value || !inInput.value) return;
     try {
       var rows = await sbFetch('GET', '/rest/v1/time_off_records?id=eq.' + id);
       var record = rows && rows[0];
       if (!record) return;
-      var oldTimeIn = new Date(record.time_in);
-      var parts = input.value.split(':');
-      var newTimeIn = new Date(oldTimeIn.getFullYear(), oldTimeIn.getMonth(), oldTimeIn.getDate(), parseInt(parts[0], 10), parseInt(parts[1], 10));
-      var duration = Math.round((newTimeIn.getTime() - new Date(record.time_out).getTime()) / 60000);
+      // Both fields are anchored to the trip's original day -- Time Off never
+      // spans midnight, so there's no separate date picker for either one.
+      var anchor = new Date(record.time_out);
+      var outParts = outInput.value.split(':');
+      var inParts = inInput.value.split(':');
+      var newTimeOut = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate(), parseInt(outParts[0], 10), parseInt(outParts[1], 10));
+      var newTimeIn = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate(), parseInt(inParts[0], 10), parseInt(inParts[1], 10));
+      var duration = Math.round((newTimeIn.getTime() - newTimeOut.getTime()) / 60000);
       if (duration < 0) { alert('Time In cannot be before Time Out.'); return; }
-      var patch = { time_in: newTimeIn.toISOString(), duration_minutes: duration, entry_type: 'edited', corrected_at: new Date().toISOString() };
+      var patch = { time_out: newTimeOut.toISOString(), time_in: newTimeIn.toISOString(), duration_minutes: duration, entry_type: 'edited', corrected_at: new Date().toISOString() };
       if (!record.original_time_in) patch.original_time_in = record.time_in;
       await sbFetch('PATCH', '/rest/v1/time_off_records?id=eq.' + id, patch, { 'Prefer': '' });
       loadAdminTimeOffSelf();
