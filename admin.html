@@ -4943,7 +4943,7 @@ html, body {
       }
 
       if (listEl) {
-        listEl.innerHTML = '<div class="card">' + data.map(function (r) {
+        listEl.innerHTML = data.map(function (r) {
           var out = new Date(r.time_out);
           var dLabel = out.toLocaleDateString('en-MY', { day: 'numeric', month: 'short' });
           var timeLabel = out.toLocaleTimeString('en-MY', { hour: 'numeric', minute: '2-digit' })
@@ -4952,12 +4952,29 @@ html, body {
           var badge = voided
             ? '<span class="badge" style="background:var(--bg);color:var(--text3);">Voided</span>'
             : (r.duration_minutes > 150 ? '<span class="badge b-red">' + fmtTimeOffDuration(r.duration_minutes) + '</span>' : '<span class="badge b-blue">' + fmtTimeOffDuration(r.duration_minutes || 0) + '</span>');
-          return '<div class="person-row" style="' + (voided ? 'opacity:0.6;' : '') + '">'
-            + '<div style="flex:1;"><div class="p-name" style="' + (voided ? 'text-decoration:line-through;' : '') + '">' + escHtml(r.staff_name) + ' — ' + escHtml(r.reason) + '</div>'
-            + '<div class="p-sub">' + dLabel + ' · ' + timeLabel + (r.entry_type === 'edited' ? ' · edited' : r.entry_type === 'backfilled' ? ' · backfilled' : '') + '</div></div>'
-            + badge
-            + '</div>';
-        }).join('') + '</div>';
+          var canCorrect = !voided && r.time_in;
+          var editIcon = canCorrect
+            ? '<div class="to-edit-icon" onclick="adminToggleTimeOffCorrection(' + r.id + ')" title="Correct Time In"><i class="ti ti-pencil"></i></div>'
+            : '';
+
+          var row = '<div class="to-history-row" style="' + (voided ? 'opacity:0.6;' : '') + '">'
+            + '<div class="to-history-top">'
+            + '<div style="flex:1;min-width:0;display:flex;align-items:center;gap:6px;">'
+            + '<div class="to-history-reason" style="' + (voided ? 'text-decoration:line-through;' : '') + '">' + escHtml(r.staff_name) + ' — ' + escHtml(r.reason) + '</div>' + editIcon
+            + '</div>' + badge + '</div>'
+            + '<div class="to-history-time">' + dLabel + ' · ' + timeLabel + (r.entry_type === 'edited' ? ' · edited' : r.entry_type === 'backfilled' ? ' · backfilled' : '') + '</div>';
+
+          if (canCorrect) {
+            var hh = String(new Date(r.time_in).getHours()).padStart(2, '0');
+            var mm = String(new Date(r.time_in).getMinutes()).padStart(2, '0');
+            row += '<div class="to-correct-row" id="admin-to-correct-row-' + r.id + '" style="display:none;">'
+              + '<input type="time" id="admin-to-correct-' + r.id + '" value="' + hh + ':' + mm + '">'
+              + '<button class="btn-primary" style="width:auto;margin:0;padding:8px 12px;" onclick="adminSaveTimeOffCorrection(' + r.id + ')">Save</button>'
+              + '</div>';
+          }
+          row += '</div>';
+          return row;
+        }).join('');
       }
     } catch (e) { /* Supabase not reachable */ }
   }
@@ -5037,7 +5054,7 @@ html, body {
         + '</div>';
     });
 
-    html += '<button class="btn-ghost" style="border:none;color:var(--text2);font-size:11.5px;" onclick="adminShowBackfillForm()">Forgot to tap either button? Log a Missed Time Off</button>';
+    html += '<button class="btn-ghost" style="border-color:var(--red-text);color:var(--red-text);margin-top:2px;" onclick="adminShowBackfillForm()">Log a Missed Time Off</button>';
     return html;
   }
 
@@ -5056,7 +5073,7 @@ html, body {
         : r.entry_type === 'backfilled' ? ' <span style="color:var(--red-text);font-weight:700;">(backfilled)</span>'
         : voided ? ' <span style="color:var(--text3);">— moved to Annual Leave</span>' : '';
 
-      var canCorrect = !voided && r.time_in && (r.entry_type === 'live' || r.entry_type === 'edited') && localDateStr(new Date(r.time_in)) === today;
+      var canCorrect = !voided && r.time_in;
       var editIcon = canCorrect
         ? '<div class="to-edit-icon" onclick="adminToggleTimeOffCorrection(' + r.id + ')" title="Correct Time In"><i class="ti ti-pencil"></i></div>'
         : '';
