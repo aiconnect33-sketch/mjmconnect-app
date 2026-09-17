@@ -4981,6 +4981,33 @@ html, body {
     return h + ':' + String(m).padStart(2, '0') + ' ' + ap;
   }
 
+  // ── Optional Google Sheet sync — see docs/time-off-sheet-sync.md. Mirrors
+  // the constant of the same name in js/tab-timeoff.js; must match it exactly
+  // since both point at the same Apps Script Web App.
+  var TIMEOFF_SHEET_WEBHOOK_URL = '';
+  var TIMEOFF_SHEET_SECRET = 'SeW2cUlObs6M2jCq-xxSrPlhB-MHCj6mqz';
+
+  async function adminTimeOffMonthlyMinutes(email, monthStart) {
+    try {
+      var rows = await sbFetch('GET', '/rest/v1/time_off_records?staff_email=eq.' + encodeURIComponent(email) + '&time_out=gte.' + monthStart + '&entry_type=neq.voided&select=duration_minutes');
+      return (rows || []).reduce(function (sum, r) { return sum + (r.duration_minutes || 0); }, 0);
+    } catch (e) { return 0; }
+  }
+
+  function adminSyncTimeOffToSheet(action, record, monthlyMinutes) {
+    if (!TIMEOFF_SHEET_WEBHOOK_URL) return;
+    fetch(TIMEOFF_SHEET_WEBHOOK_URL, {
+      method: 'POST', mode: 'no-cors',
+      body: JSON.stringify({
+        secret: TIMEOFF_SHEET_SECRET, action: action, id: record.id,
+        staffName: record.staff_name, reason: record.reason,
+        timeOut: record.time_out, timeIn: record.time_in,
+        durationMinutes: record.duration_minutes, entryType: record.entry_type,
+        monthlyMinutes: monthlyMinutes
+      })
+    }).catch(function () {});
+  }
+
   async function loadAdminTimeOffSelf() {
     var statusEl = document.getElementById('admin-timeoff-status');
     var recordsEl = document.getElementById('admin-timeoff-my-records');
@@ -5134,6 +5161,9 @@ html, body {
       loadAdminTimeOffSelf();
       if (typeof loadDbTimeOff === 'function') loadDbTimeOff();
       if (typeof loadAdminLeaveDuty === 'function') loadAdminLeaveDuty();
+      record.time_in = timeIn.toISOString(); record.duration_minutes = duration;
+      var monthStart1 = localDateStr().slice(0, 8) + '01';
+      adminTimeOffMonthlyMinutes(record.staff_email, monthStart1).then(function (mins) { adminSyncTimeOffToSheet('create', record, mins); });
     } catch (e) { alert('Could not record Time In. Please try again.'); }
   }
 
@@ -5159,16 +5189,26 @@ html, body {
       await sbFetch('PATCH', '/rest/v1/time_off_records?id=eq.' + id, patch, { 'Prefer': '' });
       loadAdminTimeOffSelf();
       if (typeof loadDbTimeOff === 'function') loadDbTimeOff();
+      Object.assign(record, patch);
+      var monthStart2 = localDateStr().slice(0, 8) + '01';
+      adminTimeOffMonthlyMinutes(record.staff_email, monthStart2).then(function (mins) { adminSyncTimeOffToSheet('update', record, mins); });
     } catch (e) { alert('Could not save the correction. Please try again.'); }
   }
 
   async function adminVoidTimeOff(id) {
     if (!confirm('Cancel this trip and apply Annual Leave instead? The record stays on file marked Voided, and the full duration is returned to your monthly buffer. You\'ll need to apply for Annual Leave separately to cover the day.')) return;
     try {
+      var rows = await sbFetch('GET', '/rest/v1/time_off_records?id=eq.' + id);
+      var record = rows && rows[0];
       await sbFetch('PATCH', '/rest/v1/time_off_records?id=eq.' + id, { entry_type: 'voided' }, { 'Prefer': '' });
       loadAdminTimeOffSelf();
       if (typeof loadDbTimeOff === 'function') loadDbTimeOff();
       if (typeof loadAdminLeaveDuty === 'function') loadAdminLeaveDuty();
+      if (record) {
+        record.entry_type = 'voided';
+        var monthStart3 = localDateStr().slice(0, 8) + '01';
+        adminTimeOffMonthlyMinutes(record.staff_email, monthStart3).then(function (mins) { adminSyncTimeOffToSheet('update', record, mins); });
+      }
     } catch (e) { alert('Could not cancel this trip. Please try again.'); }
   }
 
@@ -5234,10 +5274,15 @@ html, body {
     if (timeIn <= timeOut) { alert('Time In must be after Time Out.'); return; }
     var duration = Math.round((timeIn.getTime() - timeOut.getTime()) / 60000);
     try {
-      await sbFetch('POST', '/rest/v1/time_off_records', { staff_name: me.name || me.email, staff_email: me.email, reason: reason, time_out: timeOut.toISOString(), time_in: timeIn.toISOString(), duration_minutes: duration, entry_type: 'backfilled' });
+      var created = await sbFetch('POST', '/rest/v1/time_off_records', { staff_name: me.name || me.email, staff_email: me.email, reason: reason, time_out: timeOut.toISOString(), time_in: timeIn.toISOString(), duration_minutes: duration, entry_type: 'backfilled' });
       adminHideBackfillForm();
       loadAdminTimeOffSelf();
       if (typeof loadDbTimeOff === 'function') loadDbTimeOff();
+      var newRecord = created && created[0];
+      if (newRecord) {
+        var monthStart4 = localDateStr().slice(0, 8) + '01';
+        adminTimeOffMonthlyMinutes(me.email, monthStart4).then(function (mins) { adminSyncTimeOffToSheet('create', newRecord, mins); });
+      }
     } catch (e) { alert('Could not log this Time Off. Please try again.'); }
   }
 

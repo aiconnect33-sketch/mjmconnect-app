@@ -27,6 +27,38 @@ function timeOffMe() {
   return raw ? JSON.parse(raw) : {};
 }
 
+// ── Optional Google Sheet sync — see docs/time-off-sheet-sync.md for the
+// Apps Script + one-time setup. Skipped entirely while the URL is blank,
+// same convention as FC_SHEET_WEBHOOK_URL in js/tab-faulty.js.
+var TIMEOFF_SHEET_WEBHOOK_URL = '';
+var TIMEOFF_SHEET_SECRET = 'SeW2cUlObs6M2jCq-xxSrPlhB-MHCj6mqz';
+
+async function timeOffMonthlyMinutes(email, monthStart) {
+  try {
+    var url = SURL + '/rest/v1/time_off_records?staff_email=eq.' + encodeURIComponent(email)
+      + '&time_out=gte.' + monthStart + '&entry_type=neq.voided&select=duration_minutes';
+    var res = await fetch(url, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
+    var rows = await res.json();
+    return (rows || []).reduce(function (sum, r) { return sum + (r.duration_minutes || 0); }, 0);
+  } catch (e) { return 0; }
+}
+
+// Fire-and-forget, like Faulty Complain's sync -- never blocks or fails the
+// real Supabase save it accompanies.
+function syncTimeOffToSheet(action, record, monthlyMinutes) {
+  if (!TIMEOFF_SHEET_WEBHOOK_URL) return;
+  fetch(TIMEOFF_SHEET_WEBHOOK_URL, {
+    method: 'POST', mode: 'no-cors',
+    body: JSON.stringify({
+      secret: TIMEOFF_SHEET_SECRET, action: action, id: record.id,
+      staffName: record.staff_name, reason: record.reason,
+      timeOut: record.time_out, timeIn: record.time_in,
+      durationMinutes: record.duration_minutes, entryType: record.entry_type,
+      monthlyMinutes: monthlyMinutes
+    })
+  }).catch(function () {});
+}
+
 async function loadTimeOff() {
   if (window.location.protocol === 'file:') return;
   var today = localDateStr();
@@ -208,14 +240,24 @@ async function timeInNow(id) {
     var duration = Math.round((timeIn.getTime() - new Date(record.time_out).getTime()) / 60000);
     await sbWrite('PATCH', 'time_off_records', { time_in: timeIn.toISOString(), duration_minutes: duration }, 'id=eq.' + id);
     loadTimeOff();
+    record.time_in = timeIn.toISOString(); record.duration_minutes = duration;
+    var monthStart = localDateStr().slice(0, 8) + '01';
+    timeOffMonthlyMinutes(record.staff_email, monthStart).then(function (mins) { syncTimeOffToSheet('create', record, mins); });
   } catch (e) { alert('Could not record Time In. Please try again.'); }
 }
 
 async function voidTimeOff(id) {
   if (!confirm('Cancel this trip and apply Annual Leave instead? The record stays on file marked Voided, and the full duration is returned to your monthly buffer. You\'ll need to apply for Annual Leave separately to cover the day.')) return;
   try {
+    var rows = await fetch(SURL + '/rest/v1/time_off_records?id=eq.' + id, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } }).then(function (r) { return r.json(); });
+    var record = rows && rows[0];
     await sbWrite('PATCH', 'time_off_records', { entry_type: 'voided' }, 'id=eq.' + id);
     loadTimeOff();
+    if (record) {
+      record.entry_type = 'voided';
+      var monthStart = localDateStr().slice(0, 8) + '01';
+      timeOffMonthlyMinutes(record.staff_email, monthStart).then(function (mins) { syncTimeOffToSheet('update', record, mins); });
+    }
   } catch (e) { alert('Could not cancel this trip. Please try again.'); }
 }
 
@@ -291,12 +333,17 @@ async function saveBackfillEntry() {
   if (timeIn <= timeOut) { alert('Time In must be after Time Out.'); return; }
   var duration = Math.round((timeIn.getTime() - timeOut.getTime()) / 60000);
   try {
-    await sbWrite('POST', 'time_off_records', {
+    var created = await sbWrite('POST', 'time_off_records', {
       staff_name: me.name || me.email, staff_email: me.email,
       reason: reason, time_out: timeOut.toISOString(), time_in: timeIn.toISOString(),
       duration_minutes: duration, entry_type: 'backfilled'
     });
     hideBackfillForm();
     loadTimeOff();
+    var newRecord = created && created[0];
+    if (newRecord) {
+      var monthStart = localDateStr().slice(0, 8) + '01';
+      timeOffMonthlyMinutes(me.email, monthStart).then(function (mins) { syncTimeOffToSheet('create', newRecord, mins); });
+    }
   } catch (e) { alert('Could not log this Time Off. Please try again.'); }
 }
