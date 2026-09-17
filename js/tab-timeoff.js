@@ -90,8 +90,9 @@ async function loadTimeOff() {
   }
 
   // ── TIME OFF TAB (open to all staff) ──
-  var statusEl  = document.getElementById('timeoff-status');
-  var recordsEl = document.getElementById('timeoff-records');
+  var statusEl   = document.getElementById('timeoff-status');
+  var overviewEl = document.getElementById('timeoff-overview');
+  var recordsEl  = document.getElementById('timeoff-records');
   if (!statusEl && !recordsEl) return;
   if (!me.email) return;
 
@@ -121,9 +122,11 @@ async function loadTimeOff() {
 
     var canManageAll = typeof hasEditPermission === 'function' && hasEditPermission('timeoff');
     if (statusEl) statusEl.innerHTML = renderTimeOffStatus(openRecord, monthlyMinutes, dueReminders);
+    if (overviewEl) overviewEl.innerHTML = canManageAll ? renderTimeOffOverview(allRecords) : '';
     if (recordsEl) recordsEl.innerHTML = renderTimeOffRecords(allRecords, today, myEmailLow, canManageAll);
   } catch (e) {
     if (statusEl) statusEl.innerHTML = '<div class="card"><div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">Could not load your Time Off status.</div></div>';
+    if (overviewEl) overviewEl.innerHTML = '';
     if (recordsEl) recordsEl.innerHTML = '';
   }
 }
@@ -171,6 +174,40 @@ function renderTimeOffStatus(openRecord, monthlyMinutes, dueReminders) {
 
   html += '<button class="book-btn-ghost" style="border-color:var(--red-text);color:var(--red-text);margin-top:2px;" onclick="showBackfillForm()">📝 Log a Missed Time Off</button>';
 
+  return html;
+}
+
+// Per-staff monthly totals, shown only to whoever can manage all Time Off
+// records (HR Admin/Super Admin or a staff member granted the "Time Off"
+// edit permission) -- mirrors the Staff Overview list in admin.html.
+function renderTimeOffOverview(records) {
+  var avColors = ['av-green', 'av-amber', 'av-coral', 'av-blue', 'av-purple', 'av-red'];
+  var byStaff = {};
+  records.forEach(function (r) {
+    if (!byStaff[r.staff_name]) byStaff[r.staff_name] = { minutes: 0, count: 0 };
+    byStaff[r.staff_name].count++;
+    if (r.entry_type !== 'voided' && r.duration_minutes) byStaff[r.staff_name].minutes += r.duration_minutes;
+  });
+  var staffList = Object.keys(byStaff).map(function (name) { return { name: name, minutes: byStaff[name].minutes, count: byStaff[name].count }; });
+  if (!staffList.length) return '';
+  staffList.sort(function (a, b) { return b.minutes - a.minutes; });
+
+  var html = '<div class="section-row"><div class="section-title">Staff Overview — This Month</div></div><div class="card">';
+  html += staffList.map(function (s, i) {
+    var ini = s.name.split(' ').filter(Boolean).slice(0, 2).map(function (p) { return p[0].toUpperCase(); }).join('');
+    var avCls = avColors[i % avColors.length];
+    var status = s.minutes >= TIMEOFF_MONTHLY_CAP_MIN ? { label: 'Over', cls: 'badge-urgent' }
+      : s.minutes >= TIMEOFF_NEAR_LIMIT_MIN ? { label: 'Near limit', cls: 'badge-amber' }
+      : { label: 'Within', cls: 'badge-blue' };
+    return '<div class="person-row">'
+      + '<div class="avatar ' + avCls + '">' + ini + '</div>'
+      + '<div style="flex:1;"><div class="person-name">' + escHtml(s.name) + '</div>'
+      + '<div class="person-sub">' + s.count + ' time-off' + (s.count === 1 ? '' : 's') + '</div></div>'
+      + '<div style="text-align:right;"><div style="font-weight:700;font-size:12.5px;color:var(--text-primary);">' + formatDuration(s.minutes) + '</div>'
+      + '<span class="badge ' + status.cls + '">' + status.label + '</span></div>'
+      + '</div>';
+  }).join('');
+  html += '</div>';
   return html;
 }
 
