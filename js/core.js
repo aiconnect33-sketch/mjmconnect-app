@@ -99,6 +99,8 @@ function tick() {
 tick(); setInterval(tick, 10000);
 
 // ── Tab / Nav switching ──
+// Every switch also remembers the tab in sessionStorage (see rememberTab
+// below) so a refresh can restore it instead of always landing on Home.
 function switchTab(btn, name) {
   document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
   btn.classList.add('active');
@@ -108,6 +110,7 @@ function switchTab(btn, name) {
   var navEl = document.getElementById('nav-' + name);
   if (navEl) navEl.classList.add('active');
   else document.getElementById('nav-home').classList.add('active');
+  rememberTab(name);
 }
 
 function switchNav(name) {
@@ -120,6 +123,7 @@ function switchNav(name) {
   var tabs = document.querySelectorAll('.tab-btn');
   tabs.forEach(function(t){ t.classList.remove('active'); });
   if (tabMap[name] !== undefined) tabs[tabMap[name]].classList.add('active');
+  rememberTab(name);
 }
 
 // Hide the bottom nav while scrolling down, reveal it again on scroll up
@@ -148,6 +152,36 @@ function switchTabByName(name) {
   document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
   var navEl = document.getElementById('nav-' + name);
   if (navEl) navEl.classList.add('active');
+  rememberTab(name);
+}
+
+// ── Remember the active tab across a refresh ──
+var LAST_TAB_KEY = 'mjm_last_tab';
+
+function rememberTab(name) {
+  try { sessionStorage.setItem(LAST_TAB_KEY, name); } catch (e) {}
+}
+
+// Called once on load, after the tab-nav/screen markup and every tab-*.js
+// file are in place. Restores whichever tab (and, for Book, which pill and
+// room) the staff member was last on, so a refresh updates the data in
+// place instead of resetting to Home.
+function restoreLastTab() {
+  var name;
+  try { name = sessionStorage.getItem(LAST_TAB_KEY); } catch (e) { name = null; }
+  if (!name || name === 'home' || !document.getElementById('screen-' + name)) return;
+  switchNav(name);
+  if (name === 'book' && typeof initBookTab === 'function') {
+    initBookTab();
+    var pill = null, room = null;
+    try {
+      pill = sessionStorage.getItem('mjm_last_book_pill');
+      room = sessionStorage.getItem('mjm_last_book_room');
+    } catch (e) {}
+    if (pill === 'room' && typeof switchBookPill === 'function') switchBookPill('room');
+    if (room && typeof selectRoom === 'function') selectRoom(room);
+  }
+  if (name === 'faulty' && typeof initFaultyTab === 'function') initFaultyTab();
 }
 
 // ── Auth / Profile ──
@@ -198,6 +232,8 @@ window.addEventListener('DOMContentLoaded', function() {
     switchNav('book');
     if (typeof initBookTab === 'function') initBookTab();
     window.location.hash = '';
+  } else {
+    restoreLastTab();
   }
   initBackButtonTrap('home');
 });

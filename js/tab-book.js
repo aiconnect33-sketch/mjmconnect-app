@@ -131,6 +131,7 @@ function switchBookPill(type) {
   pV.style.color       = isVehicle ? '#fff' : 'var(--text-secondary)';
   pR.style.background  = isVehicle ? 'transparent' : 'var(--green-dark)';
   pR.style.color        = isVehicle ? 'var(--text-secondary)' : '#fff';
+  try { sessionStorage.setItem('mjm_last_book_pill', type); } catch (e) {}
 }
 
 // ════════════════════════════
@@ -432,6 +433,7 @@ function selectRoom(name) {
   hideRoomForm();
   loadRoomCalendar();
   loadMyRoomBookings();
+  try { sessionStorage.setItem('mjm_last_book_room', name); } catch (e) {}
 }
 
 function updateRoomCardInfo() {
