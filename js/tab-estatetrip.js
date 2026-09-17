@@ -5,7 +5,7 @@ async function loadEstateTrips() {
   var today = localDateStr();
   var avColors = ['av-green','av-amber','av-coral','av-blue','av-purple','av-red'];
 
-  var rawUser = sessionStorage.getItem('mjm_user');
+  var rawUser = localStorage.getItem('mjm_user');
   var me = rawUser ? JSON.parse(rawUser) : {};
   var myEmailLow = (me.email || '').toLowerCase();
   var isAdminUser = me.role === 'hradmin' || me.role === 'superadmin';
@@ -102,7 +102,7 @@ function hideEstateTripForm() {
 // HR Admin/Super Admin can manage any estate trip entry; everyone else can
 // only manage their own, matched by the creating account's email.
 function canManageEstateTrip(id) {
-  var raw = sessionStorage.getItem('mjm_user');
+  var raw = localStorage.getItem('mjm_user');
   var me = raw ? JSON.parse(raw) : {};
   if (me.role === 'hradmin' || me.role === 'superadmin') return true;
   var row = document.querySelector('[data-trip-id="' + id + '"]');
@@ -125,7 +125,7 @@ async function saveEstateTrip() {
   var goingTo = document.getElementById('estatetrip-form-going-to').value.trim();
   var date    = document.getElementById('estatetrip-form-date').value;
   if (!goingTo || !date) { alert('Please fill in the estate name and date.'); return; }
-  var raw = sessionStorage.getItem('mjm_user');
+  var raw = localStorage.getItem('mjm_user');
   var user = raw ? JSON.parse(raw) : {};
   try {
     if (editingEstateTripId) {

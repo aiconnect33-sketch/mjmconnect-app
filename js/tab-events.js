@@ -8,7 +8,7 @@ async function loadStaffEvents() {
   var addTrigger = document.getElementById('event-add-trigger');
   if (addTrigger) addTrigger.style.display = canEdit ? 'block' : 'none';
 
-  var rawUser = sessionStorage.getItem('mjm_user');
+  var rawUser = localStorage.getItem('mjm_user');
   var me = rawUser ? JSON.parse(rawUser) : {};
   var isAdminUser = me.role === 'hradmin' || me.role === 'superadmin';
   var myEmailLow = (me.email || '').toLowerCase();
@@ -80,7 +80,7 @@ function hideStaffEventForm() {
 // email, read off the rendered card -- events created before this feature
 // existed have no recorded owner, so nobody but an admin can touch those).
 function canManageEvent(id) {
-  var raw = sessionStorage.getItem('mjm_user');
+  var raw = localStorage.getItem('mjm_user');
   var me = raw ? JSON.parse(raw) : {};
   if (me.role === 'hradmin' || me.role === 'superadmin') return true;
   var card = document.querySelector('[data-event-id="' + id + '"]');
@@ -116,7 +116,7 @@ async function saveStaffEvent() {
   var desc  = document.getElementById('staff-event-desc').value.trim();
   if (!title || !date) { alert('Please fill in the event title and date.'); return; }
 
-  var raw = sessionStorage.getItem('mjm_user');
+  var raw = localStorage.getItem('mjm_user');
   var user = raw ? JSON.parse(raw) : {};
   try {
     if (editingStaffEventId) {

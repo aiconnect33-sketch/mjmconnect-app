@@ -261,7 +261,7 @@ async function submitVehicleBooking() {
   if (document.getElementById('v-clash-alert').style.display !== 'none') return;
   setBookLoading('v-submit-btn','v-submit-label','v-spinner', true);
   try {
-    var raw = sessionStorage.getItem('mjm_user');
+    var raw = localStorage.getItem('mjm_user');
     var u   = raw ? JSON.parse(raw) : {};
     var bookedBy = u.name || u.email || 'Unknown';
     var posts = vSelectedDates.map(function(d) {
@@ -352,7 +352,7 @@ async function cancelVehicleBookingFromModal(id) {
 async function loadMyVehicleBookings() {
   var el = document.getElementById('v-my-bookings');
   if (!el) return;
-  var raw = sessionStorage.getItem('mjm_user');
+  var raw = localStorage.getItem('mjm_user');
   var u   = raw ? JSON.parse(raw) : {};
   var monthStart = vCalYear + '-' + String(vCalMonth+1).padStart(2,'0') + '-01';
   var monthEnd   = localDateStr(new Date(vCalYear, vCalMonth+1, 0));
@@ -553,7 +553,7 @@ async function submitRoomBooking() {
   if (document.getElementById('r-clash-alert').style.display !== 'none') return;
   setBookLoading('r-submit-btn','r-submit-label','r-spinner', true);
   try {
-    var raw = sessionStorage.getItem('mjm_user');
+    var raw = localStorage.getItem('mjm_user');
     var u   = raw ? JSON.parse(raw) : {};
     var bookedBy = u.name || u.email || 'Unknown';
     var posts = rSelectedDates.map(function(d) {
@@ -640,7 +640,7 @@ async function cancelRoomBooking(id) {
 async function loadMyRoomBookings() {
   var el = document.getElementById('r-my-bookings');
   if (!el) return;
-  var raw = sessionStorage.getItem('mjm_user');
+  var raw = localStorage.getItem('mjm_user');
   var u   = raw ? JSON.parse(raw) : {};
   var monthStart = rCalYear + '-' + String(rCalMonth+1).padStart(2,'0') + '-01';
   var monthEnd   = localDateStr(new Date(rCalYear, rCalMonth+1, 0));
@@ -699,7 +699,7 @@ async function showDayDetail(type, dateStr) {
   body.innerHTML = '<div class="book-empty">Loading...</div>';
   modal.style.display = 'block';
   try {
-    var raw2 = sessionStorage.getItem('mjm_user');
+    var raw2 = localStorage.getItem('mjm_user');
     var u2   = raw2 ? JSON.parse(raw2) : {};
     var data = type === 'vehicle'
       ? await sbGet('vehicle_bookings', 'booking_date=eq.' + dateStr + '&order=time_from.asc')

@@ -31,7 +31,7 @@ async function loadLeave() {
   var tabEl = document.getElementById('leave-tab-list');
   var addTrigger = document.getElementById('leave-add-trigger');
   if (addTrigger) addTrigger.style.display = 'block';
-  var rawUser = sessionStorage.getItem('mjm_user');
+  var rawUser = localStorage.getItem('mjm_user');
   var me = rawUser ? JSON.parse(rawUser) : {};
   var myName  = me.name || '';
   var isAdminUser = me.role === 'hradmin' || me.role === 'superadmin';
@@ -116,7 +116,7 @@ function updateLeaveDurationVisibility() {
 }
 
 function showLeaveForm() {
-  var raw = sessionStorage.getItem('mjm_user');
+  var raw = localStorage.getItem('mjm_user');
   var user = raw ? JSON.parse(raw) : {};
   editingLeaveId = null;
   document.getElementById('leave-form-title').textContent = 'Add Leave';
@@ -140,7 +140,7 @@ function hideLeaveForm() {
 // already used for the Delete button on this tab, since the "Staff" field
 // is locked to the logged-in user's own name when adding a new record.
 function canManageLeave(id) {
-  var raw = sessionStorage.getItem('mjm_user');
+  var raw = localStorage.getItem('mjm_user');
   var me = raw ? JSON.parse(raw) : {};
   if (me.role === 'hradmin' || me.role === 'superadmin') return true;
   var row = document.querySelector('[data-leave-id="' + id + '"]');
@@ -150,7 +150,7 @@ function canManageLeave(id) {
 
 function editLeaveRequest(id, type, from, to, dayPeriod) {
   if (!canManageLeave(id)) return;
-  var raw = sessionStorage.getItem('mjm_user');
+  var raw = localStorage.getItem('mjm_user');
   var user = raw ? JSON.parse(raw) : {};
   var row = document.querySelector('[data-leave-id="' + id + '"]');
   var ownerName = row ? row.getAttribute('data-staff-name') : (user.name || user.email || '');

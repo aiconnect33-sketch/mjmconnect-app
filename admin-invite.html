@@ -471,7 +471,7 @@ html, body {
   }
   function logout() {
     if (confirm('Sign out of MJMConnect?')) {
-      sessionStorage.removeItem('mjm_user');
+      localStorage.removeItem('mjm_user');
       window.location.href = 'login.html';
     }
   }

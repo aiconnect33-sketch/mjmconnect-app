@@ -215,7 +215,7 @@ var user = null;
 
 // Auth guard + load profile
 window.addEventListener('DOMContentLoaded', async function() {
-  var stored = sessionStorage.getItem('mjm_user');
+  var stored = localStorage.getItem('mjm_user');
   if (!stored) { window.location.replace('login.html'); return; }
   user = JSON.parse(stored);
 
@@ -294,7 +294,7 @@ async function saveProfile() {
     if (res.ok) {
       // Update session
       user.name = name;
-      sessionStorage.setItem('mjm_user', JSON.stringify(user));
+      localStorage.setItem('mjm_user', JSON.stringify(user));
       // Update display
       var parts = name.split(' ').filter(Boolean);
       var ini   = parts.length >= 2 ? parts[0][0] + parts[1][0] : name.substring(0,2);
@@ -417,7 +417,7 @@ function goBack() {
 
 function signOut() {
   if (confirm('Sign out of MJMConnect?')) {
-    sessionStorage.removeItem('mjm_user');
+    localStorage.removeItem('mjm_user');
     window.location.replace('login.html');
   }
 }

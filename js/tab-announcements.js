@@ -188,7 +188,7 @@ async function loadAnnouncements() {
     var addTrigger = document.getElementById('ann-add-trigger');
     if (addTrigger) addTrigger.style.display = canEdit ? 'block' : 'none';
 
-    var rawUser = sessionStorage.getItem('mjm_user');
+    var rawUser = localStorage.getItem('mjm_user');
     var me = rawUser ? JSON.parse(rawUser) : {};
     var isAdminUser = me.role === 'hradmin' || me.role === 'superadmin';
     var myEmailLow = (me.email || '').toLowerCase();
@@ -251,7 +251,7 @@ function hideAnnForm() {
 // truth for this list -- announcements posted before this feature existed
 // have no recorded owner, so nobody but an admin can touch those).
 function canManageAnnouncement(id) {
-  var raw = sessionStorage.getItem('mjm_user');
+  var raw = localStorage.getItem('mjm_user');
   var me = raw ? JSON.parse(raw) : {};
   if (me.role === 'hradmin' || me.role === 'superadmin') return true;
   var card = document.querySelector('[data-ann-id="' + id + '"]');
@@ -279,7 +279,7 @@ async function saveAnnouncement() {
   var title = document.getElementById('ann-form-title-input').value.trim();
   var body  = document.getElementById('ann-form-body-input').value.trim();
   if (!title || !body) { alert('Please fill in both title and message.'); return; }
-  var raw = sessionStorage.getItem('mjm_user');
+  var raw = localStorage.getItem('mjm_user');
   var user = raw ? JSON.parse(raw) : {};
   try {
     if (editingAnnId) {

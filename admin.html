@@ -975,11 +975,11 @@ html, body {
 <script>
   // Auth guard — require a logged-in session with an admin role
   (function() {
-    var raw = sessionStorage.getItem('mjm_user');
+    var raw = localStorage.getItem('mjm_user');
     if (!raw) {
       if (window.location.protocol === 'file:') {
         // Local file testing only — seed a demo admin session
-        sessionStorage.setItem('mjm_user', JSON.stringify({
+        localStorage.setItem('mjm_user', JSON.stringify({
           email: 'admin@mjmconnect.com',
           role: 'superadmin',
           name: 'HR Admin'
@@ -2346,7 +2346,7 @@ html, body {
     if (!valid) return;
 
     setLoading('pub', true);
-    var user = JSON.parse(sessionStorage.getItem('mjm_user') || '{}');
+    var user = JSON.parse(localStorage.getItem('mjm_user') || '{}');
     try {
       if (editingAnnId) {
         // PATCH existing record — preserves original created_at so banner timing is unchanged
@@ -2971,7 +2971,7 @@ html, body {
   // ── Audit log (Announcements / Duty / Events only) — best-effort, never blocks the real save/delete ──
   function logAudit(module, recordId, action, itemTitle, details, originalBy) {
     try {
-      var raw = sessionStorage.getItem('mjm_user');
+      var raw = localStorage.getItem('mjm_user');
       var u = raw ? JSON.parse(raw) : null;
       var changedBy = (u && (u.name || u.email)) || 'Unknown';
       sbFetch('POST', '/rest/v1/audit_log', {
@@ -3031,7 +3031,7 @@ html, body {
   }
 
   function renderSettingsPage() {
-    var user = JSON.parse(sessionStorage.getItem('mjm_user') || '{}');
+    var user = JSON.parse(localStorage.getItem('mjm_user') || '{}');
     var list = getStaffList();
 
     // Current user info
@@ -3145,7 +3145,8 @@ html, body {
     { key: 'duty',          label: 'Duty' },
     { key: 'dutyRoles',     label: 'Duty Roles' },
     { key: 'events',        label: 'Events' },
-    { key: 'faulty',        label: 'Faulty Complain' }
+    { key: 'faulty',        label: 'Faulty Complain' },
+    { key: 'timeoff',       label: 'Time Off' }
   ];
   var permModalEmail = null;
   var permModalState = {};
@@ -3483,7 +3484,7 @@ html, body {
     initScrollHideNav();
     initPullToRefresh();
     // Set top avatar initials and role from session
-    var raw = sessionStorage.getItem('mjm_user');
+    var raw = localStorage.getItem('mjm_user');
     if (raw) {
       var u = JSON.parse(raw);
       var nameParts = (u.name || u.email || '').split(/[@.\s]/).filter(Boolean);
@@ -3530,7 +3531,7 @@ html, body {
   var SKEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhieHpib3drdWNwcWxoeGRvbWFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5OTEwMjYsImV4cCI6MjEwMjU2NzAyNn0.tZMdtKy92OUdLEOxKkO2XAa2bgXzkEeQtCAjtYF8yGA';
   var SVCKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhieHpib3drdWNwcWxoeGRvbWFwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4Njk5MTAyNiwiZXhwIjoyMTAyNTY3MDI2fQ.D7j3EkxjNswBWNraJwrqhoUhSwo4AGv7pXNXVG89STU'; // service role — used only for sending invites
   // Mirrors js/core.js's DEFAULT_PERMISSIONS (admin.html doesn't include core.js)
-  var DEFAULT_PERMISSIONS = { announcements: 'view', duty: 'view', dutyRoles: 'view', events: 'view', faulty: 'view' };
+  var DEFAULT_PERMISSIONS = { announcements: 'view', duty: 'view', dutyRoles: 'view', events: 'view', faulty: 'view', timeoff: 'view' };
 
   async function sbFetch(method, path, body, extra_headers) {
     var headers = { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
@@ -3807,7 +3808,7 @@ html, body {
     if (document.getElementById('v-clash-alert').style.display !== 'none') return;
     setBookLoading('v-submit-btn','v-submit-label','v-spinner', true);
     try {
-      var raw = sessionStorage.getItem('mjm_user');
+      var raw = localStorage.getItem('mjm_user');
       var u   = raw ? JSON.parse(raw) : {};
       var bookedBy = u.name || u.email || 'Unknown';
       var posts = vSelectedDates.map(function(d) {
@@ -3898,7 +3899,7 @@ html, body {
   async function loadMyVehicleBookings() {
     var el = document.getElementById('v-my-bookings');
     if (!el) return;
-    var raw = sessionStorage.getItem('mjm_user');
+    var raw = localStorage.getItem('mjm_user');
     var u   = raw ? JSON.parse(raw) : {};
     var monthStart = vCalYear + '-' + String(vCalMonth+1).padStart(2,'0') + '-01';
     var monthEnd   = localDateStr(new Date(vCalYear, vCalMonth+1, 0));
@@ -4098,7 +4099,7 @@ html, body {
     if (document.getElementById('r-clash-alert').style.display !== 'none') return;
     setBookLoading('r-submit-btn','r-submit-label','r-spinner', true);
     try {
-      var raw = sessionStorage.getItem('mjm_user');
+      var raw = localStorage.getItem('mjm_user');
       var u   = raw ? JSON.parse(raw) : {};
       var bookedBy = u.name || u.email || 'Unknown';
       var posts = rSelectedDates.map(function(d) {
@@ -4185,7 +4186,7 @@ html, body {
   async function loadMyRoomBookings() {
     var el = document.getElementById('r-my-bookings');
     if (!el) return;
-    var raw = sessionStorage.getItem('mjm_user');
+    var raw = localStorage.getItem('mjm_user');
     var u   = raw ? JSON.parse(raw) : {};
     var monthStart = rCalYear + '-' + String(rCalMonth+1).padStart(2,'0') + '-01';
     var monthEnd   = localDateStr(new Date(rCalYear, rCalMonth+1, 0));
@@ -4244,7 +4245,7 @@ html, body {
     body.innerHTML = '<div class="book-empty">Loading...</div>';
     modal.style.display = 'block';
     try {
-      var raw2 = sessionStorage.getItem('mjm_user');
+      var raw2 = localStorage.getItem('mjm_user');
       var u2   = raw2 ? JSON.parse(raw2) : {};
       var data = type === 'vehicle'
         ? await sbGet('vehicle_bookings', 'booking_date=eq.' + dateStr + '&order=time_from.asc')
@@ -4363,7 +4364,7 @@ html, body {
   function initFaultyTab() {
     if (faultyTabInited) return;
     faultyTabInited = true;
-    var raw = sessionStorage.getItem('mjm_user');
+    var raw = localStorage.getItem('mjm_user');
     var u = raw ? JSON.parse(raw) : {};
     var nameEl = document.getElementById('fc-staff-name');
     if (nameEl) nameEl.textContent = u.name || u.email || 'Unknown';
@@ -4661,7 +4662,7 @@ html, body {
     setBookLoading('fc-submit-btn', 'fc-submit-label', 'fc-spinner', true);
     hideBookAlert('fc-success'); hideBookAlert('fc-error');
     try {
-      var raw = sessionStorage.getItem('mjm_user');
+      var raw = localStorage.getItem('mjm_user');
       var u = raw ? JSON.parse(raw) : {};
       var photoUrl = null;
       if (fcState.photoFile) photoUrl = await uploadFcPhoto(fcState.photoFile);
@@ -4787,7 +4788,7 @@ html, body {
   }
 
   async function resolveFaultyComplaint(id) {
-    var raw = sessionStorage.getItem('mjm_user');
+    var raw = localStorage.getItem('mjm_user');
     var u = raw ? JSON.parse(raw) : {};
     var resolvedBy = u.name || u.email || 'Admin';
     var resolvedAt = new Date().toISOString();
@@ -5112,7 +5113,7 @@ html, body {
     var statusEl = document.getElementById('admin-timeoff-status');
     var recordsEl = document.getElementById('admin-timeoff-my-records');
     if (!statusEl && !recordsEl) return;
-    var me = JSON.parse(sessionStorage.getItem('mjm_user') || '{}');
+    var me = JSON.parse(localStorage.getItem('mjm_user') || '{}');
     if (!me.email) return;
     var today = localDateStr();
     try {
@@ -5236,7 +5237,7 @@ html, body {
   }
 
   async function adminTimeOutNow() {
-    var me = JSON.parse(sessionStorage.getItem('mjm_user') || '{}');
+    var me = JSON.parse(localStorage.getItem('mjm_user') || '{}');
     var reasonEl = document.getElementById('admin-timeoff-reason');
     var reason = reasonEl ? reasonEl.value.trim() : '';
     if (!reason) { alert('Please describe the reason for this Time Off.'); return; }
@@ -5323,7 +5324,7 @@ html, body {
     document.getElementById('admin-timeoff-planahead-form').classList.remove('visible');
   }
   async function adminSavePlanAheadReminder() {
-    var me = JSON.parse(sessionStorage.getItem('mjm_user') || '{}');
+    var me = JSON.parse(localStorage.getItem('mjm_user') || '{}');
     var reason = document.getElementById('admin-timeoff-pa-reason').value.trim();
     var date = document.getElementById('admin-timeoff-pa-date').value;
     var time = document.getElementById('admin-timeoff-pa-time').value;
@@ -5336,7 +5337,7 @@ html, body {
   }
 
   async function adminConvertReminder(id) {
-    var me = JSON.parse(sessionStorage.getItem('mjm_user') || '{}');
+    var me = JSON.parse(localStorage.getItem('mjm_user') || '{}');
     try {
       var existing = await sbFetch('GET', '/rest/v1/time_off_records?staff_email=eq.' + encodeURIComponent(me.email) + '&time_in=is.null&limit=1');
       if (existing && existing.length) { alert('You already have an open Time Off. Time In on that one first.'); return; }
@@ -5362,7 +5363,7 @@ html, body {
     document.getElementById('admin-timeoff-backfill-form').classList.remove('visible');
   }
   async function adminSaveBackfillEntry() {
-    var me = JSON.parse(sessionStorage.getItem('mjm_user') || '{}');
+    var me = JSON.parse(localStorage.getItem('mjm_user') || '{}');
     var reason = document.getElementById('admin-timeoff-bf-reason').value.trim();
     var date = document.getElementById('admin-timeoff-bf-date').value;
     var outT = document.getElementById('admin-timeoff-bf-out').value;
@@ -5587,7 +5588,7 @@ html, body {
       });
 
       // Send invite email via Supabase Auth (requires service role key)
-      var user = JSON.parse(sessionStorage.getItem('mjm_user') || '{}');
+      var user = JSON.parse(localStorage.getItem('mjm_user') || '{}');
       var redirectTo = window.location.origin + window.location.pathname.replace(/admin\.html$/, 'register.html');
       var res = await fetch(SURL + '/auth/v1/invite?redirect_to=' + encodeURIComponent(redirectTo), {
         method: 'POST',
@@ -5732,7 +5733,7 @@ html, body {
   // Logout
   function logout() {
     if (confirm('Sign out of MJMConnect?')) {
-      sessionStorage.removeItem('mjm_user');
+      localStorage.removeItem('mjm_user');
       window.location.href = 'login.html';
     }
   }
@@ -5942,7 +5943,7 @@ html, body {
     var lbl = document.getElementById('event-save-label');
     var spn = document.getElementById('event-spinner');
     lbl.style.display = 'none'; spn.style.display = 'block';
-    var user = JSON.parse(sessionStorage.getItem('mjm_user') || '{}');
+    var user = JSON.parse(localStorage.getItem('mjm_user') || '{}');
     try {
       if (editingEventId) {
         await sbFetch('PATCH', '/rest/v1/events?id=eq.' + editingEventId, {
