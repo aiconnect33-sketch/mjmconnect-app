@@ -3426,8 +3426,62 @@ html, body {
     }, { passive: true });
   }
 
+  // iOS gives standalone (Add to Home Screen) web apps no native
+  // pull-to-refresh gesture at all -- pulling down just does nothing, which
+  // is why data can look stuck until someone signs out and back in (a real
+  // navigation, which happens to force a fresh load). This builds the same
+  // gesture ourselves: drag down from the very top past a threshold, then
+  // let go, and it does a real reload.
+  function initPullToRefresh() {
+    var THRESHOLD = 70;
+    var startY = null, pulling = false, refreshing = false;
+
+    var indicator = document.createElement('div');
+    indicator.id = 'ptr-indicator';
+    indicator.style.cssText = 'position:fixed;top:0;left:0;right:0;height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;z-index:9999;background:#075E54;pointer-events:none;';
+    indicator.innerHTML = '<div style="width:20px;height:20px;border:2.5px solid rgba(255,255,255,0.35);border-top-color:#fff;border-radius:50%;animation:ptr-spin 0.6s linear infinite;"></div>';
+    document.body.appendChild(indicator);
+
+    var style = document.createElement('style');
+    style.textContent = '@keyframes ptr-spin { to { transform: rotate(360deg); } }';
+    document.head.appendChild(style);
+
+    function scrollTop() {
+      return (document.scrollingElement || document.documentElement).scrollTop;
+    }
+
+    document.addEventListener('touchstart', function(e) {
+      if (refreshing || scrollTop() > 0) { pulling = false; return; }
+      startY = e.touches[0].clientY;
+      pulling = true;
+    }, { passive: true });
+
+    document.addEventListener('touchmove', function(e) {
+      if (!pulling || startY === null) return;
+      var dy = e.touches[0].clientY - startY;
+      if (dy <= 0) { indicator.style.height = '0px'; return; }
+      e.preventDefault();
+      indicator.style.height = Math.min(dy * 0.5, THRESHOLD + 20) + 'px';
+    }, { passive: false });
+
+    document.addEventListener('touchend', function() {
+      if (!pulling) return;
+      var pulled = parseInt(indicator.style.height, 10) || 0;
+      pulling = false;
+      startY = null;
+      if (pulled >= THRESHOLD) {
+        refreshing = true;
+        indicator.style.height = '50px';
+        location.reload();
+      } else {
+        indicator.style.height = '0px';
+      }
+    }, { passive: true });
+  }
+
   document.addEventListener('DOMContentLoaded', function() {
     initScrollHideNav();
+    initPullToRefresh();
     // Set top avatar initials and role from session
     var raw = sessionStorage.getItem('mjm_user');
     if (raw) {
