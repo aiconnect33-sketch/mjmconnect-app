@@ -2216,6 +2216,7 @@ html, body {
     if (name === 'event')    loadDbEvents();
     if (name === 'estatetrip') loadDbEstateTrips();
     if (name === 'timeoff')  { loadDbTimeOff(); loadAdminTimeOffSelf(); }
+    rememberTab(name);
   }
   // ── BOTTOM NAV ──
   function switchNav(name) {
@@ -2236,6 +2237,7 @@ html, body {
     if (name === 'timeoff')  { loadDbTimeOff(); loadAdminTimeOffSelf(); }
     if (name === 'book')     initBookTab();
     if (name === 'faulty')   initFaultyTab();
+    rememberTab(name);
   }
   function switchTabByName(name) {
     var tabs = document.querySelectorAll('.tab-btn');
@@ -2253,11 +2255,38 @@ html, body {
     if (name === 'timeoff')  { loadDbTimeOff(); loadAdminTimeOffSelf(); }
     if (name === 'book')     initBookTab();
     if (name === 'faulty')   initFaultyTab();
+    rememberTab(name);
   }
   function syncNav(name) {
     document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
     var el = document.getElementById('nav-' + name);
     if (el) el.classList.add('active');
+  }
+
+  // ── Remember the active tab across a refresh ──
+  var LAST_TAB_KEY = 'mjm_admin_last_tab';
+
+  function rememberTab(name) {
+    try { sessionStorage.setItem(LAST_TAB_KEY, name); } catch (e) {}
+  }
+
+  // Restores whichever tab (and, for Book, which pill and room) the admin
+  // was last on, so a refresh updates the data in place instead of
+  // resetting to the Dashboard.
+  function restoreLastTab() {
+    var name;
+    try { name = sessionStorage.getItem(LAST_TAB_KEY); } catch (e) { name = null; }
+    if (!name || name === 'dashboard' || !document.getElementById('screen-' + name)) return;
+    switchNav(name);
+    if (name === 'book') {
+      var pill = null, room = null;
+      try {
+        pill = sessionStorage.getItem('mjm_admin_last_book_pill');
+        room = sessionStorage.getItem('mjm_admin_last_book_room');
+      } catch (e) {}
+      if (pill === 'room' && typeof switchBookPill === 'function') switchBookPill('room');
+      if (room && typeof selectRoom === 'function') selectRoom(room);
+    }
   }
 
   // ── NOTIFY TOGGLE ──
@@ -3425,6 +3454,7 @@ html, body {
       loadDbEvents();
     }
     initBackButtonTrap('dashboard');
+    restoreLastTab();
   });
 
   // admin.html is a single page -- every "tab" is just a div toggled by
@@ -3596,6 +3626,7 @@ html, body {
     pV.style.color       = isVehicle ? '#fff' : 'var(--text2)';
     pR.style.background  = isVehicle ? 'transparent' : 'var(--green)';
     pR.style.color        = isVehicle ? 'var(--text2)' : '#fff';
+    try { sessionStorage.setItem('mjm_admin_last_book_pill', type); } catch (e) {}
   }
 
   // ════════════════════════════
@@ -3894,6 +3925,7 @@ html, body {
     hideRoomForm();
     loadRoomCalendar();
     loadMyRoomBookings();
+    try { sessionStorage.setItem('mjm_admin_last_book_room', name); } catch (e) {}
   }
 
   function updateRoomCardInfo() {
