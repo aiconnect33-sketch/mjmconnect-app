@@ -16,7 +16,7 @@ async function loadLeave() {
         var names = data.map(function(r){ return r.staff_name; }).join(', ');
         homeEl.innerHTML = '<div class="home-summary-card" onclick="switchTabByName(\'leave\')">'
           + '<div class="home-summary-ic" style="background:var(--green-bg);color:var(--green-text);"><i class="ti ti-leaf"></i></div>'
-          + '<div style="flex:1;min-width:0;"><div class="home-summary-title">On Leave Today</div>'
+          + '<div style="flex:1;min-width:0;"><div class="home-summary-title">Today on Leave</div>'
           + '<div class="home-summary-sub" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escHtml(names) + '</div></div>'
           + '<div class="home-summary-count">' + data.length + '</div>'
           + '<i class="ti ti-chevron-right home-summary-chev"></i>'
