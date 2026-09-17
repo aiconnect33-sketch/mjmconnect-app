@@ -30,7 +30,7 @@ function timeOffMe() {
 // ── Optional Google Sheet sync — see docs/time-off-sheet-sync.md for the
 // Apps Script + one-time setup. Skipped entirely while the URL is blank,
 // same convention as FC_SHEET_WEBHOOK_URL in js/tab-faulty.js.
-var TIMEOFF_SHEET_WEBHOOK_URL = '';
+var TIMEOFF_SHEET_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbzQRDxP_90L3Y11d9A6RKZpVWtpkIeer2YSfNCNEW2MPbX5-spOH0sTaPAXFmyZ-XE1/exec';
 var TIMEOFF_SHEET_SECRET = 'SeW2cUlObs6M2jCq-xxSrPlhB-MHCj6mqz';
 
 async function timeOffMonthlyMinutes(email, monthStart) {
