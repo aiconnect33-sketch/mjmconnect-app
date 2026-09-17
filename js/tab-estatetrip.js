@@ -21,7 +21,7 @@ async function loadEstateTrips() {
         var names = data.map(function(r){ return r.staff_name; }).join(', ');
         homeEl.innerHTML = '<div class="home-summary-card" onclick="switchNav(\'estatetrip\');loadEstateTrips()">'
           + '<div class="home-summary-ic" style="background:var(--estate-bg);color:var(--estate-text);"><i class="ti ti-car"></i></div>'
-          + '<div style="flex:1;min-width:0;"><div class="home-summary-title">Going to Estate Today</div>'
+          + '<div style="flex:1;min-width:0;"><div class="home-summary-title">Today\'s Estate Trip</div>'
           + '<div class="home-summary-sub" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escHtml(names) + '</div></div>'
           + '<div class="home-summary-count">' + data.length + '</div>'
           + '<i class="ti ti-chevron-right home-summary-chev"></i>'
