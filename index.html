@@ -10,7 +10,7 @@
     if (hash && hash.indexOf('type=recovery') !== -1 && hash.indexOf('access_token') !== -1) {
       window.location.replace('register.html' + hash); return;
     }
-    if (!sessionStorage.getItem('mjm_user')) {
+    if (!localStorage.getItem('mjm_user')) {
       window.location.replace('login.html');
     }
   })();

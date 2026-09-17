@@ -23,7 +23,7 @@ function formatDuration(mins) {
 }
 
 function timeOffMe() {
-  var raw = sessionStorage.getItem('mjm_user');
+  var raw = localStorage.getItem('mjm_user');
   return raw ? JSON.parse(raw) : {};
 }
 

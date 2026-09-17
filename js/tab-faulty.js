@@ -25,7 +25,7 @@ var fcState = { loc: null, item: null, itemOther: '', urgency: null, photoFile: 
 function initFaultyTab() {
   if (faultyTabInited) return;
   faultyTabInited = true;
-  var raw = sessionStorage.getItem('mjm_user');
+  var raw = localStorage.getItem('mjm_user');
   var u = raw ? JSON.parse(raw) : {};
   var nameEl = document.getElementById('fc-staff-name');
   if (nameEl) nameEl.textContent = u.name || u.email || 'Unknown';
@@ -353,7 +353,7 @@ async function submitFaultyComplaint() {
   setFcLoading(true);
   hideFcAlert('fc-success'); hideFcAlert('fc-error');
   try {
-    var raw = sessionStorage.getItem('mjm_user');
+    var raw = localStorage.getItem('mjm_user');
     var u = raw ? JSON.parse(raw) : {};
     var photoUrl = null;
     if (fcState.photoFile) photoUrl = await uploadFcPhoto(fcState.photoFile);
@@ -491,7 +491,7 @@ function toggleFcDesc(btn, id) {
 
 // Reopening a resolved complaint is admin-only -- see admin.html.
 async function resolveFaultyComplaint(id) {
-  var raw = sessionStorage.getItem('mjm_user');
+  var raw = localStorage.getItem('mjm_user');
   var u = raw ? JSON.parse(raw) : {};
   var resolvedBy = u.name || u.email || 'Unknown';
   try {

@@ -46,7 +46,7 @@ async function sbWrite(method, table, body, filter) {
 var DEFAULT_PERMISSIONS = { announcements: 'view', duty: 'view', dutyRoles: 'view', events: 'view', faulty: 'view' };
 
 function hasEditPermission(module) {
-  var raw = sessionStorage.getItem('mjm_user');
+  var raw = localStorage.getItem('mjm_user');
   if (!raw) return false;
   try {
     var u = JSON.parse(raw);
@@ -73,7 +73,7 @@ function escJsAttr(str) {
 // Best-effort: never blocks or fails the real save/delete it accompanies.
 function logAudit(module, recordId, action, itemTitle, details, originalBy) {
   try {
-    var raw = sessionStorage.getItem('mjm_user');
+    var raw = localStorage.getItem('mjm_user');
     var u = raw ? JSON.parse(raw) : null;
     var changedBy = (u && (u.name || u.email)) || 'Unknown';
     sbWrite('POST', 'audit_log', {
@@ -241,13 +241,13 @@ function restoreLastTab() {
 // ── Auth / Profile ──
 function logout() {
   if (confirm('Sign out of MJMConnect?')) {
-    sessionStorage.removeItem('mjm_user');
+    localStorage.removeItem('mjm_user');
     window.location.href = 'login.html';
   }
 }
 
 function getCurrentUserName() {
-  var raw = sessionStorage.getItem('mjm_user');
+  var raw = localStorage.getItem('mjm_user');
   if (!raw) return 'Unknown';
   var u = JSON.parse(raw);
   return u.name || u.email || 'Unknown';
@@ -258,7 +258,7 @@ window.addEventListener('DOMContentLoaded', function() {
   initScrollHideNav();
   initPullToRefresh();
   // Set top avatar initials
-  var raw = sessionStorage.getItem('mjm_user');
+  var raw = localStorage.getItem('mjm_user');
   if (raw) {
     var u = JSON.parse(raw);
     var parts = (u.name || u.email || '').split(/[@.\s]/);
