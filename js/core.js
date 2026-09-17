@@ -199,4 +199,18 @@ window.addEventListener('DOMContentLoaded', function() {
     if (typeof initBookTab === 'function') initBookTab();
     window.location.hash = '';
   }
+  initBackButtonTrap('home');
 });
+
+// index.html is a single page -- every "tab" is just a div toggled by
+// switchNav/switchTabByName, not a real navigation. Without this, the
+// Android/browser back button falls through to whatever page was open
+// before this one (usually login.html), which looks like an unexpected
+// sign-out rather than "go back a screen" within the app.
+function initBackButtonTrap(homeName) {
+  history.pushState({ mjmApp: true }, '');
+  window.addEventListener('popstate', function() {
+    history.pushState({ mjmApp: true }, '');
+    if (typeof switchNav === 'function') switchNav(homeName);
+  });
+}
