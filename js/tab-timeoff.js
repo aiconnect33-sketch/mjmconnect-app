@@ -119,8 +119,9 @@ async function loadTimeOff() {
       return sum + r.duration_minutes;
     }, 0);
 
+    var canManageAll = typeof hasEditPermission === 'function' && hasEditPermission('timeoff');
     if (statusEl) statusEl.innerHTML = renderTimeOffStatus(openRecord, monthlyMinutes, dueReminders);
-    if (recordsEl) recordsEl.innerHTML = renderTimeOffRecords(allRecords, today, myEmailLow);
+    if (recordsEl) recordsEl.innerHTML = renderTimeOffRecords(allRecords, today, myEmailLow, canManageAll);
   } catch (e) {
     if (statusEl) statusEl.innerHTML = '<div class="card"><div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">Could not load your Time Off status.</div></div>';
     if (recordsEl) recordsEl.innerHTML = '';
@@ -173,12 +174,13 @@ function renderTimeOffStatus(openRecord, monthlyMinutes, dueReminders) {
   return html;
 }
 
-function renderTimeOffRecords(records, today, myEmailLow) {
+function renderTimeOffRecords(records, today, myEmailLow, canManageAll) {
   if (!records.length) return '<div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">No Time Off logged this month.</div>';
 
   var html = '<div class="section-row"><div class="section-title">This Month — Everyone</div></div>';
   records.forEach(function (r) {
     var isMine = r.staff_email && r.staff_email.toLowerCase() === myEmailLow;
+    var canManage = canManageAll || isMine;
     var out = new Date(r.time_out);
     var dateLabel = localDateStr(out) === today ? 'Today' : out.toLocaleDateString('en-MY', { day: 'numeric', month: 'short' });
     var timeLabel = formatClock(out) + (r.time_in ? ' → ' + formatClock(new Date(r.time_in)) : ' → still out');
@@ -193,14 +195,32 @@ function renderTimeOffRecords(records, today, myEmailLow) {
       : voided ? ' <span style="color:var(--text-light);">— moved to Annual Leave</span>' : '';
     var reasonLabel = isMine ? escHtml(r.reason) : (escHtml(r.staff_name) + ' — ' + escHtml(r.reason));
 
-    html += '<div class="to-history-row" style="' + (voided ? 'opacity:0.6;' : '') + '">'
+    var canCorrect = canManage && !voided && r.time_in;
+    var editIcon = canCorrect
+      ? '<div class="to-edit-icon" onclick="toggleTimeOffCorrection(' + r.id + ')" title="Correct Time In"><i class="ti ti-pencil"></i></div>'
+      : '';
+
+    html += '<div class="to-history-row" data-timeoff-id="' + escHtml(r.id) + '" data-staff-email="' + escHtml(r.staff_email || '') + '" style="' + (voided ? 'opacity:0.6;' : '') + '">'
       + '<div class="to-history-top">'
-      + '<div style="flex:1;min-width:0;">'
-      + '<div class="to-history-reason" style="' + (voided ? 'text-decoration:line-through;' : '') + '">' + reasonLabel + '</div>'
+      + '<div style="flex:1;min-width:0;display:flex;align-items:center;gap:6px;">'
+      + '<div class="to-history-reason" style="' + (voided ? 'text-decoration:line-through;' : '') + '">' + reasonLabel + '</div>' + editIcon
       + '</div>' + badge + '</div>'
       + '<div class="to-history-time">' + dateLabel + ' · ' + timeLabel + entryNote + '</div>';
 
-    if (isMine && !voided && r.duration_minutes > TIMEOFF_PER_TRIP_CAP_MIN) {
+    if (canCorrect) {
+      var outHH = String(out.getHours()).padStart(2, '0');
+      var outMM = String(out.getMinutes()).padStart(2, '0');
+      var inD = new Date(r.time_in);
+      var inHH = String(inD.getHours()).padStart(2, '0');
+      var inMM = String(inD.getMinutes()).padStart(2, '0');
+      html += '<div class="to-correct-row" id="to-correct-row-' + r.id + '" style="display:none;flex-wrap:wrap;">'
+        + '<div style="flex:1;min-width:90px;margin-right:12px;"><label style="font-size:9px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;">Time Out</label><input type="time" id="to-correct-out-' + r.id + '" value="' + outHH + ':' + outMM + '" style="width:100%;"></div>'
+        + '<div style="flex:1;min-width:90px;margin-right:12px;"><label style="font-size:9px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;">Time In</label><input type="time" id="to-correct-in-' + r.id + '" value="' + inHH + ':' + inMM + '" style="width:100%;"></div>'
+        + '<button class="book-btn-primary" style="width:auto;margin:0;padding:8px 12px;align-self:flex-end;" onclick="saveTimeOffCorrection(' + r.id + ')">Save</button>'
+        + '</div>';
+    }
+
+    if (canManage && !voided && r.duration_minutes > TIMEOFF_PER_TRIP_CAP_MIN) {
       html += '<div class="to-warn red">'
         + '<b>⚠ This trip ran ' + formatDuration(r.duration_minutes) + ' — over the 2.5h single-application limit.</b>'
         + 'The whole trip needs to go through Annual Leave instead of Time Off.'
@@ -210,6 +230,52 @@ function renderTimeOffRecords(records, today, myEmailLow) {
     html += '</div>';
   });
   return html;
+}
+
+// HR Admin/Super Admin, or a staff member granted "Time Off" edit permission,
+// can manage anyone's record; everyone else can only manage their own -- the
+// same ownership signal already used by Leave and Estate Trip.
+function canManageTimeOff(id) {
+  if (typeof hasEditPermission === 'function' && hasEditPermission('timeoff')) return true;
+  var me = timeOffMe();
+  var row = document.querySelector('[data-timeoff-id="' + id + '"]');
+  var ownerEmail = row ? (row.getAttribute('data-staff-email') || '') : '';
+  return !!(me.email && ownerEmail && me.email.toLowerCase() === ownerEmail.toLowerCase());
+}
+
+function toggleTimeOffCorrection(id) {
+  if (!canManageTimeOff(id)) return;
+  var row = document.getElementById('to-correct-row-' + id);
+  if (!row) return;
+  row.style.display = row.style.display === 'none' ? 'flex' : 'none';
+}
+
+async function saveTimeOffCorrection(id) {
+  if (!canManageTimeOff(id)) { alert('You can only edit your own Time Off records.'); return; }
+  var outInput = document.getElementById('to-correct-out-' + id);
+  var inInput  = document.getElementById('to-correct-in-' + id);
+  if (!outInput || !inInput || !outInput.value || !inInput.value) return;
+  try {
+    var rows = await fetch(SURL + '/rest/v1/time_off_records?id=eq.' + id, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } }).then(function (r) { return r.json(); });
+    var record = rows && rows[0];
+    if (!record) return;
+    // Both fields are anchored to the trip's original day -- Time Off never
+    // spans midnight, so there's no separate date picker for either one.
+    var anchor = new Date(record.time_out);
+    var outParts = outInput.value.split(':');
+    var inParts  = inInput.value.split(':');
+    var newTimeOut = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate(), parseInt(outParts[0], 10), parseInt(outParts[1], 10));
+    var newTimeIn  = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate(), parseInt(inParts[0], 10), parseInt(inParts[1], 10));
+    var duration = Math.round((newTimeIn.getTime() - newTimeOut.getTime()) / 60000);
+    if (duration < 0) { alert('Time In cannot be before Time Out.'); return; }
+    var patch = { time_out: newTimeOut.toISOString(), time_in: newTimeIn.toISOString(), duration_minutes: duration, entry_type: 'edited', corrected_at: new Date().toISOString() };
+    if (!record.original_time_in) patch.original_time_in = record.time_in;
+    await sbWrite('PATCH', 'time_off_records', patch, 'id=eq.' + id);
+    loadTimeOff();
+    record.time_in = newTimeIn.toISOString(); record.duration_minutes = duration;
+    var monthStart = localDateStr().slice(0, 8) + '01';
+    timeOffMonthlyMinutes(record.staff_email, monthStart).then(function (mins) { syncTimeOffToSheet('update', record, mins); });
+  } catch (e) { alert('Could not save the correction. Please try again.'); }
 }
 
 // ── ACTIONS ──
@@ -247,6 +313,7 @@ async function timeInNow(id) {
 }
 
 async function voidTimeOff(id) {
+  if (!canManageTimeOff(id)) { alert('You can only cancel your own Time Off records.'); return; }
   if (!confirm('Cancel this trip and apply Annual Leave instead? The record stays on file marked Voided, and the full duration is returned to your monthly buffer. You\'ll need to apply for Annual Leave separately to cover the day.')) return;
   try {
     var rows = await fetch(SURL + '/rest/v1/time_off_records?id=eq.' + id, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } }).then(function (r) { return r.json(); });
