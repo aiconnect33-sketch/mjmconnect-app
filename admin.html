@@ -3456,7 +3456,9 @@ html, body {
   // let go, and it does a real reload.
   function initPullToRefresh() {
     var THRESHOLD = 70;
+    var SETTLE_MS = 400; // see lastScrollTs below
     var startY = null, pulling = false, refreshing = false;
+    var lastScrollTs = 0;
 
     var indicator = document.createElement('div');
     indicator.id = 'ptr-indicator';
@@ -3473,8 +3475,21 @@ html, body {
       return body ? body.scrollTop : 0;
     }
 
+    // A flick that scrolls a list up to the top arrives at scrollTop 0 via
+    // momentum, after the finger has already lifted. Someone continuing to
+    // swipe down out of habit right after that lands a new touch that also
+    // reads scrollTop 0, which used to arm the refresh even though they
+    // just meant to keep scrolling. Tracking the most recent scroll and
+    // requiring a brief idle gap before arming gives that momentum time to
+    // settle first, so only a pull starting from a genuine rest at the top
+    // counts.
+    var body = document.querySelector('.screen-body');
+    if (body) {
+      body.addEventListener('scroll', function() { lastScrollTs = Date.now(); }, { passive: true });
+    }
+
     document.addEventListener('touchstart', function(e) {
-      if (refreshing || scrollTop() > 0) { pulling = false; return; }
+      if (refreshing || scrollTop() > 0 || (Date.now() - lastScrollTs) < SETTLE_MS) { pulling = false; return; }
       startY = e.touches[0].clientY;
       pulling = true;
     }, { passive: true });
