@@ -27,7 +27,7 @@ async function loadEstateTrips() {
           + '<i class="ti ti-chevron-right home-summary-chev"></i>'
           + '</div>';
       } else {
-        homeEl.innerHTML = '<div class="card"><div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:8px 0;">No estate trips today.</div></div>';
+        homeEl.innerHTML = '<div class="card" style="cursor:pointer;" onclick="switchNav(\'estatetrip\');loadEstateTrips()"><div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:8px 0;">No estate trips today.</div></div>';
       }
     } catch(e) {
       homeEl.innerHTML = '<div class="card"><div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:8px 0;">Could not load estate trips.</div></div>';

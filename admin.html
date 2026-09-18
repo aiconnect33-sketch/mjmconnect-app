@@ -1191,14 +1191,11 @@ html, body {
         </div>
 
         <div class="form-group">
-          <label class="form-label">Message</label>
+          <label class="form-label">Message <span style="font-weight:400;color:var(--text3);">(optional)</span></label>
           <textarea class="form-textarea" id="ann-body"
             placeholder="Write your announcement here…" maxlength="500"
             oninput="updateBodyCount()"></textarea>
           <div class="char-count" id="body-count">0 / 500</div>
-          <div class="field-error" id="body-error">
-            <i class="ti ti-alert-circle"></i> Message is required.
-          </div>
         </div>
 
         <div style="margin-top:12px;">
@@ -2362,11 +2359,6 @@ html, body {
     if (!title) {
       document.getElementById('ann-title').classList.add('error');
       document.getElementById('title-error').classList.add('visible');
-      valid = false;
-    }
-    if (!body) {
-      document.getElementById('ann-body').classList.add('error');
-      document.getElementById('body-error').classList.add('visible');
       valid = false;
     }
     if (!valid) return;

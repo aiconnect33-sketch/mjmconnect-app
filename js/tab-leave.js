@@ -22,7 +22,7 @@ async function loadLeave() {
           + '<i class="ti ti-chevron-right home-summary-chev"></i>'
           + '</div>';
       } else {
-        homeEl.innerHTML = '<div class="card"><div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:8px 0;">No one on leave today.</div></div>';
+        homeEl.innerHTML = '<div class="card" style="cursor:pointer;" onclick="switchTabByName(\'leave\')"><div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:8px 0;">No one on leave today.</div></div>';
       }
     } catch(e) {}
   }
