@@ -5390,6 +5390,18 @@ html, body {
     try {
       var existing = await sbFetch('GET', '/rest/v1/time_off_records?staff_email=eq.' + encodeURIComponent(me.email) + '&time_in=is.null&limit=1');
       if (existing && existing.length) { alert('You already have an open Time Off. Time In on that one first.'); return; }
+
+      var monthStart2 = localDateStr().slice(0, 8) + '01';
+      var monthlyMinutes2 = await adminTimeOffMonthlyMinutes(me.email, monthStart2);
+      if (monthlyMinutes2 >= 240) {
+        alert('Monthly limit reached\n\nYou\'ve used your full 4h 00m Time Off allowance this month. Please go through Annual Leave instead of Time Off.');
+        return;
+      }
+      if (monthlyMinutes2 >= 180) {
+        var remaining2 = fmtTimeOffDuration(240 - monthlyMinutes2);
+        if (!confirm('Low Time Off balance\n\nYou have ' + remaining2 + ' left this month. If this trip runs longer, it\'ll be flagged for HR to review.\n\nContinue?')) return;
+      }
+
       await sbFetch('POST', '/rest/v1/time_off_records', { staff_name: me.name || me.email, staff_email: me.email, reason: reason, time_out: new Date().toISOString() });
       loadAdminTimeOffSelf();
       if (typeof loadDbTimeOff === 'function') loadDbTimeOff();
@@ -5487,6 +5499,18 @@ html, body {
     try {
       var existing = await sbFetch('GET', '/rest/v1/time_off_records?staff_email=eq.' + encodeURIComponent(me.email) + '&time_in=is.null&limit=1');
       if (existing && existing.length) { alert('You already have an open Time Off. Time In on that one first.'); return; }
+
+      var monthStart3 = localDateStr().slice(0, 8) + '01';
+      var monthlyMinutes3 = await adminTimeOffMonthlyMinutes(me.email, monthStart3);
+      if (monthlyMinutes3 >= 240) {
+        alert('Monthly limit reached\n\nYou\'ve used your full 4h 00m Time Off allowance this month. Please go through Annual Leave instead of Time Off.');
+        return;
+      }
+      if (monthlyMinutes3 >= 180) {
+        var remaining3 = fmtTimeOffDuration(240 - monthlyMinutes3);
+        if (!confirm('Low Time Off balance\n\nYou have ' + remaining3 + ' left this month. If this trip runs longer, it\'ll be flagged for HR to review.\n\nContinue?')) return;
+      }
+
       var rows = await sbFetch('GET', '/rest/v1/time_off_reminders?id=eq.' + id);
       var reminder = rows && rows[0];
       if (!reminder) return;
