@@ -3432,14 +3432,16 @@ html, body {
 
   // Hide the bottom nav while scrolling down, reveal it again on scroll up
   // (or once back near the top), so it doesn't permanently eat screen space
-  // on long lists. The page itself scrolls (not .screen-body, which sizes
-  // to its content), so this listens on window rather than any inner element.
+  // on long lists. .screen-body (flex:1; overflow-y:auto) is the actual
+  // scrolling element -- the page itself never scrolls -- so this listens
+  // there instead of on window.
   function initScrollHideNav() {
     var nav = document.querySelector('.nav-bar-wrap');
-    if (!nav) return;
+    var body = document.querySelector('.screen-body');
+    if (!nav || !body) return;
     var lastTop = 0;
-    window.addEventListener('scroll', function() {
-      var top = window.scrollY || window.pageYOffset || 0;
+    body.addEventListener('scroll', function() {
+      var top = body.scrollTop;
       if (top <= 10 || top < lastTop) nav.classList.remove('nav-hidden');
       else if (top > lastTop) nav.classList.add('nav-hidden');
       lastTop = top;
@@ -3467,7 +3469,8 @@ html, body {
     document.head.appendChild(style);
 
     function scrollTop() {
-      return (document.scrollingElement || document.documentElement).scrollTop;
+      var body = document.querySelector('.screen-body');
+      return body ? body.scrollTop : 0;
     }
 
     document.addEventListener('touchstart', function(e) {
