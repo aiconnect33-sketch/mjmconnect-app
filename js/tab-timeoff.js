@@ -1,8 +1,13 @@
 // ── tab-timeoff.js — Time Off tab (time-out/time-in tracking) + Home currently-out ──
 //
-// Two caps, both informational only (never block a save): 150 min per single
-// trip, 240 min total per calendar month. "Only one open record at a time"
-// is enforced client-side before a new Time Out / reminder conversion.
+// Two caps: 150 min per single trip is informational only -- a trip's real
+// duration isn't known until Time In, so it can only be flagged after the
+// fact, never blocked at the start. 240 min total per calendar month IS
+// enforced at the start of a new Time Out / reminder conversion: blocked
+// outright once already used up, a confirm-to-proceed warning once past the
+// near-limit threshold (that new trip's own duration can still push the
+// total over -- see loadTimeOff() for the same accounting after it closes).
+// "Only one open record at a time" is enforced client-side the same way.
 
 var TIMEOFF_PER_TRIP_CAP_MIN = 150; // 2.5h
 var TIMEOFF_MONTHLY_CAP_MIN  = 240; // 4h
@@ -449,6 +454,18 @@ async function timeOutNow() {
     var existing = await fetch(SURL + '/rest/v1/time_off_records?staff_email=eq.' + encodeURIComponent(me.email) + '&time_in=is.null&limit=1',
       { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } }).then(function (r) { return r.json(); });
     if (existing && existing.length) { alert('You already have an open Time Off. Time In on that one first.'); return; }
+
+    var monthStart = localDateStr().slice(0, 8) + '01';
+    var monthlyMinutes = await timeOffMonthlyMinutes(me.email, monthStart);
+    if (monthlyMinutes >= TIMEOFF_MONTHLY_CAP_MIN) {
+      alert('Monthly limit reached\n\nYou\'ve used your full 4h 00m Time Off allowance this month. Please go through Annual Leave instead of Time Off.');
+      return;
+    }
+    if (monthlyMinutes >= TIMEOFF_NEAR_LIMIT_MIN) {
+      var remaining = formatDuration(TIMEOFF_MONTHLY_CAP_MIN - monthlyMinutes);
+      if (!confirm('Low Time Off balance\n\nYou have ' + remaining + ' left this month. If this trip runs longer, it\'ll be flagged for HR to review.\n\nContinue?')) return;
+    }
+
     await sbWrite('POST', 'time_off_records', {
       staff_name: me.name || me.email, staff_email: me.email,
       reason: reason, time_out: new Date().toISOString()
@@ -522,6 +539,18 @@ async function convertReminder(id) {
     var existing = await fetch(SURL + '/rest/v1/time_off_records?staff_email=eq.' + encodeURIComponent(me.email) + '&time_in=is.null&limit=1',
       { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } }).then(function (r) { return r.json(); });
     if (existing && existing.length) { alert('You already have an open Time Off. Time In on that one first.'); return; }
+
+    var monthStart = localDateStr().slice(0, 8) + '01';
+    var monthlyMinutes = await timeOffMonthlyMinutes(me.email, monthStart);
+    if (monthlyMinutes >= TIMEOFF_MONTHLY_CAP_MIN) {
+      alert('Monthly limit reached\n\nYou\'ve used your full 4h 00m Time Off allowance this month. Please go through Annual Leave instead of Time Off.');
+      return;
+    }
+    if (monthlyMinutes >= TIMEOFF_NEAR_LIMIT_MIN) {
+      var remaining = formatDuration(TIMEOFF_MONTHLY_CAP_MIN - monthlyMinutes);
+      if (!confirm('Low Time Off balance\n\nYou have ' + remaining + ' left this month. If this trip runs longer, it\'ll be flagged for HR to review.\n\nContinue?')) return;
+    }
+
     var rows = await fetch(SURL + '/rest/v1/time_off_reminders?id=eq.' + id, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } }).then(function (r) { return r.json(); });
     var reminder = rows && rows[0];
     if (!reminder) return;
