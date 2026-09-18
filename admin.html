@@ -5826,6 +5826,13 @@ html, body {
   function logout() {
     if (confirm('Sign out of MJMConnect?')) {
       localStorage.removeItem('mjm_user');
+      // Clear the remembered tab too, so logging back in always lands on
+      // Home instead of restoreLastTab() picking up where this session left off.
+      try {
+        sessionStorage.removeItem(LAST_TAB_KEY);
+        sessionStorage.removeItem('mjm_admin_last_book_pill');
+        sessionStorage.removeItem('mjm_admin_last_book_room');
+      } catch (e) {}
       window.location.href = 'login.html';
     }
   }

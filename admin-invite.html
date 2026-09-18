@@ -472,6 +472,15 @@ html, body {
   function logout() {
     if (confirm('Sign out of MJMConnect?')) {
       localStorage.removeItem('mjm_user');
+      // Clear the remembered tab so logging back in always lands on Home.
+      try {
+        sessionStorage.removeItem('mjm_last_tab');
+        sessionStorage.removeItem('mjm_last_book_pill');
+        sessionStorage.removeItem('mjm_last_book_room');
+        sessionStorage.removeItem('mjm_admin_last_tab');
+        sessionStorage.removeItem('mjm_admin_last_book_pill');
+        sessionStorage.removeItem('mjm_admin_last_book_room');
+      } catch (e) {}
       window.location.href = 'login.html';
     }
   }
