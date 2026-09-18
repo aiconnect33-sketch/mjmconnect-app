@@ -265,7 +265,10 @@ function renderTimeOffRow(r, myEmailLow, canManageAll, sectionKey) {
   var reasonLabel = isMine ? escHtml(r.reason) : (escHtml(r.staff_name) + ' — ' + escHtml(r.reason));
   var key = sectionKey + '-' + r.id;
 
-  var canCorrect = canManage && !!r.time_in;
+  // Correcting Time In/Out is admin/permission-only -- unlike the Cancel
+  // button below, ownership alone must NOT unlock it, or every staff member
+  // could quietly rewrite their own already-taken Time Off.
+  var canCorrect = canManageAll && !!r.time_in;
   var editIcon = canCorrect
     ? '<div class="to-edit-icon" onclick="toggleTimeOffCorrection(\'' + key + '\', ' + r.id + ')" title="Correct Time In"><i class="ti ti-pencil"></i></div>'
     : '';
@@ -383,24 +386,32 @@ function toggleTimeOffCancelled(which) {
 
 // HR Admin/Super Admin, or a staff member granted "Time Off" edit permission,
 // can manage anyone's record; everyone else can only manage their own -- the
-// same ownership signal already used by Leave and Estate Trip.
+// same ownership signal already used by Leave and Estate Trip. This governs
+// self-service actions like cancelling your own over-cap trip.
 function canManageTimeOff(id) {
-  if (typeof hasEditPermission === 'function' && hasEditPermission('timeoff')) return true;
+  if (canCorrectTimeOff()) return true;
   var me = timeOffMe();
   var row = document.querySelector('[data-timeoff-id="' + id + '"]');
   var ownerEmail = row ? (row.getAttribute('data-staff-email') || '') : '';
   return !!(me.email && ownerEmail && me.email.toLowerCase() === ownerEmail.toLowerCase());
 }
 
+// Correcting Time In/Out is stricter than canManageTimeOff -- admin or the
+// granted permission ONLY, never ownership alone, so staff can't quietly
+// rewrite their own already-taken Time Off.
+function canCorrectTimeOff() {
+  return typeof hasEditPermission === 'function' && hasEditPermission('timeoff');
+}
+
 function toggleTimeOffCorrection(key, id) {
-  if (!canManageTimeOff(id)) return;
+  if (!canCorrectTimeOff()) return;
   var row = document.getElementById('to-correct-row-' + key);
   if (!row) return;
   row.style.display = row.style.display === 'none' ? 'flex' : 'none';
 }
 
 async function saveTimeOffCorrection(key, id) {
-  if (!canManageTimeOff(id)) { alert('You can only edit your own Time Off records.'); return; }
+  if (!canCorrectTimeOff()) { alert('You do not have permission to edit Time Off records.'); return; }
   var outInput = document.getElementById('to-correct-out-' + key);
   var inInput  = document.getElementById('to-correct-in-' + key);
   if (!outInput || !inInput || !outInput.value || !inInput.value) return;
