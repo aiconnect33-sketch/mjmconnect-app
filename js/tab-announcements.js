@@ -278,7 +278,7 @@ async function saveAnnouncement() {
   if (editingAnnId && !canManageAnnouncement(editingAnnId)) { alert('You can only edit your own announcements.'); return; }
   var title = document.getElementById('ann-form-title-input').value.trim();
   var body  = document.getElementById('ann-form-body-input').value.trim();
-  if (!title || !body) { alert('Please fill in both title and message.'); return; }
+  if (!title) { alert('Please fill in a title.'); return; }
   var raw = localStorage.getItem('mjm_user');
   var user = raw ? JSON.parse(raw) : {};
   try {
