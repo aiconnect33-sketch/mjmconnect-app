@@ -72,7 +72,13 @@ html, body {
 .phone {
   width: 100%;
   max-width: 430px;
-  min-height: 100vh;
+  /* Must be a bounded height (not min-height) so .screen-body's flex:1
+     actually caps its box and scrolls internally -- otherwise .phone
+     just grows past the viewport with tall tab content, and the sticky
+     bottom nav ends up floating over the last chunk of that content
+     instead of sitting in its own reserved space below it. */
+  height: 100vh;
+  height: 100dvh;
   background: var(--surface);
   display: flex;
   flex-direction: column;
@@ -380,8 +386,16 @@ html, body {
 .to-history-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; gap: 8px; }
 .to-history-reason { font-size: 12.5px; font-weight: 700; color: var(--text); }
 .to-history-time { font-size: 10.5px; color: var(--text2); }
-.to-correct-row { display: flex; margin-top: 8px; align-items: flex-end; }
-.to-correct-row input { width: 100%; box-sizing: border-box; border: 1px solid var(--blue-text); border-radius: 8px; padding: 6px 8px; font-size: 12px; font-family: inherit; }
+/* Stacked (not side-by-side) so the two time fields never have to share a
+   cramped row -- a side-by-side layout depended on a precise pixel gap
+   between two native time-picker widgets, which some mobile browsers
+   render wider than their CSS box, swallowing the gap entirely. Vertical
+   spacing uses margin-bottom (not flex `gap`, which collapsed to zero on
+   some WebViews the app runs in -- see the two earlier fixes to this rule). */
+.to-correct-row { display: flex; flex-direction: column; margin-top: 8px; }
+.to-correct-field { margin-bottom: 8px; }
+.to-correct-field label { display: block; font-size: 9px; font-weight: 600; color: var(--text3); text-transform: uppercase; margin-bottom: 4px; }
+.to-correct-row input { width: 100%; box-sizing: border-box; border: 1px solid var(--blue-text); border-radius: 8px; padding: 8px 10px; font-size: 13px; font-family: inherit; }
 .to-edit-icon { flex-shrink: 0; cursor: pointer; color: var(--text3); font-size: 14px; padding: 4px 6px; margin: -4px -6px; }
 .to-toggle-row { width: 100%; display: flex; align-items: center; justify-content: space-between; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 13px 14px; margin: 16px 0 8px; font-family: inherit; cursor: pointer; }
 .to-toggle-left { display: flex; align-items: center; gap: 10px; }
@@ -5038,10 +5052,10 @@ html, body {
     var outD = new Date(r.time_out), inD = new Date(r.time_in);
     var outHH = String(outD.getHours()).padStart(2, '0'), outMM = String(outD.getMinutes()).padStart(2, '0');
     var inHH = String(inD.getHours()).padStart(2, '0'), inMM = String(inD.getMinutes()).padStart(2, '0');
-    return '<div class="to-correct-row" id="admin-to-correct-row-' + key + '" style="display:none;flex-wrap:wrap;">'
-      + '<div style="flex:1;min-width:90px;margin-right:12px;"><label style="font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase;">Time Out</label><input type="time" id="admin-to-correct-out-' + key + '" value="' + outHH + ':' + outMM + '" style="width:100%;"></div>'
-      + '<div style="flex:1;min-width:90px;margin-right:12px;"><label style="font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase;">Time In</label><input type="time" id="admin-to-correct-in-' + key + '" value="' + inHH + ':' + inMM + '" style="width:100%;"></div>'
-      + '<button class="btn-primary" style="width:auto;margin:0;padding:8px 12px;align-self:flex-end;" onclick="adminSaveTimeOffCorrection(\'' + key + '\', ' + r.id + ')">Save</button>'
+    return '<div class="to-correct-row" id="admin-to-correct-row-' + key + '" style="display:none;">'
+      + '<div class="to-correct-field"><label>Time Out</label><input type="time" id="admin-to-correct-out-' + key + '" value="' + outHH + ':' + outMM + '"></div>'
+      + '<div class="to-correct-field"><label>Time In</label><input type="time" id="admin-to-correct-in-' + key + '" value="' + inHH + ':' + inMM + '"></div>'
+      + '<button class="btn-primary" style="width:100%;margin:0;" onclick="adminSaveTimeOffCorrection(\'' + key + '\', ' + r.id + ')">Save</button>'
       + '</div>';
   }
   function timeoffRenderVoidedRow(r, showName) {

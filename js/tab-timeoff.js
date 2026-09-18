@@ -283,10 +283,10 @@ function renderTimeOffRow(r, myEmailLow, canManageAll, sectionKey) {
     var inD = new Date(r.time_in);
     var inHH = String(inD.getHours()).padStart(2, '0');
     var inMM = String(inD.getMinutes()).padStart(2, '0');
-    html += '<div class="to-correct-row" id="to-correct-row-' + key + '" style="display:none;flex-wrap:wrap;">'
-      + '<div style="flex:1;min-width:90px;margin-right:12px;"><label style="font-size:9px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;">Time Out</label><input type="time" id="to-correct-out-' + key + '" value="' + outHH + ':' + outMM + '" style="width:100%;"></div>'
-      + '<div style="flex:1;min-width:90px;margin-right:12px;"><label style="font-size:9px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;">Time In</label><input type="time" id="to-correct-in-' + key + '" value="' + inHH + ':' + inMM + '" style="width:100%;"></div>'
-      + '<button class="book-btn-primary" style="width:auto;margin:0;padding:8px 12px;align-self:flex-end;" onclick="saveTimeOffCorrection(\'' + key + '\', ' + r.id + ')">Save</button>'
+    html += '<div class="to-correct-row" id="to-correct-row-' + key + '" style="display:none;">'
+      + '<div class="to-correct-field"><label>Time Out</label><input type="time" id="to-correct-out-' + key + '" value="' + outHH + ':' + outMM + '"></div>'
+      + '<div class="to-correct-field"><label>Time In</label><input type="time" id="to-correct-in-' + key + '" value="' + inHH + ':' + inMM + '"></div>'
+      + '<button class="book-btn-primary" style="width:100%;margin:0;" onclick="saveTimeOffCorrection(\'' + key + '\', ' + r.id + ')">Save</button>'
       + '</div>';
   }
 

@@ -97,7 +97,13 @@
     max-width: 430px;
     background: var(--surface);
     position: relative; display: flex; flex-direction: column;
-    min-height: 100vh;
+    /* Must be a bounded height (not min-height) so .screen-body's flex:1
+       actually caps its box and scrolls internally -- otherwise .phone
+       just grows past the viewport with tall tab content, and the sticky
+       bottom nav ends up floating over the last chunk of that content
+       instead of sitting in its own reserved space below it. */
+    height: 100vh;
+    height: 100dvh;
   }
   .status-bar {
     background: var(--green-dark); color: #fff;
@@ -551,8 +557,16 @@
   .to-history-reason { font-size: 12.5px; font-weight: 700; color: var(--text-primary); }
   .to-history-time { font-size: 10.5px; color: var(--text-secondary); }
   .to-edit-icon { flex-shrink: 0; cursor: pointer; color: var(--text-secondary); font-size: 14px; padding: 4px 6px; margin: -4px -6px; }
-  .to-correct-row { display: flex; margin-top: 8px; align-items: flex-end; }
-  .to-correct-row input { width: 100%; box-sizing: border-box; border: 1px solid var(--blue-text); border-radius: 8px; padding: 6px 8px; font-size: 12px; font-family: inherit; }
+  /* Stacked (not side-by-side) so the two time fields never have to share a
+     cramped row -- a side-by-side layout depended on a precise pixel gap
+     between two native time-picker widgets, which some mobile browsers
+     render wider than their CSS box, swallowing the gap entirely. Vertical
+     spacing uses margin-bottom (not flex `gap`, which collapsed to zero on
+     some WebViews the app runs in -- see admin.html's history on this rule). */
+  .to-correct-row { display: flex; flex-direction: column; margin-top: 8px; }
+  .to-correct-field { margin-bottom: 8px; }
+  .to-correct-field label { display: block; font-size: 9px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 4px; }
+  .to-correct-row input { width: 100%; box-sizing: border-box; border: 1px solid var(--blue-text); border-radius: 8px; padding: 8px 10px; font-size: 13px; font-family: inherit; }
   .to-toggle-row { width: 100%; display: flex; align-items: center; justify-content: space-between; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 13px 14px; margin: 16px 0 8px; font-family: inherit; cursor: pointer; }
   .to-toggle-left { display: flex; align-items: center; gap: 10px; }
   .to-toggle-ic { width: 34px; height: 34px; border-radius: var(--radius-md); background: var(--blue-bg); color: var(--blue-text); display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
