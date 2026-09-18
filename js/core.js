@@ -154,8 +154,17 @@ function initScrollHideNav() {
 function initPullToRefresh() {
   var THRESHOLD = 70;
   var SETTLE_MS = 400; // see lastScrollTs below
-  var startY = null, pulling = false, refreshing = false;
+  var refreshing = false;
   var lastScrollTs = 0;
+
+  // touchActive: a finger is down, regardless of whether the gesture has
+  // turned into a pull yet. armed: it has -- scrollTop hit 0 partway
+  // through this same drag and we're now tracking pull distance from that
+  // moment, not from the original touchstart. startY anchors the
+  // direction check before arming; pullBaseY anchors the distance once
+  // armed, so reaching the top mid-scroll doesn't hand the gesture a
+  // head start it never earned.
+  var touchActive = false, armed = false, blockArm = false, startY = null, pullBaseY = null;
 
   var indicator = document.createElement('div');
   indicator.id = 'ptr-indicator';
@@ -167,42 +176,70 @@ function initPullToRefresh() {
   style.textContent = '@keyframes ptr-spin { to { transform: rotate(360deg); } }';
   document.head.appendChild(style);
 
+  // Checks both the inner list and the page itself, in case anything above
+  // us ever leaves the outer page scrollable too -- either one still
+  // having room to scroll means "not at the top yet."
   function scrollTop() {
     var body = document.querySelector('.screen-body');
-    return body ? body.scrollTop : 0;
+    var bodyTop = body ? body.scrollTop : 0;
+    var pageTop = (document.scrollingElement || document.documentElement).scrollTop;
+    return Math.max(bodyTop, pageTop);
   }
 
   // A flick that scrolls a list up to the top arrives at scrollTop 0 via
   // momentum, after the finger has already lifted. Someone continuing to
-  // swipe down out of habit right after that lands a new touch that also
-  // reads scrollTop 0, which used to arm the refresh even though they just
-  // meant to keep scrolling. Tracking the most recent scroll and requiring
-  // a brief idle gap before arming gives that momentum time to settle
-  // first, so only a pull starting from a genuine rest at the top counts.
+  // swipe down out of habit right after that lands a NEW touch that also
+  // begins at scrollTop 0, which used to arm the refresh even though they
+  // just meant to keep scrolling. Requiring a brief idle gap since the
+  // last scroll before a touch that STARTS at the top is allowed to arm
+  // gives that momentum time to settle first. This only gates touches
+  // that begin already at rest -- a touch that reaches the top through
+  // its own ongoing drag arms immediately, since the drag's own scroll
+  // events keep this timer fresh and would otherwise stall a completely
+  // normal continuous pull.
   var body = document.querySelector('.screen-body');
   if (body) {
     body.addEventListener('scroll', function() { lastScrollTs = Date.now(); }, { passive: true });
   }
 
   document.addEventListener('touchstart', function(e) {
-    if (refreshing || scrollTop() > 0 || (Date.now() - lastScrollTs) < SETTLE_MS) { pulling = false; return; }
+    if (refreshing) { touchActive = false; return; }
+    touchActive = true;
+    armed = false;
+    pullBaseY = null;
     startY = e.touches[0].clientY;
-    pulling = true;
+    blockArm = scrollTop() === 0 && (Date.now() - lastScrollTs) < SETTLE_MS;
   }, { passive: true });
 
   document.addEventListener('touchmove', function(e) {
-    if (!pulling || startY === null) return;
-    var dy = e.touches[0].clientY - startY;
-    if (dy <= 0) { indicator.style.height = '0px'; return; }
+    if (!touchActive) return;
+    var curY = e.touches[0].clientY;
+
+    if (!armed) {
+      // Only consider arming once the drag is actually headed downward --
+      // dragging up while already at the top (nothing above to reveal)
+      // shouldn't count. Until scrollTop genuinely hits 0, this branch
+      // never preventDefault()s, so the list keeps scrolling normally the
+      // whole way up.
+      if (!blockArm && curY - startY > 0 && scrollTop() === 0) {
+        armed = true;
+        pullBaseY = curY;
+      } else {
+        return;
+      }
+    }
+
+    var dy = curY - pullBaseY;
     e.preventDefault();
-    indicator.style.height = Math.min(dy * 0.5, THRESHOLD + 20) + 'px';
+    indicator.style.height = Math.min(Math.max(dy, 0) * 0.5, THRESHOLD + 20) + 'px';
   }, { passive: false });
 
   document.addEventListener('touchend', function() {
-    if (!pulling) return;
+    touchActive = false;
+    if (!armed) return;
     var pulled = parseInt(indicator.style.height, 10) || 0;
-    pulling = false;
-    startY = null;
+    armed = false;
+    pullBaseY = null;
     if (pulled >= THRESHOLD) {
       refreshing = true;
       indicator.style.height = '50px';
