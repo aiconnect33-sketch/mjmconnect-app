@@ -383,6 +383,14 @@ html, body {
 .to-correct-row { display: flex; margin-top: 8px; align-items: flex-end; }
 .to-correct-row input { width: 100%; box-sizing: border-box; border: 1px solid var(--blue-text); border-radius: 8px; padding: 6px 8px; font-size: 12px; font-family: inherit; }
 .to-edit-icon { flex-shrink: 0; cursor: pointer; color: var(--text3); font-size: 14px; padding: 4px 6px; margin: -4px -6px; }
+.to-toggle-row { width: 100%; display: flex; align-items: center; justify-content: space-between; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 13px 14px; margin: 16px 0 8px; font-family: inherit; cursor: pointer; }
+.to-toggle-left { display: flex; align-items: center; gap: 10px; }
+.to-toggle-ic { width: 34px; height: 34px; border-radius: var(--r-md); background: var(--blue-bg); color: var(--blue-text); display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+.to-toggle-title { font-size: 13.5px; font-weight: 700; color: var(--text); text-align: left; }
+.to-toggle-sub { font-size: 10.5px; color: var(--text2); text-align: left; }
+.to-toggle-chev { font-size: 11px; color: var(--text3); transition: transform .15s ease; }
+.to-day-label { font-size: 10px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.04em; margin: 10px 0 6px; }
+.to-cancel-toggle { width: 100%; margin-top: 2px; background: none; border: 1px dashed var(--border); color: var(--text2); font-size: 11px; font-weight: 600; border-radius: var(--r-md); padding: 8px; font-family: inherit; cursor: pointer; }
 
 /* ── BOOKING TAB (native to Admin) ── */
 .book-inline-form {
@@ -1589,14 +1597,11 @@ html, body {
       </div>
 
       <div class="sec-hdr" style="margin-top:16px;">
-        <div class="sec-title">This Month — Overview</div>
+        <div class="sec-title">Staff Overview</div>
       </div>
       <div id="timeoff-overview">
       </div>
 
-      <div class="sec-hdr" style="margin-top:16px;">
-        <div class="sec-title">This Month — All Records</div>
-      </div>
       <div id="timeoff-list">
       </div>
 
@@ -4997,6 +5002,107 @@ html, body {
     return h + 'h ' + String(m).padStart(2, '0') + 'm';
   }
 
+  // ── Time Off — shared "tap to expand" helpers for My Records / All Records ──
+  // Both sections start collapsed to a one-line summary; each keeps its own
+  // open/cancelled-visible state across re-renders (e.g. after saving a
+  // correction) so the accordion doesn't snap shut on the admin mid-edit.
+  var timeoffMineOpen = false, timeoffAllOpen = false;
+  var timeoffMineCancelledOpen = false, timeoffAllCancelledOpen = false;
+  var timeoffMineDataCache = [], timeoffAllDataCache = [];
+
+  function timeoffToggleRowHtml(icon, title, summary, isOpen, onclickFn) {
+    return '<button class="to-toggle-row" onclick="' + onclickFn + '">'
+      + '<div class="to-toggle-left"><div class="to-toggle-ic">' + icon + '</div>'
+      + '<div><div class="to-toggle-title">' + title + '</div><div class="to-toggle-sub">' + escHtml(summary) + '</div></div></div>'
+      + '<span class="to-toggle-chev" style="' + (isOpen ? 'transform:rotate(180deg);' : '') + '">▾</span>'
+      + '</button>';
+  }
+  function timeoffCancelToggleHtml(count, isOpen, onclickFn) {
+    if (!count) return '';
+    return '<button class="to-cancel-toggle" onclick="' + onclickFn + '">' + (isOpen ? 'Hide ' : 'Show ') + count + ' cancelled</button>';
+  }
+  function timeoffGroupByDate(records, today) {
+    var groups = [], byLabel = {};
+    records.forEach(function (r) {
+      var out = new Date(r.time_out);
+      var label = localDateStr(out) === today ? 'Today' : out.toLocaleDateString('en-MY', { day: 'numeric', month: 'short' });
+      if (!byLabel[label]) { byLabel[label] = { label: label, items: [] }; groups.push(byLabel[label]); }
+      byLabel[label].items.push(r);
+    });
+    return groups;
+  }
+  // key namespaces the correction row's DOM ids by section ('mine-<id>' /
+  // 'all-<id>') -- an admin's own record appears in both lists, and without
+  // this, both correction rows would collide on the same element id.
+  function timeoffCorrectionRowHtml(key, r) {
+    var outD = new Date(r.time_out), inD = new Date(r.time_in);
+    var outHH = String(outD.getHours()).padStart(2, '0'), outMM = String(outD.getMinutes()).padStart(2, '0');
+    var inHH = String(inD.getHours()).padStart(2, '0'), inMM = String(inD.getMinutes()).padStart(2, '0');
+    return '<div class="to-correct-row" id="admin-to-correct-row-' + key + '" style="display:none;flex-wrap:wrap;">'
+      + '<div style="flex:1;min-width:90px;margin-right:12px;"><label style="font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase;">Time Out</label><input type="time" id="admin-to-correct-out-' + key + '" value="' + outHH + ':' + outMM + '" style="width:100%;"></div>'
+      + '<div style="flex:1;min-width:90px;margin-right:12px;"><label style="font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase;">Time In</label><input type="time" id="admin-to-correct-in-' + key + '" value="' + inHH + ':' + inMM + '" style="width:100%;"></div>'
+      + '<button class="btn-primary" style="width:auto;margin:0;padding:8px 12px;align-self:flex-end;" onclick="adminSaveTimeOffCorrection(\'' + key + '\', ' + r.id + ')">Save</button>'
+      + '</div>';
+  }
+  function timeoffRenderVoidedRow(r, showName) {
+    var timeLabel = adminFormatClock(new Date(r.time_out)) + (r.time_in ? ' → ' + adminFormatClock(new Date(r.time_in)) : ' → still out');
+    var label = showName ? (escHtml(r.staff_name) + ' — ' + escHtml(r.reason)) : escHtml(r.reason);
+    return '<div class="to-history-row" style="opacity:0.6;">'
+      + '<div class="to-history-top"><div class="to-history-reason" style="text-decoration:line-through;">' + label + '</div>'
+      + '<span class="badge" style="background:var(--bg);color:var(--text3);">Voided</span></div>'
+      + '<div class="to-history-time">' + timeLabel + ' — moved to Annual Leave</div></div>';
+  }
+  function timeoffRenderAllRow(r) {
+    var timeLabel = adminFormatClock(new Date(r.time_out)) + (r.time_in ? ' → ' + adminFormatClock(new Date(r.time_in)) : ' → still out');
+    var badge = r.duration_minutes > 150 ? '<span class="badge b-red">' + fmtTimeOffDuration(r.duration_minutes) + '</span>' : '<span class="badge b-blue">' + fmtTimeOffDuration(r.duration_minutes || 0) + '</span>';
+    var entryNote = r.entry_type === 'edited' ? ' <span style="color:var(--amber-text);font-weight:700;">(edited)</span>' : r.entry_type === 'backfilled' ? ' <span style="color:var(--red-text);font-weight:700;">(backfilled)</span>' : '';
+    var canCorrect = !!r.time_in;
+    var key = 'all-' + r.id;
+    var editIcon = canCorrect ? '<div class="to-edit-icon" onclick="adminToggleTimeOffCorrection(\'' + key + '\')" title="Correct Time In"><i class="ti ti-pencil"></i></div>' : '';
+    var html = '<div class="to-history-row">'
+      + '<div class="to-history-top">'
+      + '<div style="flex:1;min-width:0;display:flex;align-items:center;gap:6px;">'
+      + '<div class="to-history-reason">' + escHtml(r.staff_name) + ' — ' + escHtml(r.reason) + '</div>' + editIcon
+      + '</div>' + badge + '</div>'
+      + '<div class="to-history-time">' + timeLabel + entryNote + '</div>';
+    if (canCorrect) html += timeoffCorrectionRowHtml(key, r);
+    html += '</div>';
+    return html;
+  }
+  function renderTimeOffAllRecordsSection(data, today) {
+    timeoffAllDataCache = data;
+    var nonVoided = data.filter(function (r) { return r.entry_type !== 'voided'; });
+    var voided = data.filter(function (r) { return r.entry_type === 'voided'; });
+    var staffSet = {}; data.forEach(function (r) { staffSet[r.staff_name] = 1; });
+    var staffTotal = Object.keys(staffSet).length;
+    var summary = timeoffAllOpen ? 'Tap to collapse'
+      : (data.length ? (data.length + (data.length === 1 ? ' entry' : ' entries') + ' this month · ' + staffTotal + (staffTotal === 1 ? ' staff' : ' staff')) : 'No entries this month');
+    var html = timeoffToggleRowHtml('👥', 'All Records', summary, timeoffAllOpen, 'toggleTimeOffAll()');
+    if (timeoffAllOpen) {
+      if (!data.length) {
+        html += '<div style="font-size:12px;color:var(--text3);text-align:center;padding:14px 0;">No Time Off logged this month.</div>';
+      } else {
+        timeoffGroupByDate(nonVoided, today).forEach(function (g) {
+          html += '<div class="to-day-label">' + escHtml(g.label) + '</div>';
+          g.items.forEach(function (r) { html += timeoffRenderAllRow(r); });
+        });
+        html += timeoffCancelToggleHtml(voided.length, timeoffAllCancelledOpen, 'toggleTimeOffAllCancelled()');
+        if (timeoffAllCancelledOpen) voided.forEach(function (r) { html += timeoffRenderVoidedRow(r, true); });
+      }
+    }
+    return html;
+  }
+  function toggleTimeOffAll() {
+    timeoffAllOpen = !timeoffAllOpen;
+    var el = document.getElementById('timeoff-list');
+    if (el) el.innerHTML = renderTimeOffAllRecordsSection(timeoffAllDataCache, localDateStr());
+  }
+  function toggleTimeOffAllCancelled() {
+    timeoffAllCancelledOpen = !timeoffAllCancelledOpen;
+    var el = document.getElementById('timeoff-list');
+    if (el) el.innerHTML = renderTimeOffAllRecordsSection(timeoffAllDataCache, localDateStr());
+  }
+
   async function loadDbTimeOff() {
     var overviewEl = document.getElementById('timeoff-overview');
     var listEl = document.getElementById('timeoff-list');
@@ -5008,7 +5114,7 @@ html, body {
       if (!data) return;
       if (!data.length) {
         if (overviewEl) overviewEl.innerHTML = '<div class="card"><div style="font-size:12px;color:var(--text3);text-align:center;padding:14px 0;">No Time Off logged this month.</div></div>';
-        if (listEl) listEl.innerHTML = '';
+        if (listEl) listEl.innerHTML = renderTimeOffAllRecordsSection([], today);
         return;
       }
 
@@ -5034,43 +5140,7 @@ html, body {
         }).join('') + '</div>';
       }
 
-      if (listEl) {
-        listEl.innerHTML = data.map(function (r) {
-          var out = new Date(r.time_out);
-          var dLabel = out.toLocaleDateString('en-MY', { day: 'numeric', month: 'short' });
-          var timeLabel = out.toLocaleTimeString('en-MY', { hour: 'numeric', minute: '2-digit' })
-            + (r.time_in ? ' → ' + new Date(r.time_in).toLocaleTimeString('en-MY', { hour: 'numeric', minute: '2-digit' }) : ' → still out');
-          var voided = r.entry_type === 'voided';
-          var badge = voided
-            ? '<span class="badge" style="background:var(--bg);color:var(--text3);">Voided</span>'
-            : (r.duration_minutes > 150 ? '<span class="badge b-red">' + fmtTimeOffDuration(r.duration_minutes) + '</span>' : '<span class="badge b-blue">' + fmtTimeOffDuration(r.duration_minutes || 0) + '</span>');
-          var canCorrect = !voided && r.time_in;
-          var editIcon = canCorrect
-            ? '<div class="to-edit-icon" onclick="adminToggleTimeOffCorrection(' + r.id + ')" title="Correct Time In"><i class="ti ti-pencil"></i></div>'
-            : '';
-
-          var row = '<div class="to-history-row" style="' + (voided ? 'opacity:0.6;' : '') + '">'
-            + '<div class="to-history-top">'
-            + '<div style="flex:1;min-width:0;display:flex;align-items:center;gap:6px;">'
-            + '<div class="to-history-reason" style="' + (voided ? 'text-decoration:line-through;' : '') + '">' + escHtml(r.staff_name) + ' — ' + escHtml(r.reason) + '</div>' + editIcon
-            + '</div>' + badge + '</div>'
-            + '<div class="to-history-time">' + dLabel + ' · ' + timeLabel + (r.entry_type === 'edited' ? ' · edited' : r.entry_type === 'backfilled' ? ' · backfilled' : '') + '</div>';
-
-          if (canCorrect) {
-            var outHH = String(new Date(r.time_out).getHours()).padStart(2, '0');
-            var outMM = String(new Date(r.time_out).getMinutes()).padStart(2, '0');
-            var inHH = String(new Date(r.time_in).getHours()).padStart(2, '0');
-            var inMM = String(new Date(r.time_in).getMinutes()).padStart(2, '0');
-            row += '<div class="to-correct-row" id="admin-to-correct-row-' + r.id + '" style="display:none;flex-wrap:wrap;">'
-              + '<div style="flex:1;min-width:90px;margin-right:12px;"><label style="font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase;">Time Out</label><input type="time" id="admin-to-correct-out-' + r.id + '" value="' + outHH + ':' + outMM + '" style="width:100%;"></div>'
-              + '<div style="flex:1;min-width:90px;margin-right:12px;"><label style="font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase;">Time In</label><input type="time" id="admin-to-correct-in-' + r.id + '" value="' + inHH + ':' + inMM + '" style="width:100%;"></div>'
-              + '<button class="btn-primary" style="width:auto;margin:0;padding:8px 12px;align-self:flex-end;" onclick="adminSaveTimeOffCorrection(' + r.id + ')">Save</button>'
-              + '</div>';
-          }
-          row += '</div>';
-          return row;
-        }).join('');
-      }
+      if (listEl) listEl.innerHTML = renderTimeOffAllRecordsSection(data, today);
     } catch (e) { /* Supabase not reachable */ }
   }
 
@@ -5180,58 +5250,66 @@ html, body {
     return html;
   }
 
-  function renderAdminTimeOffRecords(records, today) {
-    if (!records.length) return '<div style="font-size:12px;color:var(--text3);text-align:center;padding:14px 0;">No Time Off logged this month.</div>';
-    var html = '';
-    records.forEach(function (r) {
-      var out = new Date(r.time_out);
-      var dateLabel = localDateStr(out) === today ? 'Today' : out.toLocaleDateString('en-MY', { day: 'numeric', month: 'short' });
-      var timeLabel = adminFormatClock(out) + (r.time_in ? ' → ' + adminFormatClock(new Date(r.time_in)) : ' → still out');
-      var voided = r.entry_type === 'voided';
-      var badge = voided
-        ? '<span class="badge" style="background:var(--bg);color:var(--text3);">Voided</span>'
-        : (r.duration_minutes > 150 ? '<span class="badge b-red">' + fmtTimeOffDuration(r.duration_minutes) + '</span>' : '<span class="badge b-blue">' + fmtTimeOffDuration(r.duration_minutes || 0) + '</span>');
-      var entryNote = r.entry_type === 'edited' ? ' <span style="color:var(--amber-text);font-weight:700;">(edited)</span>'
-        : r.entry_type === 'backfilled' ? ' <span style="color:var(--red-text);font-weight:700;">(backfilled)</span>'
-        : voided ? ' <span style="color:var(--text3);">— moved to Annual Leave</span>' : '';
-
-      var canCorrect = !voided && r.time_in;
-      var editIcon = canCorrect
-        ? '<div class="to-edit-icon" onclick="adminToggleTimeOffCorrection(' + r.id + ')" title="Correct Time In"><i class="ti ti-pencil"></i></div>'
-        : '';
-
-      html += '<div class="to-history-row" style="' + (voided ? 'opacity:0.6;' : '') + '">'
-        + '<div class="to-history-top">'
-        + '<div style="flex:1;min-width:0;display:flex;align-items:center;gap:6px;">'
-        + '<div class="to-history-reason" style="' + (voided ? 'text-decoration:line-through;' : '') + '">' + escHtml(r.reason) + '</div>' + editIcon
-        + '</div>' + badge + '</div>'
-        + '<div class="to-history-time">' + dateLabel + ' · ' + timeLabel + entryNote + '</div>';
-
-      if (canCorrect) {
-        var outHH = String(new Date(r.time_out).getHours()).padStart(2, '0');
-        var outMM = String(new Date(r.time_out).getMinutes()).padStart(2, '0');
-        var inHH = String(new Date(r.time_in).getHours()).padStart(2, '0');
-        var inMM = String(new Date(r.time_in).getMinutes()).padStart(2, '0');
-        html += '<div class="to-correct-row" id="admin-to-correct-row-' + r.id + '" style="display:none;flex-wrap:wrap;">'
-          + '<div style="flex:1;min-width:90px;margin-right:12px;"><label style="font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase;">Time Out</label><input type="time" id="admin-to-correct-out-' + r.id + '" value="' + outHH + ':' + outMM + '" style="width:100%;"></div>'
-          + '<div style="flex:1;min-width:90px;margin-right:12px;"><label style="font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase;">Time In</label><input type="time" id="admin-to-correct-in-' + r.id + '" value="' + inHH + ':' + inMM + '" style="width:100%;"></div>'
-          + '<button class="btn-primary" style="width:auto;margin:0;padding:8px 12px;align-self:flex-end;" onclick="adminSaveTimeOffCorrection(' + r.id + ')">Save</button>'
-          + '</div>';
-      }
-      if (!voided && r.duration_minutes > 150) {
-        html += '<div class="to-warn red">'
-          + '<b>⚠ This trip ran ' + fmtTimeOffDuration(r.duration_minutes) + ' — over the 2.5h single-application limit.</b>'
-          + 'The whole trip needs to go through Annual Leave instead of Time Off.'
-          + '<button style="width:100%;margin-top:10px;background:var(--red-text);color:#fff;border:none;border-radius:var(--r-sm);padding:9px;font-size:11.5px;font-weight:700;" onclick="adminVoidTimeOff(' + r.id + ')">↩ Cancel This Trip</button>'
-          + '</div>';
-      }
-      html += '</div>';
-    });
+  function timeoffRenderMineRow(r) {
+    var timeLabel = adminFormatClock(new Date(r.time_out)) + (r.time_in ? ' → ' + adminFormatClock(new Date(r.time_in)) : ' → still out');
+    var badge = r.duration_minutes > 150 ? '<span class="badge b-red">' + fmtTimeOffDuration(r.duration_minutes) + '</span>' : '<span class="badge b-blue">' + fmtTimeOffDuration(r.duration_minutes || 0) + '</span>';
+    var entryNote = r.entry_type === 'edited' ? ' <span style="color:var(--amber-text);font-weight:700;">(edited)</span>' : r.entry_type === 'backfilled' ? ' <span style="color:var(--red-text);font-weight:700;">(backfilled)</span>' : '';
+    var canCorrect = !!r.time_in;
+    var key = 'mine-' + r.id;
+    var editIcon = canCorrect ? '<div class="to-edit-icon" onclick="adminToggleTimeOffCorrection(\'' + key + '\')" title="Correct Time In"><i class="ti ti-pencil"></i></div>' : '';
+    var html = '<div class="to-history-row">'
+      + '<div class="to-history-top">'
+      + '<div style="flex:1;min-width:0;display:flex;align-items:center;gap:6px;">'
+      + '<div class="to-history-reason">' + escHtml(r.reason) + '</div>' + editIcon
+      + '</div>' + badge + '</div>'
+      + '<div class="to-history-time">' + timeLabel + entryNote + '</div>';
+    if (canCorrect) html += timeoffCorrectionRowHtml(key, r);
+    if (r.duration_minutes > 150) {
+      html += '<div class="to-warn red">'
+        + '<b>⚠ This trip ran ' + fmtTimeOffDuration(r.duration_minutes) + ' — over the 2.5h single-application limit.</b>'
+        + 'The whole trip needs to go through Annual Leave instead of Time Off.'
+        + '<button style="width:100%;margin-top:10px;background:var(--red-text);color:#fff;border:none;border-radius:var(--r-sm);padding:9px;font-size:11.5px;font-weight:700;" onclick="adminVoidTimeOff(' + r.id + ')">↩ Cancel This Trip</button>'
+        + '</div>';
+    }
+    html += '</div>';
     return html;
   }
 
-  function adminToggleTimeOffCorrection(id) {
-    var row = document.getElementById('admin-to-correct-row-' + id);
+  function renderAdminTimeOffRecords(records, today) {
+    timeoffMineDataCache = records;
+    var nonVoided = records.filter(function (r) { return r.entry_type !== 'voided'; });
+    var voided = records.filter(function (r) { return r.entry_type === 'voided'; });
+    var totalMinutes = nonVoided.reduce(function (sum, r) { return sum + (r.duration_minutes || 0); }, 0);
+    var summary = timeoffMineOpen ? 'Tap to collapse'
+      : (records.length ? (records.length + (records.length === 1 ? ' entry' : ' entries') + ' this month · ' + fmtTimeOffDuration(totalMinutes)) : 'No entries this month');
+    var html = timeoffToggleRowHtml('🗂', 'My Records', summary, timeoffMineOpen, 'toggleTimeOffMine()');
+    if (timeoffMineOpen) {
+      if (!records.length) {
+        html += '<div style="font-size:12px;color:var(--text3);text-align:center;padding:14px 0;">No Time Off logged this month.</div>';
+      } else {
+        timeoffGroupByDate(nonVoided, today).forEach(function (g) {
+          html += '<div class="to-day-label">' + escHtml(g.label) + '</div>';
+          g.items.forEach(function (r) { html += timeoffRenderMineRow(r); });
+        });
+        html += timeoffCancelToggleHtml(voided.length, timeoffMineCancelledOpen, 'toggleTimeOffMineCancelled()');
+        if (timeoffMineCancelledOpen) voided.forEach(function (r) { html += timeoffRenderVoidedRow(r, false); });
+      }
+    }
+    return html;
+  }
+  function toggleTimeOffMine() {
+    timeoffMineOpen = !timeoffMineOpen;
+    var el = document.getElementById('admin-timeoff-my-records');
+    if (el) el.innerHTML = renderAdminTimeOffRecords(timeoffMineDataCache, localDateStr());
+  }
+  function toggleTimeOffMineCancelled() {
+    timeoffMineCancelledOpen = !timeoffMineCancelledOpen;
+    var el = document.getElementById('admin-timeoff-my-records');
+    if (el) el.innerHTML = renderAdminTimeOffRecords(timeoffMineDataCache, localDateStr());
+  }
+
+  function adminToggleTimeOffCorrection(key) {
+    var row = document.getElementById('admin-to-correct-row-' + key);
     if (!row) return;
     row.style.display = row.style.display === 'none' ? 'flex' : 'none';
   }
@@ -5268,9 +5346,9 @@ html, body {
     } catch (e) { alert('Could not record Time In. Please try again.'); }
   }
 
-  async function adminSaveTimeOffCorrection(id) {
-    var outInput = document.getElementById('admin-to-correct-out-' + id);
-    var inInput = document.getElementById('admin-to-correct-in-' + id);
+  async function adminSaveTimeOffCorrection(key, id) {
+    var outInput = document.getElementById('admin-to-correct-out-' + key);
+    var inInput = document.getElementById('admin-to-correct-in-' + key);
     if (!outInput || !inInput || !outInput.value || !inInput.value) return;
     try {
       var rows = await sbFetch('GET', '/rest/v1/time_off_records?id=eq.' + id);

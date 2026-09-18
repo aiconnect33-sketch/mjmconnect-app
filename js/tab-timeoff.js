@@ -91,9 +91,10 @@ async function loadTimeOff() {
 
   // ── TIME OFF TAB (open to all staff) ──
   var statusEl   = document.getElementById('timeoff-status');
+  var mineEl     = document.getElementById('timeoff-mine');
   var overviewEl = document.getElementById('timeoff-overview');
-  var recordsEl  = document.getElementById('timeoff-records');
-  if (!statusEl && !recordsEl) return;
+  var allEl      = document.getElementById('timeoff-all');
+  if (!statusEl && !mineEl && !allEl) return;
   if (!me.email) return;
 
   try {
@@ -120,14 +121,20 @@ async function loadTimeOff() {
       return sum + r.duration_minutes;
     }, 0);
 
-    var canManageAll = typeof hasEditPermission === 'function' && hasEditPermission('timeoff');
+    timeoffState.today = today;
+    timeoffState.myEmailLow = myEmailLow;
+    timeoffState.allRecords = allRecords;
+    timeoffState.canManageAll = typeof hasEditPermission === 'function' && hasEditPermission('timeoff');
+
     if (statusEl) statusEl.innerHTML = renderTimeOffStatus(openRecord, monthlyMinutes, dueReminders);
-    if (overviewEl) overviewEl.innerHTML = canManageAll ? renderTimeOffOverview(allRecords) : '';
-    if (recordsEl) recordsEl.innerHTML = renderTimeOffRecords(allRecords, today, myEmailLow, canManageAll);
+    if (mineEl) mineEl.innerHTML = renderTimeOffMineSection();
+    if (overviewEl) overviewEl.innerHTML = timeoffState.canManageAll ? renderTimeOffOverview(allRecords) : '';
+    if (allEl) allEl.innerHTML = renderTimeOffAllSection();
   } catch (e) {
     if (statusEl) statusEl.innerHTML = '<div class="card"><div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">Could not load your Time Off status.</div></div>';
+    if (mineEl) mineEl.innerHTML = '';
     if (overviewEl) overviewEl.innerHTML = '';
-    if (recordsEl) recordsEl.innerHTML = '';
+    if (allEl) allEl.innerHTML = '';
   }
 }
 
@@ -211,62 +218,167 @@ function renderTimeOffOverview(records) {
   return html;
 }
 
-function renderTimeOffRecords(records, today, myEmailLow, canManageAll) {
-  if (!records.length) return '<div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">No Time Off logged this month.</div>';
+// ── My Records / All Records — both start collapsed to a one-line summary,
+// tap to expand. State persists across re-renders (e.g. after a save) so
+// the accordion doesn't snap shut mid-edit. ──
+var timeoffState = {
+  today: '', myEmailLow: '', allRecords: [], canManageAll: false,
+  mineOpen: false, allOpen: false, mineCancelledOpen: false, allCancelledOpen: false
+};
 
-  var html = '<div class="section-row"><div class="section-title">This Month — Everyone</div></div>';
+function timeoffToggleRowHtml(icon, title, summary, isOpen, onclickFn) {
+  return '<button class="to-toggle-row" onclick="' + onclickFn + '">'
+    + '<div class="to-toggle-left"><div class="to-toggle-ic">' + icon + '</div>'
+    + '<div><div class="to-toggle-title">' + title + '</div><div class="to-toggle-sub">' + escHtml(summary) + '</div></div></div>'
+    + '<span class="to-toggle-chev" style="' + (isOpen ? 'transform:rotate(180deg);' : '') + '">▾</span>'
+    + '</button>';
+}
+function timeoffCancelToggleHtml(count, isOpen, onclickFn) {
+  if (!count) return '';
+  return '<button class="to-cancel-toggle" onclick="' + onclickFn + '">' + (isOpen ? 'Hide ' : 'Show ') + count + ' cancelled</button>';
+}
+function timeoffGroupByDate(records, today) {
+  var groups = [], byLabel = {};
   records.forEach(function (r) {
-    var isMine = r.staff_email && r.staff_email.toLowerCase() === myEmailLow;
-    var canManage = canManageAll || isMine;
     var out = new Date(r.time_out);
-    var dateLabel = localDateStr(out) === today ? 'Today' : out.toLocaleDateString('en-MY', { day: 'numeric', month: 'short' });
-    var timeLabel = formatClock(out) + (r.time_in ? ' → ' + formatClock(new Date(r.time_in)) : ' → still out');
-    var voided = r.entry_type === 'voided';
-    var badge = voided
-      ? '<span class="badge" style="background:var(--bg);color:var(--text-light);">Voided</span>'
-      : (r.duration_minutes > TIMEOFF_PER_TRIP_CAP_MIN
-        ? '<span class="badge badge-urgent">' + formatDuration(r.duration_minutes) + '</span>'
-        : '<span class="badge badge-blue">' + formatDuration(r.duration_minutes || 0) + '</span>');
-    var entryNote = r.entry_type === 'edited' ? ' <span style="color:var(--amber-text);font-weight:700;">(edited)</span>'
-      : r.entry_type === 'backfilled' ? ' <span style="color:var(--red-text);font-weight:700;">(backfilled)</span>'
-      : voided ? ' <span style="color:var(--text-light);">— moved to Annual Leave</span>' : '';
-    var reasonLabel = isMine ? escHtml(r.reason) : (escHtml(r.staff_name) + ' — ' + escHtml(r.reason));
-
-    var canCorrect = canManage && !voided && r.time_in;
-    var editIcon = canCorrect
-      ? '<div class="to-edit-icon" onclick="toggleTimeOffCorrection(' + r.id + ')" title="Correct Time In"><i class="ti ti-pencil"></i></div>'
-      : '';
-
-    html += '<div class="to-history-row" data-timeoff-id="' + escHtml(r.id) + '" data-staff-email="' + escHtml(r.staff_email || '') + '" style="' + (voided ? 'opacity:0.6;' : '') + '">'
-      + '<div class="to-history-top">'
-      + '<div style="flex:1;min-width:0;display:flex;align-items:center;gap:6px;">'
-      + '<div class="to-history-reason" style="' + (voided ? 'text-decoration:line-through;' : '') + '">' + reasonLabel + '</div>' + editIcon
-      + '</div>' + badge + '</div>'
-      + '<div class="to-history-time">' + dateLabel + ' · ' + timeLabel + entryNote + '</div>';
-
-    if (canCorrect) {
-      var outHH = String(out.getHours()).padStart(2, '0');
-      var outMM = String(out.getMinutes()).padStart(2, '0');
-      var inD = new Date(r.time_in);
-      var inHH = String(inD.getHours()).padStart(2, '0');
-      var inMM = String(inD.getMinutes()).padStart(2, '0');
-      html += '<div class="to-correct-row" id="to-correct-row-' + r.id + '" style="display:none;flex-wrap:wrap;">'
-        + '<div style="flex:1;min-width:90px;margin-right:12px;"><label style="font-size:9px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;">Time Out</label><input type="time" id="to-correct-out-' + r.id + '" value="' + outHH + ':' + outMM + '" style="width:100%;"></div>'
-        + '<div style="flex:1;min-width:90px;margin-right:12px;"><label style="font-size:9px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;">Time In</label><input type="time" id="to-correct-in-' + r.id + '" value="' + inHH + ':' + inMM + '" style="width:100%;"></div>'
-        + '<button class="book-btn-primary" style="width:auto;margin:0;padding:8px 12px;align-self:flex-end;" onclick="saveTimeOffCorrection(' + r.id + ')">Save</button>'
-        + '</div>';
-    }
-
-    if (canManage && !voided && r.duration_minutes > TIMEOFF_PER_TRIP_CAP_MIN) {
-      html += '<div class="to-warn red">'
-        + '<b>⚠ This trip ran ' + formatDuration(r.duration_minutes) + ' — over the 2.5h single-application limit.</b>'
-        + 'The whole trip needs to go through Annual Leave instead of Time Off.'
-        + '<button style="width:100%;margin-top:10px;background:var(--red-text);color:#fff;border:none;border-radius:var(--radius-sm);padding:9px;font-size:11.5px;font-weight:700;" onclick="voidTimeOff(' + r.id + ')">↩ Cancel This Trip</button>'
-        + '</div>';
-    }
-    html += '</div>';
+    var label = localDateStr(out) === today ? 'Today' : out.toLocaleDateString('en-MY', { day: 'numeric', month: 'short' });
+    if (!byLabel[label]) { byLabel[label] = { label: label, items: [] }; groups.push(byLabel[label]); }
+    byLabel[label].items.push(r);
   });
+  return groups;
+}
+
+// key namespaces the correction row's DOM ids by section ('mine-<id>' /
+// 'all-<id>') -- a record the viewer owns shows up in both My Records and
+// All Records, and without this, both correction rows would collide on the
+// same element id.
+function renderTimeOffRow(r, myEmailLow, canManageAll, sectionKey) {
+  var isMine = r.staff_email && r.staff_email.toLowerCase() === myEmailLow;
+  var canManage = canManageAll || isMine;
+  var out = new Date(r.time_out);
+  var timeLabel = formatClock(out) + (r.time_in ? ' → ' + formatClock(new Date(r.time_in)) : ' → still out');
+  var badge = r.duration_minutes > TIMEOFF_PER_TRIP_CAP_MIN
+    ? '<span class="badge badge-urgent">' + formatDuration(r.duration_minutes) + '</span>'
+    : '<span class="badge badge-blue">' + formatDuration(r.duration_minutes || 0) + '</span>';
+  var entryNote = r.entry_type === 'edited' ? ' <span style="color:var(--amber-text);font-weight:700;">(edited)</span>'
+    : r.entry_type === 'backfilled' ? ' <span style="color:var(--red-text);font-weight:700;">(backfilled)</span>' : '';
+  var reasonLabel = isMine ? escHtml(r.reason) : (escHtml(r.staff_name) + ' — ' + escHtml(r.reason));
+  var key = sectionKey + '-' + r.id;
+
+  var canCorrect = canManage && !!r.time_in;
+  var editIcon = canCorrect
+    ? '<div class="to-edit-icon" onclick="toggleTimeOffCorrection(\'' + key + '\', ' + r.id + ')" title="Correct Time In"><i class="ti ti-pencil"></i></div>'
+    : '';
+
+  var html = '<div class="to-history-row" data-timeoff-id="' + escHtml(r.id) + '" data-staff-email="' + escHtml(r.staff_email || '') + '">'
+    + '<div class="to-history-top">'
+    + '<div style="flex:1;min-width:0;display:flex;align-items:center;gap:6px;">'
+    + '<div class="to-history-reason">' + reasonLabel + '</div>' + editIcon
+    + '</div>' + badge + '</div>'
+    + '<div class="to-history-time">' + timeLabel + entryNote + '</div>';
+
+  if (canCorrect) {
+    var outHH = String(out.getHours()).padStart(2, '0');
+    var outMM = String(out.getMinutes()).padStart(2, '0');
+    var inD = new Date(r.time_in);
+    var inHH = String(inD.getHours()).padStart(2, '0');
+    var inMM = String(inD.getMinutes()).padStart(2, '0');
+    html += '<div class="to-correct-row" id="to-correct-row-' + key + '" style="display:none;flex-wrap:wrap;">'
+      + '<div style="flex:1;min-width:90px;margin-right:12px;"><label style="font-size:9px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;">Time Out</label><input type="time" id="to-correct-out-' + key + '" value="' + outHH + ':' + outMM + '" style="width:100%;"></div>'
+      + '<div style="flex:1;min-width:90px;margin-right:12px;"><label style="font-size:9px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;">Time In</label><input type="time" id="to-correct-in-' + key + '" value="' + inHH + ':' + inMM + '" style="width:100%;"></div>'
+      + '<button class="book-btn-primary" style="width:auto;margin:0;padding:8px 12px;align-self:flex-end;" onclick="saveTimeOffCorrection(\'' + key + '\', ' + r.id + ')">Save</button>'
+      + '</div>';
+  }
+
+  if (canManage && r.duration_minutes > TIMEOFF_PER_TRIP_CAP_MIN) {
+    html += '<div class="to-warn red">'
+      + '<b>⚠ This trip ran ' + formatDuration(r.duration_minutes) + ' — over the 2.5h single-application limit.</b>'
+      + 'The whole trip needs to go through Annual Leave instead of Time Off.'
+      + '<button style="width:100%;margin-top:10px;background:var(--red-text);color:#fff;border:none;border-radius:var(--radius-sm);padding:9px;font-size:11.5px;font-weight:700;" onclick="voidTimeOff(' + r.id + ')">↩ Cancel This Trip</button>'
+      + '</div>';
+  }
+  html += '</div>';
   return html;
+}
+
+function renderTimeOffVoidedRow(r, myEmailLow) {
+  var isMine = r.staff_email && r.staff_email.toLowerCase() === myEmailLow;
+  var reasonLabel = isMine ? escHtml(r.reason) : (escHtml(r.staff_name) + ' — ' + escHtml(r.reason));
+  var out = new Date(r.time_out);
+  var timeLabel = formatClock(out) + (r.time_in ? ' → ' + formatClock(new Date(r.time_in)) : ' → still out');
+  return '<div class="to-history-row" style="opacity:0.6;">'
+    + '<div class="to-history-top"><div class="to-history-reason" style="text-decoration:line-through;">' + reasonLabel + '</div>'
+    + '<span class="badge" style="background:var(--bg);color:var(--text-light);">Voided</span></div>'
+    + '<div class="to-history-time">' + timeLabel + ' — moved to Annual Leave</div></div>';
+}
+
+function renderTimeOffMineSection() {
+  var myEmailLow = timeoffState.myEmailLow;
+  var today = timeoffState.today;
+  var mine = timeoffState.allRecords.filter(function (r) { return r.staff_email && r.staff_email.toLowerCase() === myEmailLow; });
+  var nonVoided = mine.filter(function (r) { return r.entry_type !== 'voided'; });
+  var voided = mine.filter(function (r) { return r.entry_type === 'voided'; });
+  var totalMinutes = nonVoided.reduce(function (sum, r) { return sum + (r.duration_minutes || 0); }, 0);
+  var summary = timeoffState.mineOpen ? 'Tap to collapse'
+    : (mine.length ? (mine.length + (mine.length === 1 ? ' entry' : ' entries') + ' this month · ' + formatDuration(totalMinutes)) : 'No entries this month');
+  var html = timeoffToggleRowHtml('🗂', 'My Records', summary, timeoffState.mineOpen, "toggleTimeOffSection('mine')");
+  if (timeoffState.mineOpen) {
+    if (!mine.length) {
+      html += '<div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">No Time Off logged this month.</div>';
+    } else {
+      timeoffGroupByDate(nonVoided, today).forEach(function (g) {
+        html += '<div class="to-day-label">' + escHtml(g.label) + '</div>';
+        g.items.forEach(function (r) { html += renderTimeOffRow(r, myEmailLow, timeoffState.canManageAll, 'mine'); });
+      });
+      html += timeoffCancelToggleHtml(voided.length, timeoffState.mineCancelledOpen, "toggleTimeOffCancelled('mine')");
+      if (timeoffState.mineCancelledOpen) voided.forEach(function (r) { html += renderTimeOffVoidedRow(r, myEmailLow); });
+    }
+  }
+  return html;
+}
+
+function renderTimeOffAllSection() {
+  var myEmailLow = timeoffState.myEmailLow;
+  var today = timeoffState.today;
+  var canManageAll = timeoffState.canManageAll;
+  var all = timeoffState.allRecords;
+  var nonVoided = all.filter(function (r) { return r.entry_type !== 'voided'; });
+  var voided = all.filter(function (r) { return r.entry_type === 'voided'; });
+  var staffSet = {}; all.forEach(function (r) { staffSet[r.staff_name] = 1; });
+  var staffTotal = Object.keys(staffSet).length;
+  var summary = timeoffState.allOpen ? 'Tap to collapse'
+    : (all.length ? (all.length + (all.length === 1 ? ' entry' : ' entries') + ' this month · ' + staffTotal + (staffTotal === 1 ? ' staff' : ' staff')) : 'No entries this month');
+  var html = timeoffToggleRowHtml('👥', 'All Records', summary, timeoffState.allOpen, "toggleTimeOffSection('all')");
+  if (timeoffState.allOpen) {
+    if (!all.length) {
+      html += '<div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">No Time Off logged this month.</div>';
+    } else {
+      timeoffGroupByDate(nonVoided, today).forEach(function (g) {
+        html += '<div class="to-day-label">' + escHtml(g.label) + '</div>';
+        g.items.forEach(function (r) { html += renderTimeOffRow(r, myEmailLow, canManageAll, 'all'); });
+      });
+      html += timeoffCancelToggleHtml(voided.length, timeoffState.allCancelledOpen, "toggleTimeOffCancelled('all')");
+      if (timeoffState.allCancelledOpen) voided.forEach(function (r) { html += renderTimeOffVoidedRow(r, myEmailLow); });
+    }
+  }
+  return html;
+}
+
+function rerenderTimeOffSections() {
+  var mineEl = document.getElementById('timeoff-mine');
+  var allEl = document.getElementById('timeoff-all');
+  if (mineEl) mineEl.innerHTML = renderTimeOffMineSection();
+  if (allEl) allEl.innerHTML = renderTimeOffAllSection();
+}
+function toggleTimeOffSection(which) {
+  if (which === 'mine') timeoffState.mineOpen = !timeoffState.mineOpen;
+  else timeoffState.allOpen = !timeoffState.allOpen;
+  rerenderTimeOffSections();
+}
+function toggleTimeOffCancelled(which) {
+  if (which === 'mine') timeoffState.mineCancelledOpen = !timeoffState.mineCancelledOpen;
+  else timeoffState.allCancelledOpen = !timeoffState.allCancelledOpen;
+  rerenderTimeOffSections();
 }
 
 // HR Admin/Super Admin, or a staff member granted "Time Off" edit permission,
@@ -280,17 +392,17 @@ function canManageTimeOff(id) {
   return !!(me.email && ownerEmail && me.email.toLowerCase() === ownerEmail.toLowerCase());
 }
 
-function toggleTimeOffCorrection(id) {
+function toggleTimeOffCorrection(key, id) {
   if (!canManageTimeOff(id)) return;
-  var row = document.getElementById('to-correct-row-' + id);
+  var row = document.getElementById('to-correct-row-' + key);
   if (!row) return;
   row.style.display = row.style.display === 'none' ? 'flex' : 'none';
 }
 
-async function saveTimeOffCorrection(id) {
+async function saveTimeOffCorrection(key, id) {
   if (!canManageTimeOff(id)) { alert('You can only edit your own Time Off records.'); return; }
-  var outInput = document.getElementById('to-correct-out-' + id);
-  var inInput  = document.getElementById('to-correct-in-' + id);
+  var outInput = document.getElementById('to-correct-out-' + key);
+  var inInput  = document.getElementById('to-correct-in-' + key);
   if (!outInput || !inInput || !outInput.value || !inInput.value) return;
   try {
     var rows = await fetch(SURL + '/rest/v1/time_off_records?id=eq.' + id, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } }).then(function (r) { return r.json(); });

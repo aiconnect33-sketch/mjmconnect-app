@@ -553,6 +553,14 @@
   .to-edit-icon { flex-shrink: 0; cursor: pointer; color: var(--text-secondary); font-size: 14px; padding: 4px 6px; margin: -4px -6px; }
   .to-correct-row { display: flex; margin-top: 8px; align-items: flex-end; }
   .to-correct-row input { width: 100%; box-sizing: border-box; border: 1px solid var(--blue-text); border-radius: 8px; padding: 6px 8px; font-size: 12px; font-family: inherit; }
+  .to-toggle-row { width: 100%; display: flex; align-items: center; justify-content: space-between; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 13px 14px; margin: 16px 0 8px; font-family: inherit; cursor: pointer; }
+  .to-toggle-left { display: flex; align-items: center; gap: 10px; }
+  .to-toggle-ic { width: 34px; height: 34px; border-radius: var(--radius-md); background: var(--blue-bg); color: var(--blue-text); display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+  .to-toggle-title { font-size: 13.5px; font-weight: 700; color: var(--text-primary); text-align: left; }
+  .to-toggle-sub { font-size: 10.5px; color: var(--text-secondary); text-align: left; }
+  .to-toggle-chev { font-size: 11px; color: var(--text-light); transition: transform .15s ease; }
+  .to-day-label { font-size: 10px; font-weight: 700; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.04em; margin: 10px 0 6px; }
+  .to-cancel-toggle { width: 100%; margin-top: 2px; background: none; border: 1px dashed var(--border); color: var(--text-secondary); font-size: 11px; font-weight: 600; border-radius: var(--radius-md); padding: 8px; font-family: inherit; cursor: pointer; }
 
   /* ── FAULTY COMPLAIN TAB ── */
   .fc-label-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; }
@@ -1067,11 +1075,13 @@
         <button class="book-btn-ghost" onclick="hideBackfillForm()">Cancel</button>
       </div>
 
-      <div id="timeoff-overview"></div>
-
-      <div id="timeoff-records">
+      <div id="timeoff-mine">
         <div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">Loading...</div>
       </div>
+
+      <div id="timeoff-overview"></div>
+
+      <div id="timeoff-all"></div>
     </div><!-- /timeoff -->
 
     <!-- ── BOOK ── -->
