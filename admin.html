@@ -6011,7 +6011,7 @@ html, body {
             + '<i class="ti ti-chevron-right home-summary-chev"></i>'
             + '</div>';
         } else {
-          leaveEl.innerHTML = '<div class="card"><div style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0;">No one on leave today.</div></div>';
+          leaveEl.innerHTML = '<div class="card" style="cursor:pointer;" onclick="switchTabByName(\'leave\')"><div style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0;">No one on leave today.</div></div>';
         }
       }
     } catch(e) {}
@@ -6029,7 +6029,7 @@ html, body {
             + '<i class="ti ti-chevron-right home-summary-chev"></i>'
             + '</div>';
         } else {
-          tripEl.innerHTML = '<div class="card"><div style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0;">No estate trips today.</div></div>';
+          tripEl.innerHTML = '<div class="card" style="cursor:pointer;" onclick="switchTabByName(\'estatetrip\')"><div style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0;">No estate trips today.</div></div>';
         }
       }
     } catch(e) {}
@@ -6047,7 +6047,7 @@ html, body {
             + '<i class="ti ti-chevron-right home-summary-chev"></i>'
             + '</div>';
         } else {
-          toEl.innerHTML = '<div class="card"><div style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0;">No one out right now.</div></div>';
+          toEl.innerHTML = '<div class="card" style="cursor:pointer;" onclick="switchTabByName(\'timeoff\')"><div style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0;">No one out right now.</div></div>';
         }
       }
     } catch(e) {}
