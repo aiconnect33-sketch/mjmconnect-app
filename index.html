@@ -108,11 +108,18 @@
   .status-bar {
     background: var(--green-dark); color: #fff;
     font-size: 11px; font-weight: 500;
-    padding: 10px 20px 6px;
+    padding: 4px 20px 2px;
     display: flex; justify-content: space-between; align-items: center;
     flex-shrink: 0;
   }
-  .status-bar .status-icons { display: flex; align-items: center; gap: 5px; }
+  /* Real devices already show their own clock/wifi/battery above this, so
+     this mock-phone chrome just duplicates it. Only the clock text and
+     icons are hidden (not the bar itself) so the green background still
+     fills the space -- hiding the whole bar left a bare white gap where
+     its background used to be, and deleting it outright once shifted
+     every screen's layout up and had to be reverted. */
+  .status-bar #js-clock { visibility: hidden; }
+  .status-bar .status-icons { display: flex; align-items: center; gap: 5px; visibility: hidden; }
   .status-bar .status-icons i { font-size: 13px; }
   .top-bar {
     background: var(--green-dark);
@@ -128,7 +135,7 @@
     flex-shrink: 0;
   }
   .wordmark-icon i { font-size: 17px; color: #fff; }
-  .app-name { font-family: 'Poppins', sans-serif; font-size: 16px; font-weight: 700; color: #fff; letter-spacing: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .app-name { font-family: 'Poppins', sans-serif; font-size: 18px; font-weight: 700; color: #fff; letter-spacing: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
   .app-name span { color: var(--green-light); font-weight: 500; }
   .wm-badge {
     font-size: 9px; font-weight: 700;

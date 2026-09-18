@@ -90,11 +90,18 @@ html, body {
   background: var(--green);
   color: #E1F5EE;
   font-size: 11px; font-weight: 500;
-  padding: 10px 18px 6px;
+  padding: 4px 18px 2px;
   display: flex; justify-content: space-between; align-items: center;
   flex-shrink: 0;
 }
-.sb-icons { display: flex; gap: 5px; align-items: center; }
+/* Real devices already show their own clock/wifi/battery above this, so
+   this mock-phone chrome just duplicates it. Only the clock text and
+   icons are hidden (not the bar itself) so the green background still
+   fills the space -- hiding the whole bar left a bare white gap where
+   its background used to be, and deleting it outright once shifted
+   every screen's layout up and had to be reverted. */
+.sb #js-clock { visibility: hidden; }
+.sb-icons { display: flex; gap: 5px; align-items: center; visibility: hidden; }
 .sb-icons i { font-size: 13px; }
 
 /* ── TOP BAR ── */
@@ -112,7 +119,7 @@ html, body {
   flex-shrink: 0;
 }
 .wm-icon i { font-size: 17px; color: #E1F5EE; }
-.wm-name { font-size: 16px; font-weight: 700; color: #E1F5EE; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.wm-name { font-size: 18px; font-weight: 700; color: #E1F5EE; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .wm-name span { color: var(--green-lite); font-weight: 400; }
 .wm-badge {
   font-size: 9px; font-weight: 700;
