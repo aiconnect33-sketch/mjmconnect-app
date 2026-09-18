@@ -111,6 +111,11 @@
     padding: 10px 20px 6px;
     display: flex; justify-content: space-between; align-items: center;
     flex-shrink: 0;
+    /* Real devices already show their own clock/wifi/battery above this,
+       so this mock-phone chrome just duplicates it. Hidden (not removed)
+       so it keeps occupying the same space -- deleting it outright once
+       shifted every screen's layout up and had to be reverted. */
+    visibility: hidden;
   }
   .status-bar .status-icons { display: flex; align-items: center; gap: 5px; }
   .status-bar .status-icons i { font-size: 13px; }

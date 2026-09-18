@@ -93,6 +93,11 @@ html, body {
   padding: 10px 18px 6px;
   display: flex; justify-content: space-between; align-items: center;
   flex-shrink: 0;
+  /* Real devices already show their own clock/wifi/battery above this,
+     so this mock-phone chrome just duplicates it. Hidden (not removed)
+     so it keeps occupying the same space -- deleting it outright once
+     shifted every screen's layout up and had to be reverted. */
+  visibility: hidden;
 }
 .sb-icons { display: flex; gap: 5px; align-items: center; }
 .sb-icons i { font-size: 13px; }
