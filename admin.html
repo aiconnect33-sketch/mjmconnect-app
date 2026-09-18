@@ -72,7 +72,13 @@ html, body {
 .phone {
   width: 100%;
   max-width: 430px;
-  min-height: 100vh;
+  /* Must be a bounded height (not min-height) so .screen-body's flex:1
+     actually caps its box and scrolls internally -- otherwise .phone
+     just grows past the viewport with tall tab content, and the sticky
+     bottom nav ends up floating over the last chunk of that content
+     instead of sitting in its own reserved space below it. */
+  height: 100vh;
+  height: 100dvh;
   background: var(--surface);
   display: flex;
   flex-direction: column;
