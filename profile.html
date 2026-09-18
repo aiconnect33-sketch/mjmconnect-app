@@ -418,6 +418,17 @@ function goBack() {
 function signOut() {
   if (confirm('Sign out of MJMConnect?')) {
     localStorage.removeItem('mjm_user');
+    // Clear the remembered tab (staff and admin app both use this page) so
+    // logging back in always lands on Home instead of wherever this
+    // session left off.
+    try {
+      sessionStorage.removeItem('mjm_last_tab');
+      sessionStorage.removeItem('mjm_last_book_pill');
+      sessionStorage.removeItem('mjm_last_book_room');
+      sessionStorage.removeItem('mjm_admin_last_tab');
+      sessionStorage.removeItem('mjm_admin_last_book_pill');
+      sessionStorage.removeItem('mjm_admin_last_book_room');
+    } catch (e) {}
     window.location.replace('login.html');
   }
 }
