@@ -4177,13 +4177,14 @@ html, body {
       var dateStr  = rCalYear + '-' + String(rCalMonth+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
       var isToday  = (d === today.getDate() && rCalMonth === today.getMonth() && rCalYear === today.getFullYear());
       var isBooked = bookedDates && bookedDates[dateStr];
-      if (isToday)  cell.classList.add('today');
+      if (isToday) cell.classList.add('today');
+      if (isBooked && !isToday) cell.classList.add('booked');
+      var spanStyle = (isToday && isBooked) ? ' style="outline:2.5px solid #E24B4A;outline-offset:2px;"' : '';
+      cell.innerHTML = '<span' + spanStyle + '>' + d + '</span>';
       if (isBooked) {
-        cell.classList.add('booked');
         cell.style.cursor = 'pointer';
         (function(ds){ cell.onclick = function(){ showDayDetail('room', ds); }; })(dateStr);
       }
-      cell.innerHTML = '<span>' + d + '</span>';
       grid.appendChild(cell);
     }
   }
