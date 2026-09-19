@@ -181,6 +181,7 @@ function renderTimeOffStatus(openRecord, monthlyMinutes, dueReminders) {
       + (disabled
         ? '<button class="book-btn-primary" style="background:var(--text-light);margin-bottom:0;" disabled>🚫 Time In your other one first</button>'
         : '<button class="book-btn-primary" style="background:var(--blue-text);margin-bottom:0;" onclick="convertReminder(' + r.id + ')">🚶 Time Out Now</button>')
+      + '<button class="book-btn-ghost" style="border-color:var(--red-text);color:var(--red-text);margin-top:2px;" onclick="cancelReminder(' + r.id + ')">✕ Cancel — not taking this Time Off</button>'
       + '</div>';
   });
 
@@ -561,6 +562,14 @@ async function convertReminder(id) {
     await sbWrite('PATCH', 'time_off_reminders', { used: true }, 'id=eq.' + id);
     loadTimeOff();
   } catch (e) { alert('Could not start this Time Off. Please try again.'); }
+}
+
+async function cancelReminder(id) {
+  if (!confirm('Cancel this planned Time Off? No trip will be recorded.')) return;
+  try {
+    await sbWrite('DELETE', 'time_off_reminders', null, 'id=eq.' + id);
+    loadTimeOff();
+  } catch (e) { alert('Could not cancel this reminder. Please try again.'); }
 }
 
 // ── LOG A MISSED TIME OFF (backfill) ──

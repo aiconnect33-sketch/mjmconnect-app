@@ -5311,6 +5311,7 @@ html, body {
         + (disabled
           ? '<button class="btn-primary" style="background:var(--text3);margin-bottom:0;" disabled>Time In your other one first</button>'
           : '<button class="btn-primary" style="background:var(--blue-text);margin-bottom:0;" onclick="adminConvertReminder(' + r.id + ')">Time Out Now</button>')
+        + '<button class="btn-ghost" style="border-color:var(--red-text);color:var(--red-text);margin-top:8px;" onclick="adminCancelReminder(' + r.id + ')">Cancel — not taking this Time Off</button>'
         + '</div>';
     });
 
@@ -5519,6 +5520,14 @@ html, body {
       loadAdminTimeOffSelf();
       if (typeof loadDbTimeOff === 'function') loadDbTimeOff();
     } catch (e) { alert('Could not start this Time Off. Please try again.'); }
+  }
+
+  async function adminCancelReminder(id) {
+    if (!confirm('Cancel this planned Time Off? No trip will be recorded.')) return;
+    try {
+      await sbFetch('DELETE', '/rest/v1/time_off_reminders?id=eq.' + id, null, { 'Prefer': '' });
+      loadAdminTimeOffSelf();
+    } catch (e) { alert('Could not cancel this reminder. Please try again.'); }
   }
 
   function adminShowBackfillForm() {
