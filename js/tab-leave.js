@@ -52,7 +52,17 @@ async function loadLeave() {
       var html2 = '';
       function renderGroup(title, items) {
         if (!items.length) return '';
-        var h = '<div class="section-row"><div class="section-title">' + title + '</div></div><div class="card">';
+        // "Currently on Leave" gets a filled green dot + green heading,
+        // "Upcoming Leave" an outlined dark dot + near-black heading, so
+        // which group a row belongs to reads at a glance without relying
+        // on remembering which section is which.
+        var isCurrent = title === 'Currently on Leave';
+        var dotStyle = isCurrent
+          ? 'width:8px;height:8px;border-radius:50%;background:var(--green-dark);flex-shrink:0;'
+          : 'width:8px;height:8px;border-radius:50%;border:1.5px solid var(--text-primary);flex-shrink:0;';
+        var titleColor = isCurrent ? 'var(--green-dark)' : 'var(--text-primary)';
+        var h = '<div class="section-row"><div class="section-title" style="display:flex;align-items:center;gap:7px;color:' + titleColor + ';">'
+          + '<span style="' + dotStyle + '"></span>' + title + '</div></div><div class="card">';
         items.forEach(function(r, i) {
           var ini = r.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
           var avCls = avColors[i % avColors.length];
