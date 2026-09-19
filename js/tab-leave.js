@@ -61,8 +61,9 @@ async function loadLeave() {
           ? 'width:8px;height:8px;border-radius:50%;background:var(--green-dark);flex-shrink:0;'
           : 'width:8px;height:8px;border-radius:50%;border:1.5px solid var(--text-primary);flex-shrink:0;';
         var titleColor = isCurrent ? 'var(--green-dark)' : 'var(--text-primary)';
+        var cardBorder = isCurrent ? 'border:1.5px solid var(--green-dark);' : '';
         var h = '<div class="section-row"><div class="section-title" style="display:flex;align-items:center;gap:7px;color:' + titleColor + ';">'
-          + '<span style="' + dotStyle + '"></span>' + title + '</div></div><div class="card">';
+          + '<span style="' + dotStyle + '"></span>' + title + '</div></div><div class="card" style="' + cardBorder + '">';
         items.forEach(function(r, i) {
           var ini = r.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
           var avCls = avColors[i % avColors.length];
