@@ -4972,7 +4972,8 @@ html, body {
           ? 'width:7px;height:7px;border-radius:50%;background:#075E54;flex-shrink:0;'
           : 'width:7px;height:7px;border-radius:50%;border:1.5px solid #111C18;flex-shrink:0;';
         var labelColor = isCurrent ? '#075E54' : '#111C18';
-        return '<div class="card"><div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">'
+        var cardBorder = isCurrent ? 'border:1.5px solid #075E54;' : '';
+        return '<div class="card" style="' + cardBorder + '"><div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">'
           + '<span style="' + dotStyle + '"></span>'
           + '<span class="card-label" style="margin-bottom:0;font-weight:800;color:' + labelColor + ';">' + label + '</span>'
           + '</div>' +
