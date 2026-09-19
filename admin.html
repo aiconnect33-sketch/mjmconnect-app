@@ -4963,7 +4963,19 @@ html, body {
 
       function renderLeaveGroup(label, items) {
         if (!items.length) return '';
-        return '<div class="card"><div class="card-label">' + label + '</div>' +
+        // "Currently on Leave" gets a filled green dot + green heading,
+        // "Upcoming Leave" an outlined dark dot + near-black heading, so
+        // which group a row belongs to reads at a glance without relying
+        // on remembering which section is which.
+        var isCurrent = label === 'Currently on Leave';
+        var dotStyle = isCurrent
+          ? 'width:7px;height:7px;border-radius:50%;background:#075E54;flex-shrink:0;'
+          : 'width:7px;height:7px;border-radius:50%;border:1.5px solid #111C18;flex-shrink:0;';
+        var labelColor = isCurrent ? '#075E54' : '#111C18';
+        return '<div class="card"><div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">'
+          + '<span style="' + dotStyle + '"></span>'
+          + '<span class="card-label" style="margin-bottom:0;font-weight:800;color:' + labelColor + ';">' + label + '</span>'
+          + '</div>' +
           items.map(function(r) {
             var ini = r.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
             var shortType = r.leave_type === 'Annual Leave' ? 'AL' : r.leave_type === 'Medical Leave' ? 'MC' : r.leave_type === 'Paternity Leave' ? 'PL' : r.leave_type === 'Maternity Leave' ? 'ML' : 'CL';
