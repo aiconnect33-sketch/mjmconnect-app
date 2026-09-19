@@ -1213,10 +1213,14 @@
             </div>
             <div style="display:flex;gap:12px;margin-top:10px;flex-wrap:wrap;border-top:0.5px solid var(--border);padding-top:10px;">
               <div class="legend-item"><div style="width:14px;height:14px;border-radius:50%;background:var(--green-dark);"></div>Today</div>
-              <div class="legend-item"><div style="width:14px;height:14px;border-radius:4px;background:#FCEBEB;border:1px solid #F09595;"></div>Booked · tap to view</div>
+              <div class="legend-item"><div style="width:14px;height:14px;border-radius:4px;background:#FCEBEB;border:1px solid #F09595;"></div>Booked</div>
             </div>
           </div>
         </div>
+
+        <!-- Bookings on the tapped date -->
+        <div class="section-row"><div class="section-title" id="v-day-detail-title">Bookings on Selected Date</div></div>
+        <div id="v-day-detail"><div class="book-empty">Tap a date above to see its bookings.</div></div>
 
         <!-- My vehicle bookings this month -->
         <div class="section-row"><div class="section-title">My Bookings This Month</div></div>
@@ -1298,10 +1302,14 @@
             </div>
             <div style="display:flex;gap:12px;margin-top:10px;flex-wrap:wrap;border-top:0.5px solid var(--border);padding-top:10px;">
               <div class="legend-item"><div style="width:14px;height:14px;border-radius:50%;background:var(--green-dark);"></div>Today</div>
-              <div class="legend-item"><div style="width:14px;height:14px;border-radius:4px;background:#FCEBEB;border:1px solid #F09595;"></div>Booked · tap to view</div>
+              <div class="legend-item"><div style="width:14px;height:14px;border-radius:4px;background:#FCEBEB;border:1px solid #F09595;"></div>Booked</div>
             </div>
           </div>
         </div>
+
+        <!-- Bookings on the tapped date -->
+        <div class="section-row"><div class="section-title" id="r-day-detail-title">Bookings on Selected Date</div></div>
+        <div id="r-day-detail"><div class="book-empty">Tap a date above to see its bookings.</div></div>
 
         <!-- My room bookings this month -->
         <div class="section-row"><div class="section-title">My Bookings This Month</div></div>
@@ -1420,17 +1428,6 @@
     </div><!-- /menu -->
 
   </div><!-- /screen-body -->
-
-  <!-- ── DAY DETAIL MODAL (shared) ── -->
-  <div id="book-day-modal" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,0.45);" onclick="closeDayModal()">
-    <div style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:var(--surface);border-radius:18px 18px 0 0;padding:20px 16px 32px;" onclick="event.stopPropagation()">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-        <div id="book-day-modal-title" style="font-size:14px;font-weight:700;color:var(--text-primary);"></div>
-        <button onclick="closeDayModal()" style="background:none;border:none;font-size:20px;color:var(--text-secondary);cursor:pointer;line-height:1;">&times;</button>
-      </div>
-      <div id="book-day-modal-body"></div>
-    </div>
-  </div>
 
   <!-- BOTTOM NAV -->
   <div class="nav-bar-wrap">

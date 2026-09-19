@@ -3,6 +3,12 @@
 var bookTabInited = false;
 var vCalYear, vCalMonth, rCalYear, rCalMonth;
 
+// Which date's bookings are currently shown inline below each calendar, and
+// the last-fetched booked-dates map for that calendar (cached so re-drawing
+// the selection ring on tap doesn't need a fresh network round-trip).
+var vDetailDate = null, rDetailDate = null;
+var vBookedDatesCache = {}, rBookedDatesCache = {};
+
 // ── Custom Date Picker (iOS-safe, no native input) ──
 var dpState = {}; // prefix -> { year, month }
 
@@ -303,6 +309,7 @@ async function loadVehicleCalendar() {
       data.forEach(function(b) { bookedDates[b.booking_date] = true; });
     }
   } catch(e) {}
+  vBookedDatesCache = bookedDates;
   renderVehicleCalendar(bookedDates);
 }
 
@@ -320,17 +327,19 @@ function renderVehicleCalendar(bookedDates) {
   for (var d = 1; d <= daysInMonth; d++) {
     var cell = document.createElement('div');
     cell.className = 'cal-day';
-    var dateStr  = vCalYear + '-' + String(vCalMonth+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
-    var isToday  = (d === today.getDate() && vCalMonth === today.getMonth() && vCalYear === today.getFullYear());
-    var isBooked = bookedDates && bookedDates[dateStr];
+    var dateStr    = vCalYear + '-' + String(vCalMonth+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    var isToday    = (d === today.getDate() && vCalMonth === today.getMonth() && vCalYear === today.getFullYear());
+    var isBooked   = bookedDates && bookedDates[dateStr];
+    var isSelected = dateStr === vDetailDate;
     if (isToday) cell.classList.add('today');
     if (isBooked && !isToday) cell.classList.add('booked');
-    var spanStyle = (isToday && isBooked) ? ' style="outline:2.5px solid #E24B4A;outline-offset:2px;"' : '';
+    var spanStyles = [];
+    if (isToday && isBooked) spanStyles.push('outline:2.5px solid #E24B4A;outline-offset:2px;');
+    if (isSelected) spanStyles.push('box-shadow:0 0 0 2px var(--green-dark);');
+    var spanStyle = spanStyles.length ? ' style="' + spanStyles.join('') + '"' : '';
     cell.innerHTML = '<span' + spanStyle + '>' + d + '</span>';
-    if (isBooked) {
-      cell.style.cursor = 'pointer';
-      (function(ds){ cell.onclick = function(){ showDayDetail('vehicle', ds); }; })(dateStr);
-    }
+    cell.style.cursor = 'pointer';
+    (function(ds){ cell.onclick = function(){ showDayDetail('vehicle', ds); }; })(dateStr);
     grid.appendChild(cell);
   }
 }
@@ -338,14 +347,17 @@ function renderVehicleCalendar(bookedDates) {
 function vCalPrev() { vCalMonth--; if (vCalMonth < 0)  { vCalMonth = 11; vCalYear--; } loadVehicleCalendar(); loadMyVehicleBookings(); }
 function vCalNext() { vCalMonth++; if (vCalMonth > 11) { vCalMonth = 0;  vCalYear++; } loadVehicleCalendar(); loadMyVehicleBookings(); }
 
-async function cancelVehicleBookingFromModal(id) {
+async function cancelVehicleBookingFromDetail(id) {
   if (!confirm('Cancel your vehicle booking?')) return;
   try {
     var res = await fetch(SURL + '/rest/v1/vehicle_bookings?id=eq.' + id, {
       method: 'DELETE',
       headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY }
     });
-    if (res.ok) { closeDayModal(); loadVehicleCalendar(); loadMyVehicleBookings(); }
+    if (res.ok) {
+      loadVehicleCalendar(); loadMyVehicleBookings();
+      if (vDetailDate) showDayDetail('vehicle', vDetailDate);
+    }
   } catch(e) {}
 }
 
@@ -592,6 +604,7 @@ async function loadRoomCalendar() {
       data.forEach(function(b) { bookedDates[b.booking_date] = true; });
     }
   } catch(e) {}
+  rBookedDatesCache = bookedDates;
   renderRoomCalendar(bookedDates);
 }
 
@@ -609,17 +622,19 @@ function renderRoomCalendar(bookedDates) {
   for (var d = 1; d <= daysInMonth; d++) {
     var cell = document.createElement('div');
     cell.className = 'cal-day';
-    var dateStr  = rCalYear + '-' + String(rCalMonth+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
-    var isToday  = (d === today.getDate() && rCalMonth === today.getMonth() && rCalYear === today.getFullYear());
-    var isBooked = bookedDates && bookedDates[dateStr];
+    var dateStr    = rCalYear + '-' + String(rCalMonth+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    var isToday    = (d === today.getDate() && rCalMonth === today.getMonth() && rCalYear === today.getFullYear());
+    var isBooked   = bookedDates && bookedDates[dateStr];
+    var isSelected = dateStr === rDetailDate;
     if (isToday) cell.classList.add('today');
     if (isBooked && !isToday) cell.classList.add('booked');
-    var spanStyle = (isToday && isBooked) ? ' style="outline:2.5px solid #E24B4A;outline-offset:2px;"' : '';
+    var spanStyles = [];
+    if (isToday && isBooked) spanStyles.push('outline:2.5px solid #E24B4A;outline-offset:2px;');
+    if (isSelected) spanStyles.push('box-shadow:0 0 0 2px var(--green-dark);');
+    var spanStyle = spanStyles.length ? ' style="' + spanStyles.join('') + '"' : '';
     cell.innerHTML = '<span' + spanStyle + '>' + d + '</span>';
-    if (isBooked) {
-      cell.style.cursor = 'pointer';
-      (function(ds){ cell.onclick = function(){ showDayDetail('room', ds); }; })(dateStr);
-    }
+    cell.style.cursor = 'pointer';
+    (function(ds){ cell.onclick = function(){ showDayDetail('room', ds); }; })(dateStr);
     grid.appendChild(cell);
   }
 }
@@ -627,14 +642,17 @@ function renderRoomCalendar(bookedDates) {
 function rCalPrev() { rCalMonth--; if (rCalMonth < 0)  { rCalMonth = 11; rCalYear--; } loadRoomCalendar(); loadMyRoomBookings(); }
 function rCalNext() { rCalMonth++; if (rCalMonth > 11) { rCalMonth = 0;  rCalYear++; } loadRoomCalendar(); loadMyRoomBookings(); }
 
-async function cancelRoomBooking(id) {
+async function cancelRoomBookingFromDetail(id) {
   if (!confirm('Cancel your room booking?')) return;
   try {
     var res = await fetch(SURL + '/rest/v1/room_bookings?id=eq.' + id, {
       method: 'DELETE',
       headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY }
     });
-    if (res.ok) { closeDayModal(); loadRoomCalendar(); loadMyRoomBookings(); }
+    if (res.ok) {
+      loadRoomCalendar(); loadMyRoomBookings();
+      if (rDetailDate) showDayDetail('room', rDetailDate);
+    }
   } catch(e) {}
 }
 
@@ -688,25 +706,26 @@ async function cancelMyRoomBooking(id) {
 }
 
 // ════════════════════════════
-//  DAY DETAIL MODAL
+//  DAY DETAIL (shown inline below the calendar, not a popup)
 // ════════════════════════════
 
 async function showDayDetail(type, dateStr) {
-  var modal = document.getElementById('book-day-modal');
-  var title = document.getElementById('book-day-modal-title');
-  var body  = document.getElementById('book-day-modal-body');
-  var icon  = type === 'vehicle' ? '🚗' : '🏢';
-  title.textContent = icon + ' ' + fmtDate(dateStr);
-  body.innerHTML = '<div class="book-empty">Loading...</div>';
-  modal.style.display = 'block';
+  if (type === 'vehicle') { vDetailDate = dateStr; renderVehicleCalendar(vBookedDatesCache); }
+  else                    { rDetailDate = dateStr; renderRoomCalendar(rBookedDatesCache); }
+
+  var title = document.getElementById(type === 'vehicle' ? 'v-day-detail-title' : 'r-day-detail-title');
+  var body  = document.getElementById(type === 'vehicle' ? 'v-day-detail' : 'r-day-detail');
+  if (title) title.textContent = 'Bookings on ' + fmtDate(dateStr);
+  if (body) body.innerHTML = '<div class="book-empty">Loading...</div>';
   try {
     var raw2 = localStorage.getItem('mjm_user');
     var u2   = raw2 ? JSON.parse(raw2) : {};
     var data = type === 'vehicle'
       ? await sbGet('vehicle_bookings', 'booking_date=eq.' + dateStr + '&order=time_from.asc')
       : await sbGet('room_bookings',    'booking_date=eq.' + dateStr + '&room_name=eq.' + encodeURIComponent(rSelectedRoom) + '&order=time_from.asc');
+    if (!body) return;
     if (!data || data.length === 0) {
-      body.innerHTML = '<div class="book-empty">No bookings found.</div>'; return;
+      body.innerHTML = '<div class="book-empty">No bookings on this date.</div>'; return;
     }
     body.innerHTML = data.map(function(b) {
       var byLow  = (b.booked_by || '').toLowerCase();
@@ -718,8 +737,8 @@ async function showDayDetail(type, dateStr) {
         ? (b.is_full_day ? 'Full Day' : fmtTime(b.time_from) + ' – ' + fmtTime(b.time_to))
         : fmtTime(b.time_from) + ' – ' + fmtTime(b.time_to);
       var cancelFn = type === 'vehicle'
-        ? 'cancelVehicleBookingFromModal(\'' + b.id + '\')'
-        : 'cancelRoomBooking(\'' + b.id + '\')';
+        ? 'cancelVehicleBookingFromDetail(\'' + b.id + '\')'
+        : 'cancelRoomBookingFromDetail(\'' + b.id + '\')';
       return '<div class="book-item" style="margin-bottom:8px;">'
         + '<div class="book-item-header"><div class="book-item-name">' + escHtml(b.booked_by) + '</div>'
         + '<span class="badge ' + (isMine ? 'badge-info' : 'badge-amber') + '">' + (isMine ? 'Mine' : 'Booked') + '</span></div>'
@@ -728,11 +747,7 @@ async function showDayDetail(type, dateStr) {
         + (isMine ? '<button class="book-cancel-btn" onclick="' + cancelFn + '"><i class="ti ti-trash"></i> Cancel my booking</button>' : '')
         + '</div>';
     }).join('');
-  } catch(e) { body.innerHTML = '<div class="book-empty">Could not load bookings.</div>'; }
-}
-
-function closeDayModal() {
-  document.getElementById('book-day-modal').style.display = 'none';
+  } catch(e) { if (body) body.innerHTML = '<div class="book-empty">Could not load bookings.</div>'; }
 }
 
 // ════════════════════════════
