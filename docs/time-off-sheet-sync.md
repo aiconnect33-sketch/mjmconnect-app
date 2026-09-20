@@ -36,6 +36,25 @@ Complain one.
 Requests are fire-and-forget, so the app never blocks or fails on this —
 it only matters for keeping the Sheet up to date.
 
+## Sheet layout
+
+- **"In-App Time Off"** — one row per trip, in the order things happen.
+  The limit check is split into two columns since they mean different
+  things: **"Over 2.5h (Single Trip)?"** flags *that one trip's* own
+  duration (2.5h) — this can still happen for a backfilled or corrected
+  entry, since those aren't checked live the way starting a fresh Time Out
+  is. **"Over 4h (Monthly)?"** flags whether *that staff member's month*
+  had already gone over the 4h cap once this entry counted, which is the
+  cap the app itself enforces before letting someone start a new Time Out.
+- **"Staff Time Off Summary"** — one row per staff member per calendar
+  month, upserted every time an entry for them syncs, so you don't have to
+  scan the full log to see where everyone stands: `Staff Name | Month |
+  Total This Month | Over 4h (Monthly)? | Last Updated`. The total mirrors
+  whatever the app itself last computed for that person (the same
+  `monthlyMinutes` value the log's "Month Total After This Entry" column
+  gets), so it stays accurate through edits and voids without needing to
+  re-derive anything from the log's text.
+
 ## One-time setup
 
 1. Go to `script.google.com/home` while logged into the Google account that
@@ -62,6 +81,28 @@ Same as Faulty Complain's: **Deploy → Manage deployments → pick the
 existing Web app → Edit (pencil) → Version: New version → Deploy.** That
 keeps the same `.../exec` URL, so nothing in the app needs to change.
 
+### Picking up the split-limit column + summary tab on an already-deployed sheet
+
+If your Apps Script project and sheet already existed before the "Over
+4h (Monthly)?" column and the "Staff Time Off Summary" tab were added
+above:
+
+1. Replace your project's code with the updated `Code.gs` below, then
+   redeploy a new version (steps just above).
+2. The next time any Time Off entry syncs, the script fills in the new
+   "Over 4h (Monthly)?" header automatically (existing headers are left
+   untouched) and creates the "Staff Time Off Summary" tab on demand.
+3. One manual step: the old "Over Limit?" header cell (column K, row 1)
+   won't rename itself — the script only fills in *empty* header cells so
+   it never overwrites something you might have customized. Rename that
+   cell to "Over 2.5h (Single Trip)?" yourself; the values underneath it
+   are unchanged, so nothing else about that column needs touching.
+4. The summary tab only reflects entries that sync *after* the update —
+   it doesn't backfill history from rows already in the log. If you want
+   it caught up immediately rather than waiting for new activity, that's
+   a one-time manual copy from the log rather than something the script
+   needs to do automatically.
+
 ## Code.gs
 
 ```javascript
@@ -77,12 +118,17 @@ keeps the same `.../exec` URL, so nothing in the app needs to change.
 
 var SHEET_ID = '1IVv7KjRaUyxRU25P8xJ_-bhgWpnTOpNMXV59zPcyXWc';
 var TAB_NAME = 'In-App Time Off';
+var SUMMARY_TAB_NAME = 'Staff Time Off Summary';
 var SECRET = 'SeW2cUlObs6M2jCq-xxSrPlhB-MHCj6mqz'; // must match TIMEOFF_SHEET_SECRET in js/tab-timeoff.js and admin.html
 
 var HEADERS = ['Logged At', 'ID', 'Date', 'Staff Name', 'Reason', 'Time Out',
-  'Time In', 'Duration', 'Entry Type', 'Month Total After This Entry', 'Over Limit?'];
+  'Time In', 'Duration', 'Entry Type', 'Month Total After This Entry',
+  'Over 2.5h (Single Trip)?', 'Over 4h (Monthly)?'];
 
-var PER_TRIP_CAP_MIN = 150; // 2.5h, matches TIMEOFF_PER_TRIP_CAP_MIN client-side
+var SUMMARY_HEADERS = ['Staff Name', 'Month', 'Total This Month', 'Over 4h (Monthly)?', 'Last Updated'];
+
+var PER_TRIP_CAP_MIN = 150;  // 2.5h, matches TIMEOFF_PER_TRIP_CAP_MIN client-side
+var MONTHLY_CAP_MIN  = 240;  // 4h,   matches TIMEOFF_MONTHLY_CAP_MIN client-side
 
 function doPost(e) {
   var body;
@@ -103,6 +149,14 @@ function doPost(e) {
   } else if (body.action === 'update') {
     handleUpdate(sheet, body);
   }
+
+  // The monthly total the app sends is already authoritative (computed
+  // against live Supabase data at send time), so the summary tab just
+  // mirrors it rather than trying to re-derive it from the log -- which
+  // would otherwise mean parsing the log's human-formatted date/duration
+  // text back into numbers.
+  upsertSummary(getOrCreateSummarySheet(), body);
+
   return ContentService.createTextOutput('ok');
 }
 
@@ -117,10 +171,28 @@ function getOrCreateSheet() {
   return sheet;
 }
 
+function getOrCreateSummarySheet() {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sheet = ss.getSheetByName(SUMMARY_TAB_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(SUMMARY_TAB_NAME);
+    sheet.getRange(1, 1, 1, SUMMARY_HEADERS.length).setValues([SUMMARY_HEADERS]);
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
 function ensureHeaders(sheet) {
-  if (!sheet.getRange(1, 1).getValue()) {
+  var current = sheet.getRange(1, 1, 1, HEADERS.length).getValues()[0];
+  if (!current[0]) {
     sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
     sheet.setFrozenRows(1);
+    return;
+  }
+  // An existing sheet from before the monthly-limit column existed --
+  // fill in any missing trailing header only, leave everything else as is.
+  for (var col = 1; col <= HEADERS.length; col++) {
+    if (!current[col - 1]) sheet.getRange(1, col).setValue(HEADERS[col - 1]);
   }
 }
 
@@ -136,13 +208,14 @@ function handleCreate(sheet, body) {
     formatDuration(body.durationMinutes),
     entryTypeLabel(body.entryType),
     formatDuration(body.monthlyMinutes),
-    overLimitLabel(body.durationMinutes)
+    overTripLimitLabel(body.durationMinutes),
+    overMonthlyLimitLabel(body.monthlyMinutes)
   ]);
 }
 
 function handleUpdate(sheet, body) {
   var ID_COL = 2, TIME_OUT_COL = 6, TIME_IN_COL = 7, DURATION_COL = 8,
-    ENTRY_TYPE_COL = 9, MONTH_TOTAL_COL = 10, OVER_LIMIT_COL = 11;
+    ENTRY_TYPE_COL = 9, MONTH_TOTAL_COL = 10, OVER_TRIP_COL = 11, OVER_MONTHLY_COL = 12;
   var data = sheet.getDataRange().getValues();
   for (var i = 1; i < data.length; i++) {
     if (String(data[i][ID_COL - 1]) === String(body.id)) {
@@ -152,10 +225,33 @@ function handleUpdate(sheet, body) {
       sheet.getRange(row, DURATION_COL).setValue(formatDuration(body.durationMinutes));
       sheet.getRange(row, ENTRY_TYPE_COL).setValue(entryTypeLabel(body.entryType));
       sheet.getRange(row, MONTH_TOTAL_COL).setValue(formatDuration(body.monthlyMinutes));
-      sheet.getRange(row, OVER_LIMIT_COL).setValue(overLimitLabel(body.durationMinutes));
+      sheet.getRange(row, OVER_TRIP_COL).setValue(overTripLimitLabel(body.durationMinutes));
+      sheet.getRange(row, OVER_MONTHLY_COL).setValue(overMonthlyLimitLabel(body.monthlyMinutes));
       break;
     }
   }
+}
+
+// One row per staff member per calendar month, keyed off the trip's own
+// date (not "today") so a backfilled entry from a past month still lands
+// in that month's row rather than the current one.
+function upsertSummary(sheet, body) {
+  if (!body.staffName || !body.timeOut) return;
+  var month = Utilities.formatDate(new Date(body.timeOut), 'Asia/Kuala_Lumpur', 'MMMM yyyy');
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === String(body.staffName) && String(data[i][1]) === month) {
+      var row = i + 1;
+      sheet.getRange(row, 3).setValue(formatDuration(body.monthlyMinutes));
+      sheet.getRange(row, 4).setValue(overMonthlyLimitLabel(body.monthlyMinutes));
+      sheet.getRange(row, 5).setValue(formatMYTime(new Date().toISOString()));
+      return;
+    }
+  }
+  sheet.appendRow([
+    body.staffName, month, formatDuration(body.monthlyMinutes),
+    overMonthlyLimitLabel(body.monthlyMinutes), formatMYTime(new Date().toISOString())
+  ]);
 }
 
 function entryTypeLabel(t) {
@@ -165,8 +261,12 @@ function entryTypeLabel(t) {
   return 'Live';
 }
 
-function overLimitLabel(durationMinutes) {
+function overTripLimitLabel(durationMinutes) {
   return (durationMinutes || 0) > PER_TRIP_CAP_MIN ? 'Y' : 'N';
+}
+
+function overMonthlyLimitLabel(monthlyMinutes) {
+  return (monthlyMinutes || 0) > MONTHLY_CAP_MIN ? 'Y' : 'N';
 }
 
 function formatDuration(mins) {
