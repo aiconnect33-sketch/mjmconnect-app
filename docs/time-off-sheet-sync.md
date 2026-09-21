@@ -108,6 +108,20 @@ above:
    a one-time manual copy from the log rather than something the script
    needs to do automatically.
 
+### Matching the mock's look (optional, one-time)
+
+`Code.gs` below includes a `styleTimeOffSheets()` function that formats
+both tabs to match the mock shown alongside this doc — a dark green
+header row, borders, alternating row shading, and colored Y/N chips on
+the limit columns. It's a design pass only; it never touches any values.
+
+To run it: open the Apps Script project (same one from setup), pick
+`styleTimeOffSheets` from the function dropdown at the top of the editor
+(next to the Run/Debug buttons), then click **Run**. Approve the
+permission prompt if asked (it's the same Sheets access the sync already
+has). It's safe to re-run any time — for example after adding new rows,
+if you want the row banding to extend further down.
+
 ## Code.gs
 
 ```javascript
@@ -290,5 +304,69 @@ function formatMYTime(isoString) {
 function formatMYDate(isoString) {
   if (!isoString) return '';
   return Utilities.formatDate(new Date(isoString), 'Asia/Kuala_Lumpur', 'dd MMM yyyy');
+}
+
+// One-time formatting pass, run manually from the Apps Script editor
+// (pick this function in the dropdown, click Run) -- matches the mock's
+// look: dark green header, borders, banded rows, colored Y/N chips.
+// Never touches cell values, only formatting, so it's safe to re-run.
+function styleTimeOffSheets() {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  styleSheetLook(ss.getSheetByName(TAB_NAME), HEADERS.length);
+  styleSheetLook(ss.getSheetByName(SUMMARY_TAB_NAME), SUMMARY_HEADERS.length);
+  addLimitChipColors(ss.getSheetByName(TAB_NAME), 11, 12);   // K, L
+  addLimitChipColors(ss.getSheetByName(SUMMARY_TAB_NAME), 4, 4); // D
+}
+
+function styleSheetLook(sheet, numCols) {
+  if (!sheet) return;
+  var lastRow = Math.max(sheet.getLastRow(), 1);
+
+  sheet.getRange(1, 1, 1, numCols)
+    .setBackground('#0b5e46').setFontColor('#eafff5').setFontWeight('bold')
+    .setFontFamily('Manrope').setFontSize(10).setVerticalAlignment('middle');
+  sheet.setFrozenRows(1);
+  sheet.setRowHeight(1, 32);
+
+  if (lastRow > 1) {
+    sheet.getRange(2, 1, lastRow - 1, numCols)
+      .setFontFamily('IBM Plex Mono').setFontSize(10);
+  }
+
+  sheet.getRange(1, 1, lastRow, numCols)
+    .setBorder(true, true, true, true, true, true, '#d7e0db', SpreadsheetApp.BorderStyle.SOLID);
+
+  var existingBandings = sheet.getBandings();
+  for (var i = 0; i < existingBandings.length; i++) existingBandings[i].remove();
+  if (lastRow > 1) {
+    var banding = sheet.getRange(1, 1, lastRow, numCols)
+      .applyRowBanding(SpreadsheetApp.BandingTheme.LIGHT_GREEN, true, false);
+    banding.setHeaderRowColor('#0b5e46')
+      .setFirstRowColor('#ffffff')
+      .setSecondRowColor('#f0f5f2');
+  }
+
+  sheet.autoResizeColumns(1, numCols);
+}
+
+// Colors Y/N cells like the mock's chips: red-ish for Y (over cap),
+// green-ish for N (within cap). Applies to every row below the header,
+// including future ones, so new entries pick up the same styling.
+function addLimitChipColors(sheet, colStart, colEnd) {
+  if (!sheet) return;
+  var range = sheet.getRange(2, colStart, sheet.getMaxRows() - 1, colEnd - colStart + 1);
+  var rules = sheet.getConditionalFormatRules().filter(function (rule) {
+    var ranges = rule.getRanges();
+    return !ranges.some(function (r) { return r.getA1Notation() === range.getA1Notation(); });
+  });
+  rules.push(
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenTextEqualTo('Y').setBackground('#fbe3e0').setFontColor('#9c2b1f')
+      .setRanges([range]).build(),
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenTextEqualTo('N').setBackground('#e4f3e9').setFontColor('#1f7a4d')
+      .setRanges([range]).build()
+  );
+  sheet.setConditionalFormatRules(rules);
 }
 ```
