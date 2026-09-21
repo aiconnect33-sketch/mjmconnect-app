@@ -108,6 +108,17 @@ above:
    a one-time manual copy from the log rather than something the script
    needs to do automatically.
 
+### Cleaning up duplicate summary rows from before the fix
+
+Testing with entries submitted close together can trigger a race in the
+summary tab's upsert (see `doPost`'s comment below) that produces more
+than one row for the same staff + month. It's a one-time cleanup, not
+something the script can safely undo on its own: for each duplicate
+staff+month group, keep the row with the latest "Last Updated" time
+(that one reflects the true, current running total) and delete the
+older row(s). Once you're on the locked version of `doPost`, this can't
+recur.
+
 ### Matching the mock's look (optional, one-time)
 
 `Code.gs` below includes a `styleTimeOffSheets()` function that formats
@@ -150,33 +161,43 @@ var PER_TRIP_CAP_MIN = 150;  // 2.5h, matches TIMEOFF_PER_TRIP_CAP_MIN client-si
 var MONTHLY_CAP_MIN  = 240;  // 4h,   matches TIMEOFF_MONTHLY_CAP_MIN client-side
 
 function doPost(e) {
-  var body;
+  // Two submissions landing close together can otherwise run concurrently --
+  // both read the summary sheet before either has written, both conclude
+  // "no row yet" and both append one, leaving duplicate staff+month rows.
+  // The lock serializes doPost so only one execution touches the sheet at a time.
+  var lock = LockService.getScriptLock();
+  lock.waitLock(30000);
   try {
-    body = JSON.parse(e.postData.contents);
-  } catch (err) {
-    return ContentService.createTextOutput('bad request');
+    var body;
+    try {
+      body = JSON.parse(e.postData.contents);
+    } catch (err) {
+      return ContentService.createTextOutput('bad request');
+    }
+    if (!body || body.secret !== SECRET) {
+      return ContentService.createTextOutput('unauthorized');
+    }
+
+    var sheet = getOrCreateSheet();
+    ensureHeaders(sheet);
+
+    if (body.action === 'create') {
+      handleCreate(sheet, body);
+    } else if (body.action === 'update') {
+      handleUpdate(sheet, body);
+    }
+
+    // The monthly total the app sends is already authoritative (computed
+    // against live Supabase data at send time), so the summary tab just
+    // mirrors it rather than trying to re-derive it from the log -- which
+    // would otherwise mean parsing the log's human-formatted date/duration
+    // text back into numbers.
+    upsertSummary(getOrCreateSummarySheet(), body);
+
+    return ContentService.createTextOutput('ok');
+  } finally {
+    lock.releaseLock();
   }
-  if (!body || body.secret !== SECRET) {
-    return ContentService.createTextOutput('unauthorized');
-  }
-
-  var sheet = getOrCreateSheet();
-  ensureHeaders(sheet);
-
-  if (body.action === 'create') {
-    handleCreate(sheet, body);
-  } else if (body.action === 'update') {
-    handleUpdate(sheet, body);
-  }
-
-  // The monthly total the app sends is already authoritative (computed
-  // against live Supabase data at send time), so the summary tab just
-  // mirrors it rather than trying to re-derive it from the log -- which
-  // would otherwise mean parsing the log's human-formatted date/duration
-  // text back into numbers.
-  upsertSummary(getOrCreateSummarySheet(), body);
-
-  return ContentService.createTextOutput('ok');
 }
 
 function doGet(e) {
