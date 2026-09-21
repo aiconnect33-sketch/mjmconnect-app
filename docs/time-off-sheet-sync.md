@@ -219,6 +219,11 @@ function getOrCreateSummarySheet() {
     sheet.getRange(1, 1, 1, SUMMARY_HEADERS.length).setValues([SUMMARY_HEADERS]);
     sheet.setFrozenRows(1);
   }
+  // Sheets auto-detects a "September 2026"-style string as a date and
+  // silently stores it as one (while still displaying the same text) --
+  // which then fails the plain-text match in upsertSummary below. Force
+  // the Month column to Plain text so future writes stay real strings.
+  sheet.getRange(2, 2, Math.max(sheet.getMaxRows() - 1, 1), 1).setNumberFormat('@');
   return sheet;
 }
 
@@ -280,7 +285,7 @@ function upsertSummary(sheet, body) {
   var month = Utilities.formatDate(new Date(body.timeOut), 'Asia/Kuala_Lumpur', 'MMMM yyyy');
   var data = sheet.getDataRange().getValues();
   for (var i = 1; i < data.length; i++) {
-    if (String(data[i][0]) === String(body.staffName) && String(data[i][1]) === month) {
+    if (String(data[i][0]) === String(body.staffName) && monthCellMatches(data[i][1], month)) {
       var row = i + 1;
       sheet.getRange(row, 3).setValue(formatDuration(body.monthlyMinutes));
       sheet.getRange(row, 4).setValue(overMonthlyLimitLabel(body.monthlyMinutes));
@@ -292,6 +297,16 @@ function upsertSummary(sheet, body) {
     body.staffName, month, formatDuration(body.monthlyMinutes),
     overMonthlyLimitLabel(body.monthlyMinutes), formatMYTime(new Date().toISOString())
   ]);
+}
+
+// Matches a Month cell against a "MMMM yyyy" string even if that cell was
+// already silently auto-converted to a Date by Sheets before the Plain
+// text fix above -- otherwise those older rows could never match again.
+function monthCellMatches(cellValue, targetMonth) {
+  if (cellValue instanceof Date) {
+    return Utilities.formatDate(cellValue, 'Asia/Kuala_Lumpur', 'MMMM yyyy') === targetMonth;
+  }
+  return String(cellValue) === targetMonth;
 }
 
 function entryTypeLabel(t) {
@@ -337,6 +352,29 @@ function styleTimeOffSheets() {
   styleSheetLook(ss.getSheetByName(SUMMARY_TAB_NAME), SUMMARY_HEADERS.length);
   addLimitChipColors(ss.getSheetByName(TAB_NAME), 11, 12);   // K, L
   addLimitChipColors(ss.getSheetByName(SUMMARY_TAB_NAME), 4, 4); // D
+  repairSummaryMonthColumn(ss.getSheetByName(SUMMARY_TAB_NAME));
+}
+
+// One-time repair for Month cells that got silently auto-converted to a
+// Date by Sheets before the Plain text fix in getOrCreateSummarySheet --
+// rewrites them back to a real "MMMM yyyy" string so future upserts can
+// match them again. Safe to re-run; a cell that's already a string is left
+// exactly as it is (except for the number format, which is harmless to reset).
+function repairSummaryMonthColumn(sheet) {
+  if (!sheet) return;
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return;
+  var range = sheet.getRange(2, 2, lastRow - 1, 1);
+  var values = range.getValues();
+  var changed = false;
+  for (var i = 0; i < values.length; i++) {
+    if (values[i][0] instanceof Date) {
+      values[i][0] = Utilities.formatDate(values[i][0], 'Asia/Kuala_Lumpur', 'MMMM yyyy');
+      changed = true;
+    }
+  }
+  range.setNumberFormat('@');
+  if (changed) range.setValues(values);
 }
 
 function styleSheetLook(sheet, numCols) {
