@@ -53,7 +53,12 @@ it only matters for keeping the Sheet up to date.
   whatever the app itself last computed for that person (the same
   `monthlyMinutes` value the log's "Month Total After This Entry" column
   gets), so it stays accurate through edits and voids without needing to
-  re-derive anything from the log's text.
+  re-derive anything from the log's text. Months never mix: the row is
+  matched on staff name **and** month together (e.g. "Nur Aisyah" /
+  "September 2026" is a different row from "Nur Aisyah" / "October 2026"),
+  so a new month always starts that person's total back at 0 in a fresh
+  row instead of adding onto last month's figure — last month's row stays
+  exactly as it was.
 
 ## One-time setup
 
