@@ -299,6 +299,9 @@ async function onPushToggle(checkbox) {
       if (!ok) checkbox.checked = false;
     } else {
       await disablePushNotifications();
+      // A deliberate opt-out here shouldn't be undone by the Home banner
+      // nagging them again on the next visit.
+      try { localStorage.setItem(PUSH_PROMPT_DISMISS_KEY, '1'); } catch (e) {}
     }
   } catch (e) {
     checkbox.checked = false;

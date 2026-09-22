@@ -110,3 +110,57 @@ function notifyAnnouncementPush(title, body) {
     body: JSON.stringify({ secret: PUSH_SEND_SECRET, title: title, body: body })
   }).catch(function () {});
 }
+
+// ── Auto pre-prompt on Home ──
+// Explains why before the OS's own permission dialog appears (asking cold
+// tends to get a reflexive "Don't Allow", which the OS then remembers and
+// never offers again). Shown once per device until enabled or dismissed;
+// never shown again once denied, subscribed, or unsupported.
+var PUSH_PROMPT_DISMISS_KEY = 'mjm_push_prompt_dismissed';
+
+async function checkPushAutoPrompt() {
+  var el = document.getElementById('push-prompt-banner');
+  if (!el) return;
+  if (!pushSupported() || localStorage.getItem(PUSH_PROMPT_DISMISS_KEY)
+      || typeof Notification === 'undefined' || Notification.permission !== 'default') {
+    el.style.display = 'none';
+    return;
+  }
+  var status = await getPushSubscriptionStatus();
+  if (status !== 'unsubscribed') {
+    el.style.display = 'none';
+    return;
+  }
+  el.innerHTML = ''
+    + '<div style="background:#E1F5EE;border:1px solid #B7E4D3;border-radius:16px;padding:16px;margin-bottom:12px;display:flex;flex-direction:column;gap:10px;">'
+    +   '<div style="display:flex;gap:10px;align-items:flex-start;">'
+    +     '<div style="width:34px;height:34px;border-radius:10px;background:#0F6E56;display:flex;align-items:center;justify-content:center;flex-shrink:0;">'
+    +       '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#E1F5EE" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>'
+    +     '</div>'
+    +     '<div style="flex:1;">'
+    +       '<div style="font-size:14px;font-weight:700;color:#085041;margin-bottom:3px;">Get notified instantly</div>'
+    +       '<div style="font-size:12.5px;color:#3E5B51;line-height:1.5;">Turn on notifications so you don\'t miss it when HR posts an announcement — even when the app is closed.</div>'
+    +     '</div>'
+    +   '</div>'
+    +   '<div style="display:flex;gap:8px;justify-content:flex-end;">'
+    +     '<button onclick="pushPromptDismiss()" style="border:none;background:none;color:#3E5B51;font-size:13px;font-weight:600;font-family:inherit;padding:9px 12px;cursor:pointer;">Not now</button>'
+    +     '<button onclick="pushPromptEnableTap()" style="border:none;background:#0F6E56;color:#fff;font-size:13px;font-weight:700;font-family:inherit;padding:9px 18px;border-radius:10px;cursor:pointer;">Enable</button>'
+    +   '</div>'
+    + '</div>';
+  el.style.display = 'block';
+}
+
+function pushPromptDismiss() {
+  try { localStorage.setItem(PUSH_PROMPT_DISMISS_KEY, '1'); } catch (e) {}
+  var el = document.getElementById('push-prompt-banner');
+  if (el) el.style.display = 'none';
+}
+
+async function pushPromptEnableTap() {
+  await enablePushNotifications();
+  // Whether granted or not, stop nagging -- if denied, Profile's status
+  // text explains how to fix it in phone/browser settings.
+  try { localStorage.setItem(PUSH_PROMPT_DISMISS_KEY, '1'); } catch (e) {}
+  var el = document.getElementById('push-prompt-banner');
+  if (el) el.style.display = 'none';
+}

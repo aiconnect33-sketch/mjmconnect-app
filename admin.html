@@ -1090,6 +1090,9 @@ html, body {
       <div class="greet-name"><span id="greet-name-text">Super Admin</span> 👋</div>
       <div class="greet-sub">Here's what's happening today.</div>
 
+      <!-- Push notifications pre-prompt (js/push.js) -->
+      <div id="push-prompt-banner" style="display:none;"></div>
+
       <!-- Urgent banner — shows ALL urgent announcements, one card each -->
       <div id="admin-urgent-banner" style="display:none;"></div>
 
@@ -3578,6 +3581,7 @@ html, body {
       loadDbProfiles();
       loadInviteLog();
       loadDbEvents();
+      if (typeof checkPushAutoPrompt === 'function') checkPushAutoPrompt();
     }
     initBackButtonTrap('dashboard');
     restoreLastTab();
