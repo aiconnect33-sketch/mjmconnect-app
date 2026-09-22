@@ -1001,6 +1001,7 @@ html, body {
 </style>
 </head>
 <body>
+<script src="js/push.js"></script>
 <script>
   // Auth guard — require a logged-in session with an admin role
   (function() {
@@ -2376,6 +2377,7 @@ html, body {
         editingAnnOriginal = null;
       } else {
         await publishToDb(title, body, notifyOn, user.name || 'HR', user.email || '');
+        if (notifyOn && typeof notifyAnnouncementPush === 'function') notifyAnnouncementPush(title, body);
       }
       setLoading('pub', false);
       hidePostForm();

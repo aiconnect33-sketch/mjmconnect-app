@@ -292,6 +292,7 @@ async function saveAnnouncement() {
       if (diffs.length) logAudit('announcements', editingAnnId, 'edited', title, diffs, editingAnnOriginal ? editingAnnOriginal.postedBy : null);
     } else {
       await sbWrite('POST', 'announcements', { title: title, body: body, badge: 'general', posted_by: user.name || 'Staff', posted_by_email: user.email || '' });
+      if (typeof notifyAnnouncementPush === 'function') notifyAnnouncementPush(title, body);
     }
     hideAnnForm();
     loadAnnouncements();
