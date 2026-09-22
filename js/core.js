@@ -340,6 +340,7 @@ window.addEventListener('DOMContentLoaded', function() {
     if (typeof loadEstateTrips === 'function') loadEstateTrips();
     if (typeof loadTimeOff === 'function') loadTimeOff();
     if (typeof loadNotifications === 'function') loadNotifications();
+    if (typeof checkPushAutoPrompt === 'function') checkPushAutoPrompt();
   }
   // Always init calendar
   if (typeof initStaffCalendar === 'function') initStaffCalendar();
