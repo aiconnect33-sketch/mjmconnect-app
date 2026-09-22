@@ -220,9 +220,14 @@ async function sendWebPush(subscription: { endpoint: string; p256dh: string; aut
   const body = await encryptPayload(subscription.p256dh, subscription.auth, encoder.encode(JSON.stringify(payloadObj)));
   const authorization = await createVapidAuthHeader(subscription.endpoint);
 
+  const pushHeaders = new Headers();
+  pushHeaders.set('authorization', authorization);
+  pushHeaders.set('content-encoding', 'aes128gcm');
+  pushHeaders.set('ttl', '86400');
+
   const res = await fetch(subscription.endpoint, {
     method: 'POST',
-    headers: { Authorization: authorization, 'Content-Encoding': 'aes128gcm', TTL: '86400' },
+    headers: pushHeaders,
     body,
   });
   if (!res.ok) {
@@ -230,6 +235,19 @@ async function sendWebPush(subscription: { endpoint: string; p256dh: string; aut
     err.statusCode = res.status;
     throw err;
   }
+}
+
+// Plain fetch() with a headers object literal has been throwing "'headers'
+// of 'RequestInit' is not a valid ByteString" in this project's edge
+// runtime even for a small, all-ASCII header set -- cause not yet
+// isolated. Building the Headers object by hand, one .set() call at a
+// time, sidesteps whatever the object-literal + WebIDL record<> path is
+// tripping over, and logs each step so a failure pinpoints exactly where.
+function authHeaders(): Headers {
+  const h = new Headers();
+  h.set('apikey', ANON_KEY);
+  h.set('authorization', 'Bearer ' + ANON_KEY);
+  return h;
 }
 
 Deno.serve(async (req) => {
@@ -249,31 +267,52 @@ Deno.serve(async (req) => {
   const title = String(body.title || 'MJMConnect').slice(0, 100);
   const message = String(body.body || '').slice(0, 300);
 
-  const subsRes = await fetch(SUPABASE_URL + '/rest/v1/push_subscriptions?select=endpoint,p256dh,auth', {
-    headers: { apikey: ANON_KEY, Authorization: 'Bearer ' + ANON_KEY }
-  });
-  const subs = await subsRes.json();
-  const list = Array.isArray(subs) ? subs : [];
+  console.log('checkpoint A: about to fetch subscriptions, ANON_KEY len=', ANON_KEY.length);
+
+  let list: { endpoint: string; p256dh: string; auth: string }[] = [];
+  try {
+    const subsRes = await fetch(
+      SUPABASE_URL + '/rest/v1/push_subscriptions?select=endpoint,p256dh,auth',
+      { headers: authHeaders() }
+    );
+    console.log('checkpoint B: subs fetch status', subsRes.status);
+    const subs = await subsRes.json();
+    list = Array.isArray(subs) ? subs : [];
+  } catch (fetchErr) {
+    console.error('checkpoint B FAILED:', fetchErr instanceof Error ? fetchErr.stack : String(fetchErr));
+    return new Response(JSON.stringify({ ok: false, stage: 'subs-fetch', error: String(fetchErr) }), {
+      status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders() }
+    });
+  }
+
+  console.log('checkpoint C: got', list.length, 'subscriptions');
 
   let sent = 0, removed = 0;
+  const errors: string[] = [];
   await Promise.all(list.map(async (s) => {
     try {
       await sendWebPush({ endpoint: s.endpoint, p256dh: s.p256dh, auth: s.auth }, { title, body: message });
       sent++;
     } catch (err) {
+      const msg = err instanceof Error ? err.stack || err.message : String(err);
+      console.error('checkpoint D FAILED for', s.endpoint, ':', msg);
+      errors.push(msg);
       // 404/410 means the OS/browser invalidated this subscription (app
       // uninstalled, permission revoked, etc) -- stop retrying it forever.
-      if (err && (err.statusCode === 404 || err.statusCode === 410)) {
+      const statusCode = (err as { statusCode?: number })?.statusCode;
+      if (statusCode === 404 || statusCode === 410) {
         removed++;
-        await fetch(SUPABASE_URL + '/rest/v1/push_subscriptions?endpoint=eq.' + encodeURIComponent(s.endpoint), {
-          method: 'DELETE',
-          headers: { apikey: ANON_KEY, Authorization: 'Bearer ' + ANON_KEY }
-        });
+        await fetch(
+          SUPABASE_URL + '/rest/v1/push_subscriptions?endpoint=eq.' + encodeURIComponent(s.endpoint),
+          { method: 'DELETE', headers: authHeaders() }
+        );
       }
     }
   }));
 
-  return new Response(JSON.stringify({ ok: true, sent, removed, total: list.length }), {
+  console.log('checkpoint E: done, sent=', sent, 'removed=', removed);
+
+  return new Response(JSON.stringify({ ok: true, sent, removed, total: list.length, errors }), {
     headers: { 'Content-Type': 'application/json', ...corsHeaders() }
   });
 });
