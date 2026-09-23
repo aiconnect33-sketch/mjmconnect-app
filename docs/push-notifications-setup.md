@@ -77,6 +77,14 @@ app was created.
 6. Redeploy the function once after adding the secrets so it picks them up
    (Edge Functions → the function → **Deploy** again; secrets set after the
    first deploy don't apply retroactively).
+7. **Required:** open the function → **Settings** tab, and turn **off**
+   the toggle called **"Verify JWT with legacy secret"** (or "Enforce JWT
+   Verification" on older Supabase UIs), then **Save changes**. This
+   setting is **on by default** and, left on, makes Supabase itself reject
+   every call with 401 before the function's own code even runs — the
+   function's `PUSH_SECRET` check is the only authentication this endpoint
+   needs, since the client can't attach a Supabase session token anyway
+   (see the no-cors note in `js/push.js`).
 
 That's it — no CLI, no local install required.
 
