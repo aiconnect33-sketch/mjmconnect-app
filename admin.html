@@ -2352,7 +2352,17 @@ html, body {
   }
 
   // ── PUBLISH ANNOUNCEMENT ──
+  var publishAnnouncementInFlight = false;
   async function publishAnnouncement() {
+    if (publishAnnouncementInFlight) return;
+    publishAnnouncementInFlight = true;
+    try {
+      await publishAnnouncementImpl();
+    } finally {
+      publishAnnouncementInFlight = false;
+    }
+  }
+  async function publishAnnouncementImpl() {
     clearFormErrors();
     var title = document.getElementById('ann-title').value.trim();
     var body  = document.getElementById('ann-body').value.trim();
