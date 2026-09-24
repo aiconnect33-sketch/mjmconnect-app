@@ -45,6 +45,12 @@ push notifications at all, no matter what's toggled on. It also needs
 whether installed or just opened in the browser. The Profile page's status
 text explains this automatically when push isn't supported.
 
+**If notifications arrive but only show "MJMConnect / Notification"**
+instead of the real announcement text: this is iOS hiding the content on
+purpose, not a bug. Go to **iPhone Settings → Notifications →
+MJMConnect → Show Previews** and set it to **Always** (it defaults to
+"When Unlocked", which hides content on a locked screen).
+
 ## One-time setup
 
 ### 1. Create the table

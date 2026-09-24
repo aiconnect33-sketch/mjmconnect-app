@@ -70,6 +70,18 @@ html,body{min-height:100%;font-family:'Inter',-apple-system,sans-serif;backgroun
     var hash = window.location.hash;
     if (hash && hash.indexOf('type=invite') !== -1 && hash.indexOf('access_token') !== -1) {
       window.location.replace('register.html' + hash);
+      return;
+    }
+    // The PWA's start_url always opens here, so anyone already logged in
+    // (a previous login.html submit set mjm_user, and nothing ever clears
+    // it except an explicit Logout) should skip straight past this screen
+    // instead of signing in again on every app launch.
+    var raw = localStorage.getItem('mjm_user');
+    if (raw) {
+      try {
+        var role = JSON.parse(raw).role;
+        window.location.replace((role === 'superadmin' || role === 'hradmin') ? 'admin.html' : 'index.html');
+      } catch (e) {}
     }
   })();
 </script>

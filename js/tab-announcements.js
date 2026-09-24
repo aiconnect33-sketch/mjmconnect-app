@@ -273,7 +273,17 @@ async function editAnnouncement(id) {
   showAnnForm(id);
 }
 
+var saveAnnouncementInFlight = false;
 async function saveAnnouncement() {
+  if (saveAnnouncementInFlight) return;
+  saveAnnouncementInFlight = true;
+  try {
+    await saveAnnouncementImpl();
+  } finally {
+    saveAnnouncementInFlight = false;
+  }
+}
+async function saveAnnouncementImpl() {
   if (!hasEditPermission('announcements')) return;
   if (editingAnnId && !canManageAnnouncement(editingAnnId)) { alert('You can only edit your own announcements.'); return; }
   var title = document.getElementById('ann-form-title-input').value.trim();
