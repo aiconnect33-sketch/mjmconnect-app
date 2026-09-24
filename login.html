@@ -1,6 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>
+  // Runs before any stylesheet/font is fetched below, so an already-logged-in
+  // user redirects immediately instead of paying for this page's fonts/icons
+  // (and then index.html's/admin.html's on top) just to bounce straight off it.
+  (function() {
+    var hash = window.location.hash;
+    if (hash && hash.indexOf('type=invite') !== -1 && hash.indexOf('access_token') !== -1) {
+      window.location.replace('register.html' + hash);
+      return;
+    }
+    var raw = localStorage.getItem('mjm_user');
+    if (raw) {
+      try {
+        var role = JSON.parse(raw).role;
+        window.location.replace((role === 'superadmin' || role === 'hradmin') ? 'admin.html' : 'index.html');
+      } catch (e) {}
+    }
+  })();
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="color-scheme" content="light">
@@ -63,28 +82,6 @@ html,body{min-height:100%;font-family:'Inter',-apple-system,sans-serif;backgroun
 </style>
 </head>
 <body>
-
-<script>
-  // If invite token is in URL hash, redirect to register.html immediately
-  (function() {
-    var hash = window.location.hash;
-    if (hash && hash.indexOf('type=invite') !== -1 && hash.indexOf('access_token') !== -1) {
-      window.location.replace('register.html' + hash);
-      return;
-    }
-    // The PWA's start_url always opens here, so anyone already logged in
-    // (a previous login.html submit set mjm_user, and nothing ever clears
-    // it except an explicit Logout) should skip straight past this screen
-    // instead of signing in again on every app launch.
-    var raw = localStorage.getItem('mjm_user');
-    if (raw) {
-      try {
-        var role = JSON.parse(raw).role;
-        window.location.replace((role === 'superadmin' || role === 'hradmin') ? 'admin.html' : 'index.html');
-      } catch (e) {}
-    }
-  })();
-</script>
 
 <div class="page">
 <div class="login-card">
