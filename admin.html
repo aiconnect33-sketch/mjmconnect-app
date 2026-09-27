@@ -938,6 +938,22 @@ html, body {
   }
   .greet-hi { font-size: 19px; font-weight: 400; color: #fff; margin-bottom: 6px; }
   .greet-name { font-size: 27px; font-weight: 700; line-height: 1.1; color: #fff; margin-bottom: 9px; }
+  @keyframes wave-hand {
+    0%   { transform: rotate(0deg); }
+    6%   { transform: rotate(14deg); }
+    12%  { transform: rotate(-8deg); }
+    18%  { transform: rotate(14deg); }
+    24%  { transform: rotate(-4deg); }
+    30%  { transform: rotate(10deg); }
+    36%  { transform: rotate(0deg); }
+    100% { transform: rotate(0deg); }
+  }
+  .wave-emoji {
+    display: inline-block;
+    transform-origin: 70% 70%;
+    animation: wave-hand 2.8s ease-in-out infinite;
+    animation-delay: 0.4s;
+  }
   .greet-sub { font-size: 17px; font-weight: 400; color: rgba(255,255,255,0.9); margin-bottom: 20px; }
   .home-alert-banner {
     background: #FFFBEB; border: 0.5px solid #F5D78A; border-radius: var(--r-xl);
@@ -1087,7 +1103,7 @@ html, body {
     <div class="home-hero">
 
       <div class="greet-hi">Hi,</div>
-      <div class="greet-name"><span id="greet-name-text">Super Admin</span> 👋</div>
+      <div class="greet-name"><span id="greet-name-text">Super Admin</span> <span class="wave-emoji">👋</span></div>
       <div class="greet-sub">Here's what's happening today.</div>
 
       <!-- Push notifications pre-prompt (js/push.js) -->
