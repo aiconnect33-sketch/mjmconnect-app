@@ -116,6 +116,8 @@ function initBookTab() {
   var now = new Date();
   if (vCalYear === undefined) { vCalYear = now.getFullYear(); vCalMonth = now.getMonth(); }
   if (rCalYear === undefined) { rCalYear = now.getFullYear(); rCalMonth = now.getMonth(); }
+  renderVehiclePicker();
+  updateVehicleCardInfo();
   renderRoomPicker();
   updateRoomCardInfo();
   if (window.location.protocol !== 'file:') {
@@ -144,8 +146,47 @@ function switchBookPill(type) {
 //  VEHICLE
 // ════════════════════════════
 
+var VEHICLES = [
+  { name: 'QPA1234', sub: 'Company Car', icon: 'ti-car', bg: 'var(--green-bg)', color: 'var(--green-dark)' },
+  { name: 'QM7351K', sub: 'Company Car', icon: 'ti-car', bg: 'var(--blue-bg)',  color: 'var(--blue-text)' }
+];
+var vSelectedVehicle = VEHICLES[0].name;
 var vIsFullDay = true;
 var vSelectedDates = [];
+
+function renderVehiclePicker() {
+  var el = document.getElementById('vehicle-picker-list');
+  if (!el) return;
+  el.innerHTML = VEHICLES.map(function(v) {
+    var sel = v.name === vSelectedVehicle;
+    return '<div class="room-picker-card' + (sel ? ' selected' : '') + '" onclick="selectVehicle(\'' + escJsAttr(v.name) + '\')">'
+      + '<div style="width:36px;height:36px;border-radius:var(--radius-md);background:' + v.bg + ';color:' + v.color + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:17px;"><i class="ti ' + v.icon + '"></i></div>'
+      + '<div style="flex:1;min-width:0;">'
+      + '<div style="font-size:13px;font-weight:600;color:var(--text-primary);">' + escHtml(v.name) + '</div>'
+      + '<div style="font-size:10.5px;color:var(--text-secondary);margin-top:1px;">' + escHtml(v.sub) + '</div>'
+      + '</div>'
+      + '<i class="ti ti-circle-check room-picker-card-check"></i>'
+      + '</div>';
+  }).join('');
+}
+
+function selectVehicle(name) {
+  if (name === vSelectedVehicle) return;
+  vSelectedVehicle = name;
+  renderVehiclePicker();
+  updateVehicleCardInfo();
+  hideVehicleForm();
+  loadVehicleCalendar();
+  loadMyVehicleBookings();
+  try { sessionStorage.setItem('mjm_last_book_vehicle', name); } catch (e) {}
+}
+
+function updateVehicleCardInfo() {
+  var formName = document.getElementById('vehicle-form-vehicle-name');
+  var calTitle = document.getElementById('v-cal-section-title');
+  if (formName) formName.textContent = vSelectedVehicle;
+  if (calTitle) calTitle.textContent = vSelectedVehicle + ' — Availability';
+}
 
 function showVehicleForm() {
   vIsFullDay = true;
@@ -227,7 +268,7 @@ async function checkVehicleClash() {
   var tto   = document.getElementById('v-time-to').value;
   try {
     for (var i = 0; i < vSelectedDates.length; i++) {
-      var url  = SURL + '/rest/v1/vehicle_bookings?booking_date=eq.' + vSelectedDates[i] + '&select=*';
+      var url  = SURL + '/rest/v1/vehicle_bookings?booking_date=eq.' + vSelectedDates[i] + '&vehicle_name=eq.' + encodeURIComponent(vSelectedVehicle) + '&select=*';
       var res  = await fetch(url, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
       var data = await res.json() || [];
       var clash = null;
@@ -276,7 +317,7 @@ async function submitVehicleBooking() {
         headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY,
                    'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
         body: JSON.stringify({
-          booked_by: bookedBy, booking_date: d,
+          booked_by: bookedBy, booking_date: d, vehicle_name: vSelectedVehicle,
           is_full_day: vIsFullDay,
           time_from: vIsFullDay ? null : to24h(tfrom),
           time_to:   vIsFullDay ? null : to24h(tto),
@@ -304,7 +345,7 @@ async function submitVehicleBooking() {
 async function loadVehicleCalendar() {
   var bookedDates = {};
   try {
-    var data = await sbGet('vehicle_bookings', 'select=booking_date');
+    var data = await sbGet('vehicle_bookings', 'vehicle_name=eq.' + encodeURIComponent(vSelectedVehicle) + '&select=booking_date');
     if (data && data.length) {
       data.forEach(function(b) { bookedDates[b.booking_date] = true; });
     }
@@ -371,6 +412,7 @@ async function loadMyVehicleBookings() {
   try {
     var url  = SURL + '/rest/v1/vehicle_bookings?booking_date=gte.' + monthStart
              + '&booking_date=lte.' + monthEnd
+             + '&vehicle_name=eq.' + encodeURIComponent(vSelectedVehicle)
              + '&order=booking_date.asc&limit=200';
     var res  = await fetch(url, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
     var data = await res.json();
@@ -721,7 +763,7 @@ async function showDayDetail(type, dateStr) {
     var raw2 = localStorage.getItem('mjm_user');
     var u2   = raw2 ? JSON.parse(raw2) : {};
     var data = type === 'vehicle'
-      ? await sbGet('vehicle_bookings', 'booking_date=eq.' + dateStr + '&order=time_from.asc')
+      ? await sbGet('vehicle_bookings', 'booking_date=eq.' + dateStr + '&vehicle_name=eq.' + encodeURIComponent(vSelectedVehicle) + '&order=time_from.asc')
       : await sbGet('room_bookings',    'booking_date=eq.' + dateStr + '&room_name=eq.' + encodeURIComponent(rSelectedRoom) + '&order=time_from.asc');
     if (!body) return;
     if (!data || data.length === 0) {

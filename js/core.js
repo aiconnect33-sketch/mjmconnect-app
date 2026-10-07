@@ -281,13 +281,15 @@ function restoreLastTab() {
   switchNav(name);
   if (name === 'book' && typeof initBookTab === 'function') {
     initBookTab();
-    var pill = null, room = null;
+    var pill = null, room = null, vehicle = null;
     try {
       pill = sessionStorage.getItem('mjm_last_book_pill');
       room = sessionStorage.getItem('mjm_last_book_room');
+      vehicle = sessionStorage.getItem('mjm_last_book_vehicle');
     } catch (e) {}
     if (pill === 'room' && typeof switchBookPill === 'function') switchBookPill('room');
     if (room && typeof selectRoom === 'function') selectRoom(room);
+    if (vehicle && typeof selectVehicle === 'function') selectVehicle(vehicle);
   }
   if (name === 'faulty' && typeof initFaultyTab === 'function') initFaultyTab();
 }
@@ -302,6 +304,7 @@ function logout() {
       sessionStorage.removeItem(LAST_TAB_KEY);
       sessionStorage.removeItem('mjm_last_book_pill');
       sessionStorage.removeItem('mjm_last_book_room');
+      sessionStorage.removeItem('mjm_last_book_vehicle');
     } catch (e) {}
     window.location.href = 'login.html';
   }
