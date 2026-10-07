@@ -1142,16 +1142,10 @@
       <!-- ── VEHICLE PANEL ── -->
       <div id="book-panel-vehicle">
 
+        <div class="section-row"><div class="section-title">Select a Vehicle</div></div>
+        <div id="vehicle-picker-list" style="margin-bottom:12px;"></div>
+
         <div class="card" style="margin-bottom:10px;">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-            <div style="width:40px;height:40px;border-radius:var(--radius-md);background:var(--green-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-              <i class="ti ti-car" style="font-size:20px;color:var(--green-dark);"></i>
-            </div>
-            <div>
-              <div style="font-size:13px;font-weight:600;color:var(--text-primary);">Vehicle Booking (QPA1234)</div>
-              <div style="font-size:11px;color:var(--text-secondary);">Full day or time-slot · First-come, first-served</div>
-            </div>
-          </div>
           <button class="book-btn-primary" onclick="showVehicleForm()">
             <i class="ti ti-plus"></i> New Booking
           </button>
@@ -1160,7 +1154,7 @@
         <!-- Vehicle booking form -->
         <div class="book-inline-form" id="vehicle-form" style="display:none;">
           <div class="book-form-title">
-            <span><i class="ti ti-car"></i> &nbsp;Book Vehicle</span>
+            <span><i class="ti ti-car"></i> &nbsp;Book <span id="vehicle-form-vehicle-name">Vehicle</span></span>
             <button class="book-close-btn" onclick="hideVehicleForm()">&times;</button>
           </div>
           <div class="book-form-group">
@@ -1218,7 +1212,7 @@
         <div class="book-alert book-alert-error" id="v-error"><i class="ti ti-alert-circle"></i><span id="v-error-msg">Could not save booking.</span></div>
 
         <!-- Vehicle calendar -->
-        <div class="section-row"><div class="section-title">Availability</div></div>
+        <div class="section-row"><div class="section-title" id="v-cal-section-title">Availability</div></div>
         <div class="cal-card" style="margin-bottom:10px;">
           <div class="cal-header">
             <button class="cal-nav-btn" onclick="vCalPrev()"><i class="ti ti-chevron-left"></i></button>

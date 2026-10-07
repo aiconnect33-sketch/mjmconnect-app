@@ -1733,16 +1733,10 @@ html, body {
       <!-- ── VEHICLE PANEL ── -->
       <div id="book-panel-vehicle">
 
+        <div class="sec-title" style="margin-bottom:8px;">Select a Vehicle</div>
+        <div id="vehicle-picker-list" style="margin-bottom:12px;"></div>
+
         <div class="card" style="margin-bottom:10px;">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-            <div style="width:40px;height:40px;border-radius:var(--r-md);background:var(--green-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-              <i class="ti ti-car" style="font-size:20px;color:var(--green);"></i>
-            </div>
-            <div>
-              <div style="font-size:13px;font-weight:600;color:var(--text);">Vehicle Booking (QPA1234)</div>
-              <div style="font-size:11px;color:var(--text2);">Full day or time-slot · First-come, first-served</div>
-            </div>
-          </div>
           <button class="book-btn-primary" onclick="showVehicleForm()">
             <i class="ti ti-plus"></i> New Booking
           </button>
@@ -1751,7 +1745,7 @@ html, body {
         <!-- Vehicle booking form -->
         <div class="book-inline-form" id="vehicle-form" style="display:none;">
           <div class="book-form-title">
-            <span><i class="ti ti-car"></i> &nbsp;Book Vehicle</span>
+            <span><i class="ti ti-car"></i> &nbsp;Book <span id="vehicle-form-vehicle-name">Vehicle</span></span>
             <button class="book-close-btn" onclick="hideVehicleForm()">&times;</button>
           </div>
           <div class="book-form-group">
@@ -1809,7 +1803,7 @@ html, body {
         <div class="book-alert book-alert-error" id="v-error"><i class="ti ti-alert-circle"></i><span id="v-error-msg">Could not save booking.</span></div>
 
         <!-- Vehicle calendar -->
-        <div class="sec-title" style="margin-bottom:8px;">Availability</div>
+        <div class="sec-title" style="margin-bottom:8px;" id="v-cal-section-title">Availability</div>
         <div class="cal-card" style="margin-bottom:10px;">
           <div class="cal-header">
             <button class="cal-nav-btn" onclick="vCalPrev()"><i class="ti ti-chevron-left"></i></button>
@@ -2319,13 +2313,15 @@ html, body {
     if (!name || name === 'dashboard' || !document.getElementById('screen-' + name)) return;
     switchNav(name);
     if (name === 'book') {
-      var pill = null, room = null;
+      var pill = null, room = null, vehicle = null;
       try {
         pill = sessionStorage.getItem('mjm_admin_last_book_pill');
         room = sessionStorage.getItem('mjm_admin_last_book_room');
+        vehicle = sessionStorage.getItem('mjm_admin_last_book_vehicle');
       } catch (e) {}
       if (pill === 'room' && typeof switchBookPill === 'function') switchBookPill('room');
       if (room && typeof selectRoom === 'function') selectRoom(room);
+      if (vehicle && typeof selectVehicle === 'function') selectVehicle(vehicle);
     }
   }
 
@@ -3769,6 +3765,8 @@ html, body {
     var now = new Date();
     if (vCalYear === undefined) { vCalYear = now.getFullYear(); vCalMonth = now.getMonth(); }
     if (rCalYear === undefined) { rCalYear = now.getFullYear(); rCalMonth = now.getMonth(); }
+    renderVehiclePicker();
+    updateVehicleCardInfo();
     renderRoomPicker();
     updateRoomCardInfo();
     loadVehicleCalendar();
@@ -3795,8 +3793,47 @@ html, body {
   //  VEHICLE
   // ════════════════════════════
 
+  var VEHICLES = [
+    { name: 'QPA1234', sub: 'Company Car', icon: 'ti-car', bg: 'var(--green-bg)', color: 'var(--green)' },
+    { name: 'QM7351K', sub: 'Company Car', icon: 'ti-car', bg: 'var(--blue-bg)',  color: 'var(--blue-text)' }
+  ];
+  var vSelectedVehicle = VEHICLES[0].name;
   var vIsFullDay = true;
   var vSelectedDates = [];
+
+  function renderVehiclePicker() {
+    var el = document.getElementById('vehicle-picker-list');
+    if (!el) return;
+    el.innerHTML = VEHICLES.map(function(v) {
+      var sel = v.name === vSelectedVehicle;
+      return '<div class="room-picker-card' + (sel ? ' selected' : '') + '" onclick="selectVehicle(\'' + escJsAttr(v.name) + '\')">'
+        + '<div style="width:36px;height:36px;border-radius:var(--r-md);background:' + v.bg + ';color:' + v.color + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:17px;"><i class="ti ' + v.icon + '"></i></div>'
+        + '<div style="flex:1;min-width:0;">'
+        + '<div style="font-size:13px;font-weight:600;color:var(--text);">' + escHtml(v.name) + '</div>'
+        + '<div style="font-size:10.5px;color:var(--text2);margin-top:1px;">' + escHtml(v.sub) + '</div>'
+        + '</div>'
+        + '<i class="ti ti-circle-check room-picker-card-check"></i>'
+        + '</div>';
+    }).join('');
+  }
+
+  function selectVehicle(name) {
+    if (name === vSelectedVehicle) return;
+    vSelectedVehicle = name;
+    renderVehiclePicker();
+    updateVehicleCardInfo();
+    hideVehicleForm();
+    loadVehicleCalendar();
+    loadMyVehicleBookings();
+    try { sessionStorage.setItem('mjm_admin_last_book_vehicle', name); } catch (e) {}
+  }
+
+  function updateVehicleCardInfo() {
+    var formName = document.getElementById('vehicle-form-vehicle-name');
+    var calTitle = document.getElementById('v-cal-section-title');
+    if (formName) formName.textContent = vSelectedVehicle;
+    if (calTitle) calTitle.textContent = vSelectedVehicle + ' — Availability';
+  }
 
   function showVehicleForm() {
     vIsFullDay = true;
@@ -3875,7 +3912,7 @@ html, body {
     var tto   = document.getElementById('v-time-to').value;
     try {
       for (var i = 0; i < vSelectedDates.length; i++) {
-        var url  = SURL + '/rest/v1/vehicle_bookings?booking_date=eq.' + vSelectedDates[i] + '&select=*';
+        var url  = SURL + '/rest/v1/vehicle_bookings?booking_date=eq.' + vSelectedDates[i] + '&vehicle_name=eq.' + encodeURIComponent(vSelectedVehicle) + '&select=*';
         var res  = await fetch(url, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
         var data = await res.json() || [];
         var clash = null;
@@ -3924,7 +3961,7 @@ html, body {
           headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY,
                      'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
           body: JSON.stringify({
-            booked_by: bookedBy, booking_date: d,
+            booked_by: bookedBy, booking_date: d, vehicle_name: vSelectedVehicle,
             is_full_day: vIsFullDay,
             time_from: vIsFullDay ? null : to24h(tfrom),
             time_to:   vIsFullDay ? null : to24h(tto),
@@ -3952,7 +3989,7 @@ html, body {
   async function loadVehicleCalendar() {
     var bookedDates = {};
     try {
-      var data = await sbGet('vehicle_bookings', 'select=booking_date');
+      var data = await sbGet('vehicle_bookings', 'vehicle_name=eq.' + encodeURIComponent(vSelectedVehicle) + '&select=booking_date');
       if (data && data.length) {
         data.forEach(function(b) { bookedDates[b.booking_date] = true; });
       }
@@ -4019,6 +4056,7 @@ html, body {
     try {
       var url  = SURL + '/rest/v1/vehicle_bookings?booking_date=gte.' + monthStart
                + '&booking_date=lte.' + monthEnd
+               + '&vehicle_name=eq.' + encodeURIComponent(vSelectedVehicle)
                + '&order=booking_date.asc&limit=200';
       var res  = await fetch(url, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
       var data = await res.json();
@@ -4368,7 +4406,7 @@ html, body {
       var raw2 = localStorage.getItem('mjm_user');
       var u2   = raw2 ? JSON.parse(raw2) : {};
       var data = type === 'vehicle'
-        ? await sbGet('vehicle_bookings', 'booking_date=eq.' + dateStr + '&order=time_from.asc')
+        ? await sbGet('vehicle_bookings', 'booking_date=eq.' + dateStr + '&vehicle_name=eq.' + encodeURIComponent(vSelectedVehicle) + '&order=time_from.asc')
         : await sbGet('room_bookings',    'booking_date=eq.' + dateStr + '&room_name=eq.' + encodeURIComponent(rSelectedRoom) + '&order=time_from.asc');
       if (!body) return;
       if (!data || data.length === 0) {
@@ -5976,6 +6014,7 @@ html, body {
         sessionStorage.removeItem(LAST_TAB_KEY);
         sessionStorage.removeItem('mjm_admin_last_book_pill');
         sessionStorage.removeItem('mjm_admin_last_book_room');
+        sessionStorage.removeItem('mjm_admin_last_book_vehicle');
       } catch (e) {}
       window.location.href = 'login.html';
     }
