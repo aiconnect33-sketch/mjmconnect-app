@@ -167,8 +167,16 @@ function renderTimeOffStatus(openRecord, monthlyMinutes, dueReminders) {
     html += '<div class="card">'
       + '<div class="book-form-group"><label class="book-form-label">Reason</label>'
       + '<input class="book-form-input" id="timeoff-reason" placeholder="e.g. Bank errand, clinic appointment..."></div>'
+      + '<div id="timeoff-now-row">'
       + '<button class="book-btn-primary" onclick="timeOutNow()">🚶 Time Out Now</button>'
-      + '<button class="book-btn-ghost" onclick="showPlanAheadForm()">📅 Plan Ahead</button>'
+      + '<div class="to-time-toggle" onclick="showTimeOffCustomTime()">⏱ Or key in a time instead</div>'
+      + '</div>'
+      + '<div id="timeoff-custom-row" style="display:none;">'
+      + '<div class="book-form-group"><label class="book-form-label">Time Out At</label>'
+      + '<input class="book-form-input" type="time" id="timeoff-custom-time"></div>'
+      + '<button class="book-btn-primary" onclick="timeOutAtCustomTime()">🚶 Confirm Time Out</button>'
+      + '<div class="to-time-toggle" onclick="hideTimeOffCustomTime()">↺ Use current time instead</div>'
+      + '</div>'
       + '</div>';
   }
 
@@ -447,6 +455,42 @@ async function saveTimeOffCorrection(key, id) {
 // ── ACTIONS ──
 
 async function timeOutNow() {
+  await startTimeOff(new Date());
+}
+
+// Lets someone who stepped out a few minutes before opening the app log the
+// actual time they left, instead of the time they happen to tap the button.
+// Only accepts a time up to now (plus a small grace window for clock skew) --
+// this is a correction for "just now", not a future Plan Ahead reminder.
+function showTimeOffCustomTime() {
+  var now = new Date();
+  var timeInput = document.getElementById('timeoff-custom-time');
+  if (timeInput) timeInput.value = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+  var nowRow = document.getElementById('timeoff-now-row');
+  var customRow = document.getElementById('timeoff-custom-row');
+  if (nowRow) nowRow.style.display = 'none';
+  if (customRow) customRow.style.display = 'block';
+}
+
+function hideTimeOffCustomTime() {
+  var nowRow = document.getElementById('timeoff-now-row');
+  var customRow = document.getElementById('timeoff-custom-row');
+  if (nowRow) nowRow.style.display = 'block';
+  if (customRow) customRow.style.display = 'none';
+}
+
+async function timeOutAtCustomTime() {
+  var timeInput = document.getElementById('timeoff-custom-time');
+  var val = timeInput ? timeInput.value : '';
+  if (!val) { alert('Please choose a time.'); return; }
+  var parts = val.split(':');
+  var d = new Date();
+  d.setHours(parseInt(parts[0], 10), parseInt(parts[1], 10), 0, 0);
+  if (d.getTime() > Date.now() + 60000) { alert('Time Out can\'t be in the future.'); return; }
+  await startTimeOff(d);
+}
+
+async function startTimeOff(timeOutDate) {
   var me = timeOffMe();
   var reasonEl = document.getElementById('timeoff-reason');
   var reason = reasonEl ? reasonEl.value.trim() : '';
@@ -469,7 +513,7 @@ async function timeOutNow() {
 
     await sbWrite('POST', 'time_off_records', {
       staff_name: me.name || me.email, staff_email: me.email,
-      reason: reason, time_out: new Date().toISOString()
+      reason: reason, time_out: timeOutDate.toISOString()
     });
     loadTimeOff();
   } catch (e) { alert('Could not start Time Off. Please try again.'); }
@@ -506,33 +550,11 @@ async function voidTimeOff(id) {
   } catch (e) { alert('Could not cancel this trip. Please try again.'); }
 }
 
-// ── PLAN AHEAD ──
-
-function showPlanAheadForm() {
-  document.getElementById('timeoff-pa-reason').value = '';
-  document.getElementById('timeoff-pa-date').value = localDateStr();
-  document.getElementById('timeoff-pa-time').value = '';
-  document.getElementById('timeoff-planahead-form').style.display = 'block';
-  document.getElementById('timeoff-planahead-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-function hidePlanAheadForm() {
-  document.getElementById('timeoff-planahead-form').style.display = 'none';
-}
-async function savePlanAheadReminder() {
-  var me = timeOffMe();
-  var reason = document.getElementById('timeoff-pa-reason').value.trim();
-  var date   = document.getElementById('timeoff-pa-date').value;
-  var time   = document.getElementById('timeoff-pa-time').value;
-  if (!reason || !date || !time) { alert('Please fill in the reason, date, and time.'); return; }
-  try {
-    await sbWrite('POST', 'time_off_reminders', {
-      staff_name: me.name || me.email, staff_email: me.email,
-      reason: reason, planned_date: date, planned_time: time
-    });
-    hidePlanAheadForm();
-    loadTimeOff();
-  } catch (e) { alert('Could not save the reminder. Please try again.'); }
-}
+// ── PLAN AHEAD reminders (time_off_reminders) ──
+// Creating new ones was removed in favor of keying in a time directly on
+// the main Time Out card (see showTimeOffCustomTime/timeOutAtCustomTime
+// above); convertReminder/cancelReminder stay so any reminder already on
+// file from before still has a way to be acted on.
 
 async function convertReminder(id) {
   var me = timeOffMe();

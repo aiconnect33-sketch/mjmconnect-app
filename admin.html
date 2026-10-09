@@ -384,6 +384,8 @@ html, body {
 .to-out-banner .to-status-line { font-size: 12px; font-weight: 700; color: var(--blue-text); margin-bottom: 4px; }
 .to-out-banner .to-reason-line { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
 .to-out-banner .to-time-line { font-size: 11px; color: var(--text2); margin-bottom: 14px; }
+.to-time-toggle { text-align: center; font-size: 12.5px; font-weight: 600; color: var(--green); cursor: pointer; padding: 10px 4px 2px; }
+.to-time-toggle:active { opacity: 0.6; }
 
 .to-warn { border-radius: var(--r-lg); padding: 13px 14px; margin-top: 10px; margin-bottom: 10px; font-size: 11.5px; line-height: 1.6; }
 .to-warn.red { background: var(--red-bg); color: var(--red-text); border: 1px solid rgba(163,45,45,0.25); }
@@ -1585,26 +1587,6 @@ html, body {
       </div>
       <div id="admin-timeoff-status">
         <div class="card"><div style="font-size:12px;color:var(--text3);text-align:center;padding:14px 0;">Loading...</div></div>
-      </div>
-
-      <div class="inline-form" id="admin-timeoff-planahead-form">
-        <div class="inline-form-title">Plan Ahead<button class="close-btn" onclick="adminHidePlanAheadForm()">&times;</button></div>
-        <div class="form-group">
-          <label class="form-label">Reason</label>
-          <input class="form-input no-icon" id="admin-timeoff-pa-reason" placeholder="e.g. Medical appointment">
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-          <div class="form-group">
-            <label class="form-label">Expected Date</label>
-            <input class="form-input no-icon" type="date" id="admin-timeoff-pa-date">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Expected Time</label>
-            <input class="form-input no-icon" type="time" id="admin-timeoff-pa-time">
-          </div>
-        </div>
-        <button class="btn-primary" onclick="adminSavePlanAheadReminder()">Save Reminder</button>
-        <button class="btn-ghost" onclick="adminHidePlanAheadForm()">Cancel</button>
       </div>
 
       <div class="inline-form" id="admin-timeoff-backfill-form">
@@ -5392,8 +5374,16 @@ html, body {
       html += '<div class="card">'
         + '<div class="form-group"><label class="form-label">Reason</label>'
         + '<input class="form-input no-icon" id="admin-timeoff-reason" placeholder="e.g. Bank errand, clinic appointment..."></div>'
+        + '<div id="admin-timeoff-now-row">'
         + '<button class="btn-primary" onclick="adminTimeOutNow()">Time Out Now</button>'
-        + '<button class="btn-ghost" onclick="adminShowPlanAheadForm()">Plan Ahead</button>'
+        + '<div class="to-time-toggle" onclick="adminShowTimeOffCustomTime()">⏱ Or key in a time instead</div>'
+        + '</div>'
+        + '<div id="admin-timeoff-custom-row" style="display:none;">'
+        + '<div class="form-group"><label class="form-label">Time Out At</label>'
+        + '<input class="form-input no-icon" type="time" id="admin-timeoff-custom-time"></div>'
+        + '<button class="btn-primary" onclick="adminTimeOutAtCustomTime()">Confirm Time Out</button>'
+        + '<div class="to-time-toggle" onclick="adminHideTimeOffCustomTime()">↺ Use current time instead</div>'
+        + '</div>'
         + '</div>';
     }
 
@@ -5479,6 +5469,41 @@ html, body {
   }
 
   async function adminTimeOutNow() {
+    await adminStartTimeOff(new Date());
+  }
+
+  // Mirrors showTimeOffCustomTime/timeOutAtCustomTime in js/tab-timeoff.js --
+  // lets someone who stepped out a few minutes before opening the app log
+  // the actual time they left, instead of the time they tap the button.
+  function adminShowTimeOffCustomTime() {
+    var now = new Date();
+    var timeInput = document.getElementById('admin-timeoff-custom-time');
+    if (timeInput) timeInput.value = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+    var nowRow = document.getElementById('admin-timeoff-now-row');
+    var customRow = document.getElementById('admin-timeoff-custom-row');
+    if (nowRow) nowRow.style.display = 'none';
+    if (customRow) customRow.style.display = 'block';
+  }
+
+  function adminHideTimeOffCustomTime() {
+    var nowRow = document.getElementById('admin-timeoff-now-row');
+    var customRow = document.getElementById('admin-timeoff-custom-row');
+    if (nowRow) nowRow.style.display = 'block';
+    if (customRow) customRow.style.display = 'none';
+  }
+
+  async function adminTimeOutAtCustomTime() {
+    var timeInput = document.getElementById('admin-timeoff-custom-time');
+    var val = timeInput ? timeInput.value : '';
+    if (!val) { alert('Please choose a time.'); return; }
+    var parts = val.split(':');
+    var d = new Date();
+    d.setHours(parseInt(parts[0], 10), parseInt(parts[1], 10), 0, 0);
+    if (d.getTime() > Date.now() + 60000) { alert('Time Out can\'t be in the future.'); return; }
+    await adminStartTimeOff(d);
+  }
+
+  async function adminStartTimeOff(timeOutDate) {
     var me = JSON.parse(localStorage.getItem('mjm_user') || '{}');
     var reasonEl = document.getElementById('admin-timeoff-reason');
     var reason = reasonEl ? reasonEl.value.trim() : '';
@@ -5498,7 +5523,7 @@ html, body {
         if (!confirm('Low Time Off balance\n\nYou have ' + remaining2 + ' left this month. If this trip runs longer, it\'ll be flagged for HR to review.\n\nContinue?')) return;
       }
 
-      await sbFetch('POST', '/rest/v1/time_off_records', { staff_name: me.name || me.email, staff_email: me.email, reason: reason, time_out: new Date().toISOString() });
+      await sbFetch('POST', '/rest/v1/time_off_records', { staff_name: me.name || me.email, staff_email: me.email, reason: reason, time_out: timeOutDate.toISOString() });
       loadAdminTimeOffSelf();
       if (typeof loadDbTimeOff === 'function') loadDbTimeOff();
       if (typeof loadAdminLeaveDuty === 'function') loadAdminLeaveDuty();
@@ -5567,28 +5592,11 @@ html, body {
     } catch (e) { alert('Could not cancel this trip. Please try again.'); }
   }
 
-  function adminShowPlanAheadForm() {
-    document.getElementById('admin-timeoff-pa-reason').value = '';
-    document.getElementById('admin-timeoff-pa-date').value = localDateStr();
-    document.getElementById('admin-timeoff-pa-time').value = '';
-    document.getElementById('admin-timeoff-planahead-form').classList.add('visible');
-    document.getElementById('admin-timeoff-planahead-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-  function adminHidePlanAheadForm() {
-    document.getElementById('admin-timeoff-planahead-form').classList.remove('visible');
-  }
-  async function adminSavePlanAheadReminder() {
-    var me = JSON.parse(localStorage.getItem('mjm_user') || '{}');
-    var reason = document.getElementById('admin-timeoff-pa-reason').value.trim();
-    var date = document.getElementById('admin-timeoff-pa-date').value;
-    var time = document.getElementById('admin-timeoff-pa-time').value;
-    if (!reason || !date || !time) { alert('Please fill in the reason, date, and time.'); return; }
-    try {
-      await sbFetch('POST', '/rest/v1/time_off_reminders', { staff_name: me.name || me.email, staff_email: me.email, reason: reason, planned_date: date, planned_time: time });
-      adminHidePlanAheadForm();
-      loadAdminTimeOffSelf();
-    } catch (e) { alert('Could not save the reminder. Please try again.'); }
-  }
+  // Plan Ahead reminders (time_off_reminders) -- creating new ones was
+  // removed in favor of keying in a time directly on the main Time Out
+  // card (see adminShowTimeOffCustomTime/adminTimeOutAtCustomTime above);
+  // adminConvertReminder/adminCancelReminder stay so any reminder already
+  // on file from before still has a way to be acted on.
 
   async function adminConvertReminder(id) {
     var me = JSON.parse(localStorage.getItem('mjm_user') || '{}');
