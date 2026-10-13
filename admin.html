@@ -1063,6 +1063,18 @@ html, body {
     .dsk-qa-wrap { grid-column: 1 / -1; }
 
     .faulty-grid { display: grid; grid-template-columns: 0.95fr 1.05fr; gap: 20px; align-items: start; }
+
+    /* Dashboard's dark-green bleed (meant to fill a narrow phone screen)
+       reads as a wall of green across a wide desktop viewport instead of
+       the page background the rest of the app uses. Switch it to the same
+       light page background as every other screen -- the calendar header,
+       summary cards, and quick-access icons all carry their own color
+       already, so only the text that assumed a dark backdrop needs to
+       flip from white to dark here. */
+    .screen-body:has(#screen-dashboard.active) { background: var(--bg); }
+    .greet-hi, .greet-name { color: var(--text); }
+    .greet-sub { color: var(--text2); }
+    .qa-title, .qa-label { color: var(--text); }
   }
 
 </style>
