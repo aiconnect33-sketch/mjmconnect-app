@@ -170,11 +170,23 @@ html,body{min-height:100%;font-family:'Inter',-apple-system,sans-serif;backgroun
         <div class="field-hint">Set by HR · cannot be changed</div>
       </div>
       <div class="form-group">
+        <label class="form-label">OPISPRO Password</label>
+        <div class="input-wrap">
+          <i class="ti ti-shield-lock input-icon"></i>
+          <input class="form-input" type="password" id="reg-opispro-pw" name="opispro-password" placeholder="Your OPISPRO login password" autocomplete="off">
+          <button class="input-icon-right" type="button" onclick="togglePw('reg-opispro-pw','eye-opispro')"><i class="ti ti-eye" id="eye-opispro"></i></button>
+        </div>
+        <div class="field-hint">We check this against OPISPRO to confirm it's really you, then fill in your name and office below. It's never saved.</div>
+        <div class="field-error" id="opispro-error"><i class="ti ti-alert-circle"></i><span id="opispro-error-text">Unauthorized. Invalid email and/or password.</span></div>
+      </div>
+      <div class="form-group">
         <label class="form-label">Full Name</label>
         <div class="input-wrap">
           <i class="ti ti-user input-icon"></i>
-          <input class="form-input" type="text" id="reg-name" name="name" placeholder="As per your ID" oninput="updateAvatar()" autocomplete="name">
+          <input class="form-input locked" type="text" id="reg-name" name="name" placeholder="Verify your OPISPRO password above" oninput="updateAvatar()" autocomplete="name" readonly>
+          <i class="ti ti-lock input-icon-right" style="cursor:default;"></i>
         </div>
+        <div class="field-hint">Filled in automatically from OPISPRO once verified</div>
         <div class="field-error" id="name-error"><i class="ti ti-alert-circle"></i><span>Full name is required.</span></div>
       </div>
       <div class="form-group">
@@ -187,7 +199,10 @@ html,body{min-height:100%;font-family:'Inter',-apple-system,sans-serif;backgroun
       </form>
     </div>
     <div class="card-footer">
-      <button class="btn-primary" type="button" onclick="goStep(2)">Continue <i class="ti ti-arrow-right"></i></button>
+      <button class="btn-primary" type="button" id="verify-btn" onclick="handleVerifyAndContinue()">
+        <span id="verify-label">Verify &amp; Continue <i class="ti ti-arrow-right"></i></span>
+        <div class="spinner" id="verify-spinner"></div>
+      </button>
       <div class="hdivider"></div>
       <div class="footer-note">Wrong details? <a href="login.html">Contact HR</a> to update your invite.</div>
     </div>
@@ -316,6 +331,20 @@ var refreshToken = null;
 var userEmail    = null;
 var flowType     = null; // 'invite' or 'recovery'
 
+// Set once OPISPRO verification succeeds (see handleVerifyAndContinue) and
+// saved onto the profile in handleCreate(). Never sent anywhere except in
+// that one PATCH -- the OPISPRO password itself is read straight from the
+// input and never stored in a variable.
+var opisproUserId   = null;
+var opisproLocation = null;
+
+// Same shared-secret pattern as PUSH_SECRET in js/push.js -- this just
+// keeps the function from being hit by randoms who stumble on the URL; it
+// isn't, and can't be, a real secret since it ships in this public file.
+// The real secret (the OPISPRO service token) lives only in the Edge
+// Function's own environment and never reaches the browser.
+var OPISPRO_CLIENT_SECRET = 'mWfK3xNqL8vY2bRz6cTdP9hJ4sAeU1oG';
+
 // ── ON LOAD — parse token from URL ──
 window.addEventListener('DOMContentLoaded', async function() {
 
@@ -399,9 +428,6 @@ function showPanel(name) {
 
 // ── GO STEP ──
 function goStep(n) {
-  if (n === 2 && currentStep === 1) {
-    if (!validateStep1()) return;
-  }
   showPanel(n);
   currentStep = n;
   updateStepUI(n);
@@ -423,17 +449,50 @@ function updateStepUI(n) {
   }
 }
 
-function validateStep1() {
+// ── VERIFY WITH OPISPRO, THEN ADVANCE TO STEP 2 ──
+async function handleVerifyAndContinue() {
   clearErrors();
-  var name = document.getElementById('reg-name').value.trim();
-  if (!name) {
-    document.getElementById('reg-name').classList.add('error');
-    document.getElementById('name-error').classList.add('visible');
-    document.getElementById('p1-alert-msg').textContent = 'Full name is required.';
-    document.getElementById('p1-alert').classList.add('visible');
-    return false;
+  document.getElementById('opispro-error').classList.remove('visible');
+
+  var pw = document.getElementById('reg-opispro-pw').value;
+  if (!pw) {
+    document.getElementById('reg-opispro-pw').classList.add('error');
+    document.getElementById('opispro-error-text').textContent = 'Please enter your OPISPRO password.';
+    document.getElementById('opispro-error').classList.add('visible');
+    return;
   }
-  return true;
+
+  var btn = document.getElementById('verify-btn');
+  var lbl = document.getElementById('verify-label');
+  var spn = document.getElementById('verify-spinner');
+  btn.disabled = true; lbl.style.display = 'none'; spn.style.display = 'block';
+
+  try {
+    var res = await fetch(SURL + '/functions/v1/opispro-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secret: OPISPRO_CLIENT_SECRET, email: userEmail, password: pw })
+    });
+    var result = await res.json();
+
+    if (result.error_no === 0 && result.data) {
+      opisproUserId   = result.data.user_id;
+      opisproLocation = result.data.location;
+      document.getElementById('reg-name').value = result.data.name;
+      updateAvatar();
+      goStep(2);
+    } else {
+      document.getElementById('reg-opispro-pw').classList.add('error');
+      document.getElementById('opispro-error-text').textContent = result.message || 'Could not verify with OPISPRO. Please try again.';
+      document.getElementById('opispro-error').classList.add('visible');
+    }
+  } catch (e) {
+    document.getElementById('reg-opispro-pw').classList.add('error');
+    document.getElementById('opispro-error-text').textContent = 'Connection error. Please try again.';
+    document.getElementById('opispro-error').classList.add('visible');
+  }
+
+  btn.disabled = false; lbl.style.display = 'inline'; spn.style.display = 'none';
 }
 
 function clearErrors() {
@@ -556,7 +615,7 @@ async function handleCreate() {
           'Content-Type': 'application/json',
           'Prefer': 'return=representation'
         },
-        body: JSON.stringify({ full_name: name, phone: phone, role: 'staff' })
+        body: JSON.stringify({ full_name: name, phone: phone, role: 'staff', opispro_user_id: opisproUserId, opispro_location: opisproLocation })
       });
 
       if (!profileRes.ok) {
@@ -588,7 +647,7 @@ async function handleCreate() {
 
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Enter') {
-    if (currentStep === 1) goStep(2);
+    if (currentStep === 1) handleVerifyAndContinue();
     if (currentStep === 2) handleCreate();
   }
 });
