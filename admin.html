@@ -901,6 +901,22 @@ html, body {
   border-radius: 50%; border: 1.5px solid var(--surface);
 }
 
+/* Pending Approvals count -- a plain dot on the mobile bottom nav (tight on
+   space), a real number on the desktop sidebar (room for it). Both hidden
+   by default and shown via JS once loadPendingApprovals() has a count. */
+.nav-icon-dot { position: relative; display: inline-block; }
+.nav-icon-dot.show::after {
+  content: ''; position: absolute; top: -1px; right: -4px;
+  width: 7px; height: 7px; background: var(--red-dot);
+  border-radius: 50%; border: 1.5px solid #064F46;
+}
+.dsk-item-badge {
+  display: none; margin-left: auto; background: var(--red-dot); color: #fff;
+  font-size: 10px; font-weight: 700; min-width: 16px; height: 16px;
+  border-radius: 8px; padding: 0 4px; align-items: center; justify-content: center; line-height: 1;
+}
+.dsk-item-badge.show { display: flex; }
+
 /* ── DIVIDER ── */
 .divider { height: 0.5px; background: var(--border); margin: 10px 0; }
 
@@ -1130,7 +1146,7 @@ html, body {
   <div class="dsk-item" id="dsknav-estatetrip" onclick="switchTabByName('estatetrip')"><i class="ti ti-map-pin"></i>Estate Trip</div>
 
   <div class="dsk-section-label">Admin Only</div>
-  <div class="dsk-item admin-only" id="dsknav-invite" onclick="switchNav('invite')"><i class="ti ti-user-check"></i>Approvals</div>
+  <div class="dsk-item admin-only" id="dsknav-invite" onclick="switchNav('invite')"><i class="ti ti-user-check"></i>Approvals<span class="dsk-item-badge" id="dsknav-invite-badge"></span></div>
   <div class="dsk-item admin-only" id="dsknav-settings" onclick="switchNav('settings')"><i class="ti ti-shield-check"></i>Manage Admins</div>
 
   <div class="dsk-spacer"></div>
@@ -2222,7 +2238,7 @@ html, body {
       <i class="ti ti-home"></i><span>Home</span>
     </div>
     <div class="nav-item" id="nav-invite" onclick="switchNav('invite')">
-      <i class="ti ti-user-check"></i><span>Approvals</span>
+      <span class="nav-icon-dot" id="nav-invite-dot"><i class="ti ti-user-check"></i></span><span>Approvals</span>
     </div>
     <div class="nav-item" id="nav-settings" onclick="switchNav('settings')">
       <i class="ti ti-settings"></i><span>Setting</span>
@@ -3683,6 +3699,7 @@ html, body {
     loadAdminNotifications();
       loadAdminLeaveDuty();
       loadDbProfiles();
+      loadPendingApprovals();
       loadInviteLog();
       loadDbEvents();
       if (typeof checkPushAutoPrompt === 'function') checkPushAutoPrompt();
@@ -5952,10 +5969,12 @@ html, body {
       var data = await sbFetch('GET', '/rest/v1/profiles?role=eq.pending&order=created_at.desc&select=email,full_name,opispro_location,created_at');
       if (!data || data.length === 0) {
         if (countEl) countEl.textContent = '';
+        updatePendingApprovalsBadge(0);
         listEl.innerHTML = '<div style="text-align:center;padding:14px 0;font-size:12px;color:var(--text3);">No one is waiting on approval right now.</div>';
         return;
       }
       if (countEl) countEl.textContent = '(' + data.length + ')';
+      updatePendingApprovalsBadge(data.length);
       listEl.innerHTML = data.map(function(u) {
         var ini = (u.full_name || u.email).split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
         var date = u.created_at ? new Date(u.created_at).toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'}) : '';
@@ -5977,6 +5996,18 @@ html, body {
       }).join('');
     } catch(e) {
       listEl.innerHTML = '<div style="text-align:center;padding:12px 0;font-size:12px;color:var(--text3);">Could not load pending approvals.</div>';
+    }
+  }
+
+  // Red dot on the mobile bottom nav (no room for a number there), a real
+  // count on the desktop sidebar (there's room). Both start hidden in markup.
+  function updatePendingApprovalsBadge(count) {
+    var dot = document.getElementById('nav-invite-dot');
+    if (dot) dot.classList.toggle('show', count > 0);
+    var badge = document.getElementById('dsknav-invite-badge');
+    if (badge) {
+      badge.textContent = count > 99 ? '99+' : String(count);
+      badge.classList.toggle('show', count > 0);
     }
   }
 
