@@ -317,8 +317,47 @@ function getCurrentUserName() {
   return u.name || u.email || 'Unknown';
 }
 
+// ── Pending-approval gate ──
+// A brand-new OPISPRO sign-in (see login.html) lands here with role:'pending'
+// until an Admin approves them in admin.html's Pending Approvals queue. They
+// have a valid session, so skip them past the normal login redirect -- but
+// nothing of the real app (Announcements, Leave, etc.) should be reachable
+// until that approval happens, so this replaces the whole page instead of
+// just hiding one screen.
+function showPendingApprovalScreen(u) {
+  var parts = (u.name || u.email || '').split(/[@.\s]/);
+  var initials = parts.filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('') || 'ST';
+  document.body.innerHTML =
+    '<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 16px 40px;background:var(--bg);font-family:\'Inter\',-apple-system,sans-serif;">' +
+      '<div style="width:100%;max-width:360px;background:var(--surface);border-radius:20px;border:0.5px solid var(--border);box-shadow:0 4px 24px rgba(15,110,86,0.08);overflow:hidden;">' +
+        '<div style="background:var(--green-dark);padding:20px 24px;display:flex;align-items:center;gap:10px;">' +
+          '<div style="width:34px;height:34px;border-radius:10px;background:var(--green-mid);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="ti ti-building-community" style="color:#E1F5EE;font-size:17px;"></i></div>' +
+          '<div style="font-size:15px;font-weight:700;color:#E1F5EE;">MJM<span style="color:var(--green-light);font-weight:400;">Connect</span></div>' +
+        '</div>' +
+        '<div style="padding:28px 24px 24px;text-align:center;">' +
+          '<div style="width:72px;height:72px;border-radius:50%;background:var(--amber-bg);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;"><i class="ti ti-hourglass" style="font-size:34px;color:var(--amber-text);"></i></div>' +
+          '<div style="display:inline-flex;align-items:center;gap:6px;background:var(--green-bg);border-radius:20px;padding:6px 14px;font-size:11.5px;font-weight:700;color:var(--green-text);margin-bottom:14px;"><i class="ti ti-check" style="font-size:12px;"></i> Verified with OPISPRO</div>' +
+          '<div style="font-size:17px;font-weight:700;color:var(--text-primary);margin-bottom:8px;">Almost there!</div>' +
+          '<div style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:18px;">Your identity\'s confirmed, but an Admin still needs to approve your MJMConnect access. You\'ll be able to sign in and see everything as soon as that happens.</div>' +
+          '<div style="background:var(--bg);border-radius:14px;border:0.5px solid var(--border);padding:14px;display:flex;align-items:center;gap:12px;text-align:left;margin-bottom:18px;">' +
+            '<div style="width:40px;height:40px;border-radius:50%;background:var(--green-bg);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--green-text);flex-shrink:0;">' + escHtml(initials) + '</div>' +
+            '<div><div style="font-size:13px;font-weight:700;color:var(--text-primary);">' + escHtml(u.name || '') + '</div><div style="font-size:11.5px;color:var(--text-secondary);margin-top:1px;">' + escHtml(u.email || '') + (u.opispro_location ? ' · ' + escHtml(u.opispro_location) : '') + '</div></div>' +
+          '</div>' +
+          '<button onclick="logout()" style="width:100%;background:transparent;color:var(--text-secondary);border:1px solid var(--border);border-radius:10px;padding:10px;font-size:12.5px;font-weight:600;font-family:inherit;cursor:pointer;">Sign Out</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+}
+
 // ── DOMContentLoaded bootstrap ──
 window.addEventListener('DOMContentLoaded', function() {
+  var rawEarly = localStorage.getItem('mjm_user');
+  if (rawEarly) {
+    try {
+      var uEarly = JSON.parse(rawEarly);
+      if (uEarly && uEarly.role === 'pending') { showPendingApprovalScreen(uEarly); return; }
+    } catch (e) {}
+  }
   initScrollHideNav();
   initPullToRefresh();
   // Set top avatar initials

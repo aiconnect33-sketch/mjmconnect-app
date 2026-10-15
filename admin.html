@@ -1130,7 +1130,7 @@ html, body {
   <div class="dsk-item" id="dsknav-estatetrip" onclick="switchTabByName('estatetrip')"><i class="ti ti-map-pin"></i>Estate Trip</div>
 
   <div class="dsk-section-label">Admin Only</div>
-  <div class="dsk-item admin-only" id="dsknav-invite" onclick="switchNav('invite')"><i class="ti ti-user-plus"></i>Invite Staff</div>
+  <div class="dsk-item admin-only" id="dsknav-invite" onclick="switchNav('invite')"><i class="ti ti-user-check"></i>Approvals</div>
   <div class="dsk-item admin-only" id="dsknav-settings" onclick="switchNav('settings')"><i class="ti ti-shield-check"></i>Manage Admins</div>
 
   <div class="dsk-spacer"></div>
@@ -1347,60 +1347,34 @@ html, body {
     ═══════════════════════════ -->
     <div class="screen-section" id="screen-invite">
 
-      <div class="alert alert-success" id="invite-success">
+      <div class="alert alert-success" id="approval-success">
         <i class="ti ti-circle-check"></i>
-        <span id="invite-success-msg">Invite sent successfully.</span>
+        <span id="approval-success-msg">Done.</span>
       </div>
-      <div class="alert alert-error" id="invite-error">
+      <div class="alert alert-error" id="approval-error">
         <i class="ti ti-alert-circle"></i>
-        <span id="invite-error-msg">Could not send invite. Please try again.</span>
+        <span id="approval-error-msg">Could not complete that action. Please try again.</span>
       </div>
 
-      <!-- Invite form -->
-      <div class="card" style="margin-bottom:10px;">
-        <div class="card-label">New Staff Invite</div>
-        <div class="form-group">
-          <label class="form-label">Full Name</label>
-          <div class="input-wrap">
-            <i class="ti ti-user input-icon"></i>
-            <input class="form-input" type="text" id="invite-name"
-              placeholder="e.g. Nurul Ain Binti Razak"
-              oninput="clearInviteErrors()">
-          </div>
-          <div class="field-error" id="invite-name-error">
-            <i class="ti ti-alert-circle"></i> Full name is required.
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Work Email</label>
-          <div class="input-wrap">
-            <i class="ti ti-mail input-icon"></i>
-            <input class="form-input" type="email" id="invite-email"
-              placeholder="e.g. nurulain@puigroups.com"
-              inputmode="email" oninput="clearInviteErrors()">
-          </div>
-          <div class="field-error" id="invite-email-error">
-            <i class="ti ti-alert-circle"></i>
-            <span id="invite-email-msg">Please enter a valid email.</span>
-          </div>
-        </div>
-        <div style="background:var(--green-bg);border-radius:var(--r-md);padding:9px 11px;
-          display:flex;gap:7px;align-items:flex-start;margin-bottom:10px;">
-          <i class="ti ti-info-circle" style="font-size:13px;color:var(--green);margin-top:1px;flex-shrink:0;"></i>
-          <span style="font-size:11px;color:var(--green-text);line-height:1.5;">
-            An invite email will be sent with a secure link to set up their account.
-            The link expires in <strong>48 hours</strong>.
-          </span>
-        </div>
-        <button class="btn-primary" id="invite-send-btn" onclick="sendInvite()">
-          <span id="invite-send-label"><i class="ti ti-send"></i>&nbsp; Send Invite Link</span>
-          <div class="spinner" id="invite-spinner"></div>
-        </button>
-      </div>
-
-      <!-- Invite log -->
+      <!-- Pending Approvals: people who signed in with valid OPISPRO credentials
+           (login.html) but have no MJMConnect access yet. There is no more
+           HR-sent invite step -- staff reach login.html on their own, so this
+           is a review queue instead of a form. -->
       <div class="sec-hdr">
-        <div class="sec-title">Invite Log <span id="invite-log-count"></span></div>
+        <div class="sec-title">Pending Approvals <span id="pending-approvals-count"></span></div>
+        <button class="sec-action" onclick="loadPendingApprovals()">Refresh</button>
+      </div>
+      <div class="card" id="pending-approvals-card" style="margin-bottom:10px;padding:4px 0;">
+        <div id="pending-approvals-list">
+          <div style="text-align:center;padding:14px 0;font-size:12px;color:var(--text3);">
+            Loading…
+          </div>
+        </div>
+      </div>
+
+      <!-- Account log -->
+      <div class="sec-hdr">
+        <div class="sec-title">Account Log <span id="invite-log-count"></span></div>
         <button class="sec-action" onclick="loadInviteLog()">Refresh</button>
       </div>
       <div class="card" id="invite-log-card">
@@ -2248,7 +2222,7 @@ html, body {
       <i class="ti ti-home"></i><span>Home</span>
     </div>
     <div class="nav-item" id="nav-invite" onclick="switchNav('invite')">
-      <i class="ti ti-user-plus"></i><span>Invite</span>
+      <i class="ti ti-user-check"></i><span>Approvals</span>
     </div>
     <div class="nav-item" id="nav-settings" onclick="switchNav('settings')">
       <i class="ti ti-settings"></i><span>Setting</span>
@@ -2339,7 +2313,7 @@ html, body {
     document.getElementById('screen-' + name).classList.add('active');
     syncNav(name);
     if (name === 'settings') renderSettingsPage();
-    if (name === 'invite')   loadInviteLog();
+    if (name === 'invite')   { loadPendingApprovals(); loadInviteLog(); }
     if (name === 'event')    loadDbEvents();
     if (name === 'estatetrip') loadDbEstateTrips();
     if (name === 'timeoff')  { loadDbTimeOff(); loadAdminTimeOffSelf(); }
@@ -2359,7 +2333,7 @@ html, body {
     if (el) el.classList.add('active');
     syncDskNav(name);
     if (name === 'settings') renderSettingsPage();
-    if (name === 'invite')   loadInviteLog();
+    if (name === 'invite')   { loadPendingApprovals(); loadInviteLog(); }
     if (name === 'event')    loadDbEvents();
     if (name === 'estatetrip') loadDbEstateTrips();
     if (name === 'timeoff')  { loadDbTimeOff(); loadAdminTimeOffSelf(); }
@@ -2377,7 +2351,7 @@ html, body {
     if (screen) screen.classList.add('active');
     syncNav(name);
     if (name === 'settings') renderSettingsPage();
-    if (name === 'invite')   loadInviteLog();
+    if (name === 'invite')   { loadPendingApprovals(); loadInviteLog(); }
     if (name === 'event')    loadDbEvents();
     if (name === 'estatetrip') loadDbEstateTrips();
     if (name === 'timeoff')  { loadDbTimeOff(); loadAdminTimeOffSelf(); }
@@ -3734,7 +3708,7 @@ html, body {
   // ── SUPABASE CONFIG ──
   var SURL  = 'https://hbxzbowkucpqlhxdomap.supabase.co';
   var SKEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhieHpib3drdWNwcWxoeGRvbWFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5OTEwMjYsImV4cCI6MjEwMjU2NzAyNn0.tZMdtKy92OUdLEOxKkO2XAa2bgXzkEeQtCAjtYF8yGA';
-  var SVCKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhieHpib3drdWNwcWxoeGRvbWFwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4Njk5MTAyNiwiZXhwIjoyMTAyNTY3MDI2fQ.D7j3EkxjNswBWNraJwrqhoUhSwo4AGv7pXNXVG89STU'; // service role — used only for sending invites
+  var SVCKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhieHpib3drdWNwcWxoeGRvbWFwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4Njk5MTAyNiwiZXhwIjoyMTAyNTY3MDI2fQ.D7j3EkxjNswBWNraJwrqhoUhSwo4AGv7pXNXVG89STU'; // service role — only used by deleteInvite() to clean up pre-OPISPRO accounts that still have a real Supabase Auth user. New OPISPRO sign-ins never create one, so this key's remaining footprint will shrink as those legacy rows are cleared.
   // Mirrors js/core.js's DEFAULT_PERMISSIONS (admin.html doesn't include core.js)
   var DEFAULT_PERMISSIONS = { announcements: 'view', duty: 'view', dutyRoles: 'view', events: 'view', faulty: 'view', timeoff: 'view' };
 
@@ -5952,95 +5926,88 @@ html, body {
   }
 
   // ══════════════════════════════════════
-  // INVITE STAFF
+  // PENDING APPROVALS
+  // People land here automatically the moment they sign in at login.html
+  // with valid OPISPRO credentials and have no existing profiles row --
+  // there is no more HR-sent invite step. Approve flips role to 'staff'
+  // (existing permissions default to all-'view', same as before -- use the
+  // Manage Permissions action afterward if someone needs edit rights).
+  // Reject just deletes the row; they're free to sign in again later to
+  // re-enter the queue.
   // ══════════════════════════════════════
 
-  async function sendInvite() {
-    clearInviteErrors();
-    var name  = document.getElementById('invite-name').value.trim();
-    var email = document.getElementById('invite-email').value.trim().toLowerCase();
-    var valid = true;
+  function showApprovalFeedback(ok, msg) {
+    var el = document.getElementById(ok ? 'approval-success' : 'approval-error');
+    var msgEl = document.getElementById(ok ? 'approval-success-msg' : 'approval-error-msg');
+    msgEl.textContent = msg;
+    el.classList.add('visible');
+    setTimeout(function(){ el.classList.remove('visible'); }, 4000);
+  }
 
-    if (!name) {
-      document.getElementById('invite-name').classList.add('error');
-      document.getElementById('invite-name-error').classList.add('visible');
-      valid = false;
-    }
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      document.getElementById('invite-email').classList.add('error');
-      document.getElementById('invite-email-msg').textContent = 'Please enter a valid email address.';
-      document.getElementById('invite-email-error').classList.add('visible');
-      valid = false;
-    }
-    if (!valid) return;
-
-    setInviteLoading(true);
-
+  async function loadPendingApprovals() {
+    var listEl = document.getElementById('pending-approvals-list');
+    var countEl = document.getElementById('pending-approvals-count');
+    listEl.innerHTML = '<div style="text-align:center;padding:14px 0;font-size:12px;color:var(--text3);">Loading…</div>';
     try {
-      // Check if already invited/registered
-      var existing = await sbFetch('GET', '/rest/v1/profiles?email=eq.' + encodeURIComponent(email) + '&select=email,role');
-      if (existing && existing.length > 0) {
-        setInviteLoading(false);
-        document.getElementById('invite-email').classList.add('error');
-        document.getElementById('invite-email-msg').textContent = 'This email already has an account.';
-        document.getElementById('invite-email-error').classList.add('visible');
+      var data = await sbFetch('GET', '/rest/v1/profiles?role=eq.pending&order=created_at.desc&select=email,full_name,opispro_location,created_at');
+      if (!data || data.length === 0) {
+        if (countEl) countEl.textContent = '';
+        listEl.innerHTML = '<div style="text-align:center;padding:14px 0;font-size:12px;color:var(--text3);">No one is waiting on approval right now.</div>';
         return;
       }
-
-      // Save invite record to profiles with role=pending
-      await sbFetch('POST', '/rest/v1/profiles', {
-        email: email,
-        full_name: name,
-        role: 'pending',
-        phone: ''
-      });
-
-      // Send invite email via Supabase Auth (requires service role key)
-      var user = JSON.parse(localStorage.getItem('mjm_user') || '{}');
-      var redirectTo = window.location.origin + window.location.pathname.replace(/admin\.html$/, 'register.html');
-      var res = await fetch(SURL + '/auth/v1/invite?redirect_to=' + encodeURIComponent(redirectTo), {
-        method: 'POST',
-        headers: {
-          'apikey': SVCKEY,
-          'Authorization': 'Bearer ' + SVCKEY,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          email: email,
-          data: { full_name: name, invited_by: user.name || 'HR Admin' }
-        })
-      });
-
-      setInviteLoading(false);
-
-      if (res.ok) {
-        // Clear form
-        document.getElementById('invite-name').value  = '';
-        document.getElementById('invite-email').value = '';
-        // Show success
-        document.getElementById('invite-success-msg').textContent =
-          'Invite sent to ' + email + '. They will receive an email with a setup link.';
-        document.getElementById('invite-success').classList.add('visible');
-        setTimeout(function(){ document.getElementById('invite-success').classList.remove('visible'); }, 5000);
-        // Refresh log
-        loadInviteLog();
-      } else {
-        var err = await res.json();
-        // Roll back the pending profile row so this email can be retried,
-        // instead of being permanently blocked by the "already has an account" check.
-        try { await sbFetch('DELETE', '/rest/v1/profiles?email=eq.' + encodeURIComponent(email), null, { 'Prefer': '' }); } catch(e2) {}
-        document.getElementById('invite-error-msg').textContent =
-          err.msg || err.message || 'Could not send invite. Please try again.';
-        document.getElementById('invite-error').classList.add('visible');
-        setTimeout(function(){ document.getElementById('invite-error').classList.remove('visible'); }, 5000);
-      }
-
+      if (countEl) countEl.textContent = '(' + data.length + ')';
+      listEl.innerHTML = data.map(function(u) {
+        var ini = (u.full_name || u.email).split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
+        var date = u.created_at ? new Date(u.created_at).toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'}) : '';
+        return '<div class="person-row">'
+          + '<div class="av av-g">' + ini + '</div>'
+          + '<div style="flex:1;">'
+          + '<div class="p-name">' + escHtml(u.full_name || '') + '</div>'
+          + '<div class="p-sub">' + escHtml(u.email) + '</div>'
+          + '<div style="display:flex;align-items:center;gap:6px;margin-top:6px;">'
+          + (u.opispro_location ? '<span class="badge b-green" style="font-size:10px;">' + escHtml(u.opispro_location) + '</span>' : '')
+          + '<span style="font-size:10px;color:var(--text3);">Verified' + (date ? ' · ' + date : '') + '</span>'
+          + '</div>'
+          + '<div style="display:flex;gap:7px;margin-top:10px;">'
+          + '<button style="flex:1;background:var(--green);color:#fff;border:none;border-radius:var(--r-sm);padding:8px;font-size:11.5px;font-weight:700;font-family:inherit;cursor:pointer;" onclick="approveStaff(\'' + escJsAttr(u.email) + '\')"><i class="ti ti-check"></i>&nbsp; Approve as Staff</button>'
+          + '<button style="flex:1;background:transparent;color:var(--red-text);border:1px solid var(--red-bg);border-radius:var(--r-sm);padding:8px;font-size:11.5px;font-weight:700;font-family:inherit;cursor:pointer;" onclick="rejectPending(\'' + escJsAttr(u.email) + '\')"><i class="ti ti-x"></i>&nbsp; Reject</button>'
+          + '</div>'
+          + '</div>'
+          + '</div>';
+      }).join('');
     } catch(e) {
-      setInviteLoading(false);
-      try { await sbFetch('DELETE', '/rest/v1/profiles?email=eq.' + encodeURIComponent(email), null, { 'Prefer': '' }); } catch(e2) {}
-      document.getElementById('invite-error-msg').textContent = 'Connection error. Check your internet and try again.';
-      document.getElementById('invite-error').classList.add('visible');
-      setTimeout(function(){ document.getElementById('invite-error').classList.remove('visible'); }, 5000);
+      listEl.innerHTML = '<div style="text-align:center;padding:12px 0;font-size:12px;color:var(--text3);">Could not load pending approvals.</div>';
+    }
+  }
+
+  async function approveStaff(email) {
+    try {
+      var updated = await sbFetch('PATCH', '/rest/v1/profiles?email=eq.' + encodeURIComponent(email), { role: 'staff' });
+      if (!updated || updated.length === 0) {
+        showApprovalFeedback(false, 'Could not approve ' + email + '. Please try again.');
+        return;
+      }
+      showApprovalFeedback(true, email + ' approved — they now have Staff access.');
+      loadPendingApprovals();
+      loadInviteLog();
+    } catch(e) {
+      showApprovalFeedback(false, 'Connection error. Please try again.');
+    }
+  }
+
+  async function rejectPending(email) {
+    if (!confirm('Reject this sign-in? ' + email + ' will need to sign in again to be reviewed.')) return;
+    try {
+      var deleted = await sbFetch('DELETE', '/rest/v1/profiles?email=eq.' + encodeURIComponent(email));
+      if (!deleted || deleted.length === 0) {
+        showApprovalFeedback(false, 'Could not reject ' + email + '. Please try again.');
+        return;
+      }
+      showApprovalFeedback(true, email + ' was rejected.');
+      loadPendingApprovals();
+      loadInviteLog();
+    } catch(e) {
+      showApprovalFeedback(false, 'Connection error. Please try again.');
     }
   }
 
@@ -6050,7 +6017,7 @@ html, body {
       var listEl = document.getElementById('invite-log-list');
       var countEl = document.getElementById('invite-log-count');
       if (!data || data.length === 0) {
-        listEl.innerHTML = '<div style="text-align:center;padding:14px 0;font-size:12px;color:var(--text3);">No invites sent yet.</div>';
+        listEl.innerHTML = '<div style="text-align:center;padding:14px 0;font-size:12px;color:var(--text3);">No accounts yet.</div>';
         return;
       }
       var avColors = ['av-g','av-b','av-a','av-c','av-p'];
@@ -6120,22 +6087,6 @@ html, body {
     } catch(e) {
       alert('Could not delete invite. ' + (e.message || 'Please try again.'));
     }
-  }
-
-  function setInviteLoading(on) {
-    var btn = document.getElementById('invite-send-btn');
-    var lbl = document.getElementById('invite-send-label');
-    var spn = document.getElementById('invite-spinner');
-    btn.disabled = on;
-    lbl.style.display   = on ? 'none'  : 'inline';
-    spn.style.display   = on ? 'block' : 'none';
-  }
-
-  function clearInviteErrors() {
-    document.getElementById('invite-name').classList.remove('error');
-    document.getElementById('invite-email').classList.remove('error');
-    document.getElementById('invite-name-error').classList.remove('visible');
-    document.getElementById('invite-email-error').classList.remove('visible');
   }
 
   // Logout

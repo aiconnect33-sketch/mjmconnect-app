@@ -79,6 +79,9 @@ html,body{min-height:100%;font-family:'Inter',-apple-system,sans-serif;backgroun
 @keyframes spin{to{transform:rotate(360deg)}}
 .panel{display:none}.panel.active{display:block}
 .back-btn{display:flex;align-items:center;gap:6px;background:none;border:none;color:var(--green);font-size:13px;font-weight:500;font-family:inherit;cursor:pointer;padding:0;margin-bottom:14px}
+.opispro-note{background:var(--green-bg);border-radius:var(--r-md);padding:10px 12px;display:flex;gap:8px;align-items:flex-start;margin-bottom:16px}
+.opispro-note i{font-size:14px;color:var(--green);flex-shrink:0;margin-top:1px}
+.opispro-note span{font-size:11.5px;color:var(--green-text);line-height:1.5}
 </style>
 </head>
 <body>
@@ -92,8 +95,9 @@ html,body{min-height:100%;font-family:'Inter',-apple-system,sans-serif;backgroun
 
   <div id="panel-login" class="panel active">
     <div class="card-body">
-      <div class="section-label">Sign in to your account</div>
+      <div class="section-label">Sign in with your OPISPRO account</div>
       <div class="alert alert-error" id="login-alert"><i class="ti ti-alert-circle"></i><span id="login-alert-msg">Incorrect email or password.</span></div>
+      <div class="opispro-note"><i class="ti ti-info-circle"></i><span>No invite needed — use the same email and password you use for OPISPRO. First time signing in? An Admin will need to approve your access before you can use the app.</span></div>
       <form autocomplete="on" onsubmit="return false;">
       <div class="form-group">
         <label class="form-label">Work Email</label>
@@ -104,15 +108,14 @@ html,body{min-height:100%;font-family:'Inter',-apple-system,sans-serif;backgroun
         <div class="field-error" id="email-error"><i class="ti ti-alert-circle"></i><span>Please enter a valid email.</span></div>
       </div>
       <div class="form-group">
-        <label class="form-label">Password</label>
+        <label class="form-label">OPISPRO Password</label>
         <div class="input-wrap">
           <i class="ti ti-lock input-icon"></i>
-          <input class="form-input" type="password" id="password" name="password" placeholder="Enter your password" autocomplete="current-password">
+          <input class="form-input" type="password" id="password" name="password" placeholder="Your OPISPRO password" autocomplete="current-password">
           <button class="input-icon-right" type="button" onclick="togglePassword()"><i class="ti ti-eye" id="pw-icon"></i></button>
         </div>
         <div class="field-error" id="pw-error"><i class="ti ti-alert-circle"></i><span>Password cannot be empty.</span></div>
       </div>
-      <div class="forgot-row"><button class="link-btn" type="button" onclick="showPanel('forgot')">Forgot password?</button></div>
       <button class="btn-primary" id="signin-btn" type="button" onclick="handleSignIn()">
         <span id="signin-label">Sign In</span><div class="spinner" id="signin-spinner"></div>
       </button>
@@ -120,33 +123,7 @@ html,body{min-height:100%;font-family:'Inter',-apple-system,sans-serif;backgroun
     </div>
     <div class="hdivider"></div>
     <div class="card-footer">
-      <div class="no-account-note">Don't have an account?<br><strong>Contact HR to receive an invite link.</strong><span class="small">Self-registration is not available.</span></div>
-    </div>
-  </div>
-
-  <div id="panel-forgot" class="panel">
-    <div class="card-body">
-      <button class="back-btn" onclick="showPanel('login')"><i class="ti ti-arrow-left"></i> Back to sign in</button>
-      <div class="section-label" style="text-align:left;margin-bottom:6px;">Reset your password</div>
-      <p style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:16px;">Enter your work email and we'll send a reset link. Expires in 30 minutes.</p>
-      <div class="alert alert-success" id="reset-success"><i class="ti ti-circle-check"></i><span>Reset link sent to <strong id="reset-email-shown"></strong>. Check your inbox.</span></div>
-      <div class="alert alert-error" id="reset-error"><i class="ti ti-alert-circle"></i><span>No account found with that email.</span></div>
-      <form autocomplete="on" onsubmit="return false;">
-      <div class="form-group" id="reset-form-group">
-        <label class="form-label">Work Email</label>
-        <div class="input-wrap">
-          <i class="ti ti-mail input-icon"></i>
-          <input class="form-input" type="email" id="reset-email" name="email" placeholder="Enter your work email" autocomplete="email">
-        </div>
-      </div>
-      <button class="btn-primary" id="reset-btn" type="button" onclick="handleReset()">
-        <span id="reset-label">Send Reset Link</span><div class="spinner" id="reset-spinner"></div>
-      </button>
-      </form>
-    </div>
-    <div class="hdivider"></div>
-    <div class="card-footer">
-      <div class="no-account-note">Don't have an account?<br><strong>Contact HR to receive an invite link.</strong><span class="small">Self-registration is not available.</span></div>
+      <div class="no-account-note">Wrong details? Check your OPISPRO login.<span class="small">MJMConnect doesn't have a separate password.</span></div>
     </div>
   </div>
 </div>
@@ -156,6 +133,11 @@ html,body{min-height:100%;font-family:'Inter',-apple-system,sans-serif;backgroun
 <script>
 var SURL = 'https://hbxzbowkucpqlhxdomap.supabase.co';
 var SKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhieHpib3drdWNwcWxoeGRvbWFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5OTEwMjYsImV4cCI6MjEwMjU2NzAyNn0.tZMdtKy92OUdLEOxKkO2XAa2bgXzkEeQtCAjtYF8yGA';
+
+// Same shared-secret pattern as register.html's OPISPRO_CLIENT_SECRET -- this
+// just keeps the function from being hit by randoms who stumble on the URL;
+// it isn't, and can't be, a real secret since it ships in this public file.
+var OPISPRO_CLIENT_SECRET = 'mWfK3xNqL8vY2bRz6cTdP9hJ4sAeU1oG';
 
 async function sbFetch(method, path, body) {
   var res = await fetch(SURL + path, {
@@ -168,38 +150,66 @@ async function sbFetch(method, path, body) {
 
 async function handleSignIn() {
   clearErrors();
-  var email = document.getElementById('email').value.trim();
+  var email = document.getElementById('email').value.trim().toLowerCase();
   var pw    = document.getElementById('password').value;
   if (!isValidEmail(email)) { document.getElementById('email').classList.add('error'); document.getElementById('email-error').classList.add('visible'); return; }
   if (!pw) { document.getElementById('password').classList.add('error'); document.getElementById('pw-error').classList.add('visible'); return; }
   setLoading('signin', true);
   try {
-    var res = await fetch(SURL + '/auth/v1/token?grant_type=password', {
+    var res = await fetch(SURL + '/functions/v1/opispro-login', {
       method: 'POST',
-      headers: { 'apikey': SKEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email, password: pw })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secret: OPISPRO_CLIENT_SECRET, email: email, password: pw })
     });
-    var data = await res.json();
-    if (!res.ok || data.error) {
+    var result = await res.json();
+
+    if (result.error_no !== 0 || !result.data) {
       setLoading('signin', false);
-      document.getElementById('login-alert-msg').textContent = 'Incorrect email or password. Please try again.';
+      document.getElementById('login-alert-msg').textContent = result.message || 'Incorrect email or password. Please try again.';
       document.getElementById('login-alert').classList.add('visible');
       document.getElementById('email').classList.add('error');
       document.getElementById('password').classList.add('error');
       return;
     }
+
+    // OPISPRO accepted the credentials -- find (or create) the matching
+    // MJMConnect profile. A brand-new email lands as role:'pending' until
+    // an Admin approves it (see admin.html's Pending Approvals queue).
     var profile = await sbFetch('GET', '/rest/v1/profiles?email=eq.' + encodeURIComponent(email) + '&select=*');
-    var role = 'staff', name = email.split('@')[0], permissions = null;
-    if (profile && profile.length > 0) { role = profile[0].role || 'staff'; name = profile[0].full_name || name; permissions = profile[0].permissions || null; }
-    localStorage.setItem('mjm_user', JSON.stringify({ email: email, role: role, name: name, access_token: data.access_token, permissions: permissions }));
-    // Clear any cached pages and redirect
-      if ('caches' in window) {
-        caches.keys().then(function(names) {
-          names.forEach(function(name) { caches.delete(name); });
-        });
+    var role, name, permissions = null, location = result.data.location;
+    if (profile && profile.length > 0) {
+      role = profile[0].role || 'staff';
+      name = profile[0].full_name || result.data.name;
+      permissions = profile[0].permissions || null;
+      location = profile[0].opispro_location || location;
+    } else {
+      role = 'pending';
+      name = result.data.name;
+      var created = await sbFetch('POST', '/rest/v1/profiles', {
+        email: email,
+        full_name: name,
+        role: 'pending',
+        phone: '',
+        opispro_user_id: result.data.user_id,
+        opispro_location: location
+      });
+      if (!created) {
+        setLoading('signin', false);
+        document.getElementById('login-alert-msg').textContent = 'Could not set up your account. Please try again.';
+        document.getElementById('login-alert').classList.add('visible');
+        return;
       }
-      var dest = (role === 'superadmin' || role === 'hradmin') ? 'admin.html' : 'index.html';
-      window.location.replace(dest);
+    }
+
+    localStorage.setItem('mjm_user', JSON.stringify({ email: email, role: role, name: name, permissions: permissions, opispro_location: location }));
+    // Clear any cached pages and redirect
+    if ('caches' in window) {
+      caches.keys().then(function(names) {
+        names.forEach(function(name) { caches.delete(name); });
+      });
+    }
+    var dest = (role === 'superadmin' || role === 'hradmin') ? 'admin.html' : 'index.html';
+    window.location.replace(dest);
   } catch(e) {
     setLoading('signin', false);
     document.getElementById('login-alert-msg').textContent = 'Connection error. Check your internet and try again.';
@@ -207,39 +217,20 @@ async function handleSignIn() {
   }
 }
 
-async function handleReset() {
-  var email = document.getElementById('reset-email').value.trim();
-  if (!isValidEmail(email)) { document.getElementById('reset-email').classList.add('error'); return; }
-  setLoading('reset', true);
-  try {
-    var resetRedirectTo = window.location.origin + window.location.pathname.replace(/login\.html$/, 'register.html');
-    await fetch(SURL + '/auth/v1/recover?redirect_to=' + encodeURIComponent(resetRedirectTo), { method: 'POST', headers: { 'apikey': SKEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email }) });
-    setLoading('reset', false);
-    document.getElementById('reset-email-shown').textContent = email;
-    document.getElementById('reset-success').classList.add('visible');
-    document.getElementById('reset-form-group').style.display = 'none';
-    document.getElementById('reset-btn').style.display = 'none';
-  } catch(e) { setLoading('reset', false); document.getElementById('reset-error').classList.add('visible'); }
-}
-
 function togglePassword() {
   var i = document.getElementById('password'), ic = document.getElementById('pw-icon');
   if (i.type === 'password') { i.type = 'text'; ic.className = 'ti ti-eye-off'; } else { i.type = 'password'; ic.className = 'ti ti-eye'; }
 }
-function showPanel(n) { document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('active'); }); document.getElementById('panel-' + n).classList.add('active'); clearErrors(); }
 function clearErrors() { document.querySelectorAll('.field-error').forEach(function(e){ e.classList.remove('visible'); }); document.querySelectorAll('.form-input').forEach(function(i){ i.classList.remove('error'); }); document.querySelectorAll('.alert').forEach(function(a){ a.classList.remove('visible'); }); }
 function isValidEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()); }
 function setLoading(w, on) {
-  var btn = document.getElementById(w === 'signin' ? 'signin-btn' : 'reset-btn');
-  var lbl = document.getElementById(w === 'signin' ? 'signin-label' : 'reset-label');
-  var spn = document.getElementById(w === 'signin' ? 'signin-spinner' : 'reset-spinner');
+  var btn = document.getElementById('signin-btn');
+  var lbl = document.getElementById('signin-label');
+  var spn = document.getElementById('signin-spinner');
   btn.disabled = on; lbl.style.display = on ? 'none' : 'inline'; spn.style.display = on ? 'block' : 'none';
 }
 document.addEventListener('keydown', function(e) {
-  if (e.key !== 'Enter') return;
-  var a = document.querySelector('.panel.active');
-  if (a && a.id === 'panel-login') handleSignIn();
-  if (a && a.id === 'panel-forgot') handleReset();
+  if (e.key === 'Enter') handleSignIn();
 });
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
