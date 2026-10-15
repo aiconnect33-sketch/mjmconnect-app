@@ -3,13 +3,6 @@
 <head>
 <script>
   (function() {
-    var hash = window.location.hash;
-    if (hash && hash.indexOf('type=invite') !== -1 && hash.indexOf('access_token') !== -1) {
-      window.location.replace('register.html' + hash); return;
-    }
-    if (hash && hash.indexOf('type=recovery') !== -1 && hash.indexOf('access_token') !== -1) {
-      window.location.replace('register.html' + hash); return;
-    }
     if (!localStorage.getItem('mjm_user')) {
       window.location.replace('login.html');
     }

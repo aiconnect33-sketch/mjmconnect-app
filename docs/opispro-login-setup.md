@@ -1,10 +1,12 @@
 # OPISPRO login verification setup
 
-Checks a new staff member's OPISPRO email and password during registration
-(`register.html`), so their MJMConnect account can only be set up by someone
-who can actually sign into OPISPRO as that person. On success, their real
-name and office location (`HQ`, `MILL` or `ESTATE`) come straight from
-OPISPRO instead of being typed by hand.
+Checks every sign-in's OPISPRO email and password (`login.html`) instead of
+a separate MJMConnect password — there's no HR invite step anymore; anyone
+with valid OPISPRO credentials can sign in, and a first-time email becomes
+a `role: 'pending'` profile until an Admin approves it (see admin.html's
+Pending Approvals queue). On success, the person's real name and office
+location (`HQ`, `MILL` or `ESTATE`) come straight from OPISPRO instead of
+being typed by hand.
 
 ## Why this needs a server-side piece
 
@@ -12,12 +14,12 @@ OPISPRO's API (see the API reference PDF) requires a **service Bearer
 token** issued by the OPISPRO team to call its Login endpoint. That token
 is a genuine secret — unlike Supabase's anon key, anyone who got hold of it
 could call OPISPRO as MJMConnect's service account. It can never be placed
-in `register.html` or any other client-side file.
+in `login.html` or any other client-side file.
 
 So, same reasoning as the push-notifications feature
 (`docs/push-notifications-setup.md`): a **Supabase Edge Function**
 (`opispro-login`) holds the token server-side and relays the call.
-`register.html` calls this function instead of opispro.com directly.
+`login.html` calls this function instead of opispro.com directly.
 
 ## One-time setup
 
@@ -32,7 +34,7 @@ this app was created.
 1. In the [Supabase dashboard](https://supabase.com/dashboard), open this
    project → **Edge Functions** → **Deploy a new function**.
 2. Name it exactly `opispro-login` (must match the URL hardcoded in
-   `register.html`'s `handleVerifyAndContinue()`).
+   `login.html`'s `handleSignIn()`).
 3. Paste in the code from the **Edge Function code** section below.
 4. Click **Deploy**.
 5. Still on the Edge Functions page, go to **Manage secrets** and add:
@@ -43,29 +45,29 @@ this app was created.
    | `OPISPRO_CLIENT_SECRET` | `mWfK3xNqL8vY2bRz6cTdP9hJ4sAeU1oG` |
 
    `OPISPRO_CLIENT_SECRET` must match the `OPISPRO_CLIENT_SECRET` constant
-   already hardcoded in `register.html` — nothing in the app code needs to
+   already hardcoded in `login.html` — nothing in the app code needs to
    change. Only `OPISPRO_TOKEN` is a genuine secret; it's never sent to any
    browser.
 6. Redeploy the function once after adding the secrets so it picks them up.
 7. **Required:** open the function → **Settings** tab, and turn **off**
    **"Verify JWT with legacy secret"** (or "Enforce JWT Verification"),
    then **Save changes**. Left on, Supabase rejects every call with 401
-   before the function's own code runs — the client here has no Supabase
-   session to attach (the person hasn't finished creating their account
-   yet), so `OPISPRO_CLIENT_SECRET` is the only authentication this
+   before the function's own code runs — nobody calling this has a
+   Supabase session yet (there's no separate MJMConnect login step before
+   it), so `OPISPRO_CLIENT_SECRET` is the only authentication this
    endpoint can use.
 
 That's it — no CLI, no local install required.
 
 ### 3. Test it
 
-1. Send yourself (or a test account) a staff invite from the admin app.
-2. Open the invite link, and on the "Your Info" step, enter your real
-   OPISPRO password.
-3. Tap **Verify & Continue** — your name should fill in automatically from
-   OPISPRO and the form should advance to the password step. A wrong
-   password should show OPISPRO's own "Unauthorized. Invalid email and/or
-   password." message and stay on the same step.
+1. On `login.html`, enter a real OPISPRO email and password.
+2. Tap **Sign In** — a first-time email should land on the "Almost
+   there!" pending-approval screen with the name/location filled in
+   automatically from OPISPRO; an email that's already an approved staff
+   member should go straight into the app. A wrong password should show
+   OPISPRO's own "Unauthorized. Invalid email and/or password." message
+   and stay on the sign-in page.
 
 ## A known limitation
 
@@ -84,15 +86,15 @@ ever needs tightening further (e.g. a per-IP or per-email attempt limit).
 ```typescript
 // supabase/functions/opispro-login/index.ts
 //
-// Verifies a staff member's OPISPRO email + password during MJMConnect
-// registration (register.html's handleVerifyAndContinue()) and returns
-// their name + office location from OPISPRO. The OPISPRO service token is
-// a genuine secret and must never reach the browser, so this function
-// holds it server-side and relays the call -- see docs/opispro-login-setup.md.
+// Verifies a staff member's OPISPRO email + password on every MJMConnect
+// sign-in (login.html's handleSignIn()) and returns their name + office
+// location from OPISPRO. The OPISPRO service token is a genuine secret and
+// must never reach the browser, so this function holds it server-side and
+// relays the call -- see docs/opispro-login-setup.md.
 //
 // Needs two secrets set on this Supabase project:
 //   OPISPRO_TOKEN          - the Sanctum service bearer token from the OPISPRO team
-//   OPISPRO_CLIENT_SECRET  - must match OPISPRO_CLIENT_SECRET in register.html
+//   OPISPRO_CLIENT_SECRET  - must match OPISPRO_CLIENT_SECRET in login.html
 
 const OPISPRO_TOKEN = Deno.env.get('OPISPRO_TOKEN') || '';
 const OPISPRO_CLIENT_SECRET = Deno.env.get('OPISPRO_CLIENT_SECRET') || '';

@@ -11,8 +11,7 @@ Supabase (config in `js/core.js`); everything else is client-side.
 
 Entry points: `login.html` (default landing — redirects here unless
 `sessionStorage.mjm_user` is set), `index.html` (main dashboard, tabs
-for Announcements/Leave/Duty/Book), `admin.html`, `register.html`,
-`profile.html`.
+for Announcements/Leave/Duty/Book), `admin.html`, `profile.html`.
 
 ## Start
 

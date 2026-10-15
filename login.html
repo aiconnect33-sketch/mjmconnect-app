@@ -6,11 +6,6 @@
   // user redirects immediately instead of paying for this page's fonts/icons
   // (and then index.html's/admin.html's on top) just to bounce straight off it.
   (function() {
-    var hash = window.location.hash;
-    if (hash && hash.indexOf('type=invite') !== -1 && hash.indexOf('access_token') !== -1) {
-      window.location.replace('register.html' + hash);
-      return;
-    }
     var raw = localStorage.getItem('mjm_user');
     if (raw) {
       try {
@@ -134,9 +129,9 @@ html,body{min-height:100%;font-family:'Inter',-apple-system,sans-serif;backgroun
 var SURL = 'https://hbxzbowkucpqlhxdomap.supabase.co';
 var SKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhieHpib3drdWNwcWxoeGRvbWFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5OTEwMjYsImV4cCI6MjEwMjU2NzAyNn0.tZMdtKy92OUdLEOxKkO2XAa2bgXzkEeQtCAjtYF8yGA';
 
-// Same shared-secret pattern as register.html's OPISPRO_CLIENT_SECRET -- this
-// just keeps the function from being hit by randoms who stumble on the URL;
-// it isn't, and can't be, a real secret since it ships in this public file.
+// Same shared-secret pattern as PUSH_SECRET in js/push.js -- this just
+// keeps the function from being hit by randoms who stumble on the URL; it
+// isn't, and can't be, a real secret since it ships in this public file.
 var OPISPRO_CLIENT_SECRET = 'mWfK3xNqL8vY2bRz6cTdP9hJ4sAeU1oG';
 
 async function sbFetch(method, path, body) {

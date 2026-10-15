@@ -1,8 +1,7 @@
-// MJMConnect Service Worker v3.0
-var CACHE_NAME = 'mjmconnect-v3';
+// MJMConnect Service Worker v3.1
+var CACHE_NAME = 'mjmconnect-v3.1';
 var ASSETS = [
   'login.html',
-  'register.html',
   'index.html',
   'admin.html',
   'admin-invite.html',
