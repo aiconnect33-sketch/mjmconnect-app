@@ -134,6 +134,22 @@ var SKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI
 // isn't, and can't be, a real secret since it ships in this public file.
 var OPISPRO_CLIENT_SECRET = 'mWfK3xNqL8vY2bRz6cTdP9hJ4sAeU1oG';
 
+// Must match PUSH_SECRET set as an Edge Function secret (see
+// docs/pending-approval-notify-setup.md) -- same secret js/push.js already
+// uses for send-announcement-push, since both functions share one project.
+var PENDING_NOTIFY_SECRET = 'NkFQfYHY9-H9iVvbUOxFetYsNk8k6-0U';
+
+// Fire-and-forget, like notifyAnnouncementPush in js/push.js -- never
+// blocks or fails the sign-in it accompanies. No explicit Content-Type:
+// mode:'no-cors' only allows "simple" requests, and the Edge Function's
+// req.json() doesn't care what Content-Type the browser ends up sending.
+function notifyPendingApproval(name, email, location) {
+  fetch(SURL + '/functions/v1/notify-pending-approval', {
+    method: 'POST', mode: 'no-cors',
+    body: JSON.stringify({ secret: PENDING_NOTIFY_SECRET, name: name, email: email, location: location })
+  }).catch(function () {});
+}
+
 async function sbFetch(method, path, body) {
   var res = await fetch(SURL + path, {
     method: method,
@@ -194,6 +210,7 @@ async function handleSignIn() {
         document.getElementById('login-alert').classList.add('visible');
         return;
       }
+      notifyPendingApproval(name, email, location);
     }
 
     localStorage.setItem('mjm_user', JSON.stringify({ email: email, role: role, name: name, permissions: permissions, opispro_location: location }));
