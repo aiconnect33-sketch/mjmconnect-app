@@ -6011,6 +6011,19 @@ html, body {
     }
   }
 
+  // Must match EMAIL_NOTIFY_SECRET set as an Edge Function secret (see
+  // docs/staff-status-email-setup.md) -- same value login.html already uses.
+  var EMAIL_NOTIFY_SECRET = 'NkFQfYHY9-H9iVvbUOxFetYsNk8k6-0U';
+
+  // Fire-and-forget, like the push-notification calls elsewhere in this
+  // app -- never blocks or fails the Approve action it accompanies.
+  function notifyStaffApproved(name, email) {
+    fetch(SURL + '/functions/v1/notify-staff-status', {
+      method: 'POST', mode: 'no-cors',
+      body: JSON.stringify({ secret: EMAIL_NOTIFY_SECRET, type: 'approved', name: name, email: email })
+    }).catch(function () {});
+  }
+
   async function approveStaff(email) {
     try {
       var updated = await sbFetch('PATCH', '/rest/v1/profiles?email=eq.' + encodeURIComponent(email), { role: 'staff' });
@@ -6018,6 +6031,7 @@ html, body {
         showApprovalFeedback(false, 'Could not approve ' + email + '. Please try again.');
         return;
       }
+      notifyStaffApproved(updated[0].full_name || '', email);
       showApprovalFeedback(true, email + ' approved — they now have Staff access.');
       loadPendingApprovals();
       loadInviteLog();
