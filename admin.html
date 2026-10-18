@@ -3522,11 +3522,40 @@ html, body {
       if (pulled >= THRESHOLD) {
         refreshing = true;
         indicator.style.height = '50px';
-        location.reload();
+        // A real location.reload() tears the whole page down, which flashes
+        // plain white (unstyled by any of this page's CSS) while the browser
+        // re-fetches and re-parses everything. Refreshing the data in place
+        // instead means the page never unloads, so there's nothing to flash.
+        refreshAdminData().finally(function() {
+          refreshing = false;
+          indicator.style.height = '0px';
+        });
       } else {
         indicator.style.height = '0px';
       }
     }, { passive: true });
+  }
+
+  // Re-fetches every section's live data in place, without navigating --
+  // used both on initial load and by the pull-to-refresh gesture, so "pull
+  // to refresh" never has to fall back to a real location.reload().
+  async function refreshAdminData() {
+    renderSettingsPage();
+    if (window.location.protocol !== 'file:') {
+      await Promise.all([
+        loadDbAnnouncements(),
+        loadDbLeave(),
+        loadDbDuty(),
+        loadAdminCalendar(),
+        loadAdminNotifications(),
+        loadAdminLeaveDuty(),
+        loadDbProfiles().then(renderSettingsPage),
+        loadPendingApprovals(),
+        loadInviteLog(),
+        loadDbEvents()
+      ]);
+      if (typeof checkPushAutoPrompt === 'function') checkPushAutoPrompt();
+    }
   }
 
   document.addEventListener('DOMContentLoaded', function() {
@@ -3549,20 +3578,7 @@ html, body {
       var dskNameEl = document.getElementById('dsk-foot-name');
       if (dskNameEl && (u.name || u.email)) dskNameEl.textContent = u.name || u.email;
     }
-    renderSettingsPage();
-    if (window.location.protocol !== 'file:') {
-      loadDbAnnouncements();
-      loadDbLeave();
-      loadDbDuty();
-      loadAdminCalendar();
-    loadAdminNotifications();
-      loadAdminLeaveDuty();
-      loadDbProfiles();
-      loadPendingApprovals();
-      loadInviteLog();
-      loadDbEvents();
-      if (typeof checkPushAutoPrompt === 'function') checkPushAutoPrompt();
-    }
+    refreshAdminData();
     initBackButtonTrap('dashboard');
     restoreLastTab();
   });
