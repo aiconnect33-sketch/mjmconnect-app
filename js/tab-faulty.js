@@ -464,7 +464,7 @@ async function loadTeamComplaints() {
       var photoHtml = c.photo_url
         ? '<a class="fc-photo-view" href="' + escHtml(c.photo_url) + '" target="_blank"><img src="' + escHtml(c.photo_url) + '" alt="Attached photo"></a>'
         : '';
-      return '<div class="book-item">'
+      return '<div class="book-item fc-case">'
         + '<div class="book-item-header"><div class="book-item-name">' + escHtml(itemLabel) + '</div><div>' + fcUrgencyBadge(c.urgency) + '&nbsp;' + fcStatusBadge(c.status) + '</div></div>'
         + '<div class="fc-loc"><i class="ti ti-map-pin"></i> ' + escHtml(c.location) + '</div>'
         + '<button class="fc-view-btn" aria-expanded="false" onclick="toggleFcDesc(this,' + c.id + ')"><i class="ti ti-chevron-right"></i> View details</button>'

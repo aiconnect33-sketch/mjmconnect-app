@@ -577,6 +577,9 @@
     background: var(--surface); border: 0.5px solid var(--border);
     border-radius: var(--radius-lg); padding: 12px 14px; margin-bottom: 8px;
   }
+  /* Faulty Complaint cards only -- .book-item's own border is too close in
+     colour to the page background to read as a separator between cards. */
+  .book-item.fc-case { border: 1px solid #C3D2CB; }
   .book-item-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
   .book-item-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
   .book-item-date { font-size: 11px; color: var(--text-secondary); margin-bottom: 2px; }
