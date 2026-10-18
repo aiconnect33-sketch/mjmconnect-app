@@ -150,21 +150,6 @@ function notifyPendingApproval(name, email, location) {
   }).catch(function () {});
 }
 
-// Must match EMAIL_NOTIFY_SECRET set as an Edge Function secret (see
-// docs/staff-status-email-setup.md). Same non-secret-secret pattern as
-// everything else here -- it just blocks drive-by hits on the URL.
-var EMAIL_NOTIFY_SECRET = 'NkFQfYHY9-H9iVvbUOxFetYsNk8k6-0U';
-
-// Fire-and-forget, same reasoning as notifyPendingApproval above -- tells
-// the person their request was received and is waiting on Admin, right
-// after their first-ever OPISPRO sign-in creates the pending profile.
-function notifyStaffEmail(type, name, email) {
-  fetch(SURL + '/functions/v1/notify-staff-status', {
-    method: 'POST', mode: 'no-cors',
-    body: JSON.stringify({ secret: EMAIL_NOTIFY_SECRET, type: type, name: name, email: email })
-  }).catch(function () {});
-}
-
 async function sbFetch(method, path, body) {
   var res = await fetch(SURL + path, {
     method: method,
@@ -226,7 +211,6 @@ async function handleSignIn() {
         return;
       }
       notifyPendingApproval(name, email, location);
-      notifyStaffEmail('pending', name, email);
     }
 
     localStorage.setItem('mjm_user', JSON.stringify({ email: email, role: role, name: name, permissions: permissions, opispro_location: location }));

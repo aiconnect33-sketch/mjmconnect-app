@@ -6011,16 +6011,22 @@ html, body {
     }
   }
 
-  // Must match EMAIL_NOTIFY_SECRET set as an Edge Function secret (see
-  // docs/staff-status-email-setup.md) -- same value login.html already uses.
-  var EMAIL_NOTIFY_SECRET = 'NkFQfYHY9-H9iVvbUOxFetYsNk8k6-0U';
-
-  // Fire-and-forget, like the push-notification calls elsewhere in this
-  // app -- never blocks or fails the Approve action it accompanies.
-  function notifyStaffApproved(name, email) {
-    fetch(SURL + '/functions/v1/notify-staff-status', {
-      method: 'POST', mode: 'no-cors',
-      body: JSON.stringify({ secret: EMAIL_NOTIFY_SECRET, type: 'approved', name: name, email: email })
+  // Emails the newly-approved staff member via Supabase's own built-in
+  // Invite email (Authentication -> Email Templates -> "Invite user" in
+  // the Supabase dashboard -- its wording is customized there to say
+  // "you're approved" instead of the default invite text). Reuses SVCKEY,
+  // already present in this file for deleteInvite()'s legacy cleanup.
+  // Fire-and-forget: never blocks or fails the Approve action it
+  // accompanies, and a 422 ("already registered") for a pre-existing
+  // auth user is expected and harmless here -- the click-through link is
+  // only ever used to carry the person to login.html, nothing reads the
+  // resulting Supabase session.
+  function sendApprovalEmail(email) {
+    var redirectTo = window.location.origin + window.location.pathname.replace(/admin\.html$/, 'login.html');
+    fetch(SURL + '/auth/v1/invite?redirect_to=' + encodeURIComponent(redirectTo), {
+      method: 'POST',
+      headers: { 'apikey': SVCKEY, 'Authorization': 'Bearer ' + SVCKEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email })
     }).catch(function () {});
   }
 
@@ -6031,7 +6037,7 @@ html, body {
         showApprovalFeedback(false, 'Could not approve ' + email + '. Please try again.');
         return;
       }
-      notifyStaffApproved(updated[0].full_name || '', email);
+      sendApprovalEmail(email);
       showApprovalFeedback(true, email + ' approved — they now have Staff access.');
       loadPendingApprovals();
       loadInviteLog();
