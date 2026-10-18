@@ -959,6 +959,25 @@ html, body {
   .screen-body:has(#screen-dashboard.active) { background: linear-gradient(180deg, #0B7A63 0%, #08705C 55%, var(--green) 100%); }
   .home-hero {
     margin: -14px -14px 0; padding: 18px 16px 4px;
+    position: relative;
+  }
+  /* Sparse rising dots behind the greeting banner -- purely decorative, so
+     they sit in their own absolutely-positioned layer (home-hero-dots)
+     behind everything real (home-hero-content), rather than touching the
+     stacking order of the actual content below. */
+  .home-hero-dots {
+    position: absolute; inset: 0; overflow: hidden; pointer-events: none;
+  }
+  .home-hero-content { position: relative; z-index: 1; }
+  .hh-dot {
+    position: absolute; border-radius: 50%; background: rgba(255,255,255,.55);
+    animation: hh-rise linear infinite;
+  }
+  @keyframes hh-rise {
+    0%   { transform: translateY(0) scale(1); opacity: 0; }
+    10%  { opacity: .7; }
+    85%  { opacity: .22; }
+    100% { transform: translateY(-140px) scale(.7); opacity: 0; }
   }
   .greet-hi { font-size: 19px; font-weight: 400; color: #fff; margin-bottom: 6px; }
   .greet-name { font-size: 27px; font-weight: 700; line-height: 1.1; color: #fff; margin-bottom: 9px; }
@@ -1094,6 +1113,7 @@ html, body {
        already, so only the text that assumed a dark backdrop needs to
        flip from white to dark here. */
     .screen-body:has(#screen-dashboard.active) { background: var(--bg); }
+    .home-hero-dots { display: none; }
     .greet-hi, .greet-name { color: var(--text); }
     .greet-sub { color: var(--text2); }
     .qa-title, .qa-label { color: var(--text); }
@@ -1222,6 +1242,16 @@ html, body {
     ═══════════════════════════ -->
     <div class="screen-section active" id="screen-dashboard">
     <div class="home-hero">
+    <div class="home-hero-dots" aria-hidden="true">
+      <span class="hh-dot" style="width:5px;height:5px;left:30px;top:100px;animation-duration:9s;animation-delay:0s;"></span>
+      <span class="hh-dot" style="width:8px;height:8px;left:90px;top:60px;animation-duration:12s;animation-delay:1.5s;"></span>
+      <span class="hh-dot" style="width:4px;height:4px;left:160px;top:140px;animation-duration:8s;animation-delay:3s;"></span>
+      <span class="hh-dot" style="width:6px;height:6px;left:230px;top:40px;animation-duration:11s;animation-delay:2s;"></span>
+      <span class="hh-dot" style="width:9px;height:9px;left:280px;top:90px;animation-duration:14s;animation-delay:4.5s;"></span>
+      <span class="hh-dot" style="width:5px;height:5px;left:330px;top:50px;animation-duration:10s;animation-delay:0.8s;"></span>
+      <span class="hh-dot" style="width:4px;height:4px;left:60px;top:20px;animation-duration:13s;animation-delay:5.5s;"></span>
+    </div>
+    <div class="home-hero-content">
 
       <div class="greet-hi">Hi,</div>
       <div class="greet-name"><span id="greet-name-text">Super Admin</span> <span class="wave-emoji">👋</span></div>
@@ -1301,6 +1331,7 @@ html, body {
 
       </div><!-- /dashboard-grid -->
 
+    </div><!-- /home-hero-content -->
     </div><!-- /home-hero -->
     </div><!-- /dashboard -->
 
