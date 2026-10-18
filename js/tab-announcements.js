@@ -2,7 +2,7 @@
 
 // ── STAFF CALENDAR ──
 var staffCalYear, staffCalMonth;
-var staffCalLeave = {}, staffCalEvents = {}, staffCalEstate = {};
+var staffCalLeave = {}, staffCalLeaveDetail = {}, staffCalEvents = {}, staffCalEstate = {};
 var STAFF_MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
 function initStaffCalendar() {
@@ -12,19 +12,21 @@ function initStaffCalendar() {
 }
 
 async function loadStaffCalendar() {
-  staffCalLeave = {}; staffCalEvents = {}; staffCalEstate = {};
+  staffCalLeave = {}; staffCalLeaveDetail = {}; staffCalEvents = {}; staffCalEstate = {};
   if (window.location.protocol === 'file:') { renderStaffCalendar(); return; }
   try {
-    var leaveData = await sbGet('leave_records', 'select=date_from,date_to&limit=200');
-    if (leaveData && leaveData.length) {
-      leaveData.forEach(function(r) {
-        if (!r.date_from || !r.date_to) return;
-        var cur = new Date(r.date_from + 'T00:00:00');
-        var end = new Date(r.date_to   + 'T00:00:00');
-        while (cur <= end) {
-          staffCalLeave[cur.getFullYear() + '-' + String(cur.getMonth()+1).padStart(2,'0') + '-' + String(cur.getDate()).padStart(2,'0')] = true;
-          cur.setDate(cur.getDate() + 1);
-        }
+    // Leave for the currently-viewed month, straight from OPISPRO (see
+    // docs/opispro-leaves-setup.md) -- same source js/tab-leave.js uses.
+    var monthStart = staffCalYear + '-' + String(staffCalMonth+1).padStart(2,'0') + '-01';
+    var daysInThisMonth = new Date(staffCalYear, staffCalMonth + 1, 0).getDate();
+    var leaveMonth = await fetchOpisproLeaves(monthStart, daysInThisMonth);
+    if (leaveMonth && leaveMonth.users) {
+      leaveMonth.users.forEach(function(u) {
+        u.leaves.forEach(function(lv) {
+          staffCalLeave[lv.date] = true;
+          if (!staffCalLeaveDetail[lv.date]) staffCalLeaveDetail[lv.date] = [];
+          staffCalLeaveDetail[lv.date].push({ name: u.name, leave_type: lv.leave_type, day_type: lv.day_type });
+        });
       });
     }
     var evData = await sbGet('events', 'select=event_date&limit=200');
@@ -87,20 +89,19 @@ async function showStaffDayDetail(dateStr, hasLeave, hasEvent, hasEstate) {
   var html = '';
   try {
     if (hasLeave) {
-      var leaves = await sbGet('leave_records', 'date_from=lte.' + dateStr + '&date_to=gte.' + dateStr + '&select=*');
-      if (leaves && leaves.length) {
+      var leaves = staffCalLeaveDetail[dateStr] || [];
+      if (leaves.length) {
         html += '<div style="font-size:10px;font-weight:600;color:#6B7A73;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">On Leave</div>';
         html += leaves.map(function(r) {
-          var ini  = r.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
-          var from = new Date(r.date_from+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'});
-          var to   = new Date(r.date_to+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'});
-          var shortType = r.leave_type === 'Annual Leave' ? 'AL' : r.leave_type === 'Medical Leave' ? 'MC' : 'CL';
-          if (r.day_period === 'am') shortType += ' · AM';
-          else if (r.day_period === 'pm') shortType += ' · PM';
+          var ini  = r.name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
+          var shortType = LEAVE_SHORT_CODE[r.leave_type] || r.leave_type;
+          if (r.day_type === 'AM') shortType += ' · AM';
+          else if (r.day_type === 'PM') shortType += ' · PM';
+          else if (r.day_type === 'HOURLY') shortType += ' · Hourly';
           return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:0.5px solid #E2E8E5;">'
             + '<div style="width:30px;height:30px;border-radius:50%;background:#E1F5EE;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#085041;flex-shrink:0;">' + ini + '</div>'
-            + '<div style="flex:1;"><div style="font-size:12px;font-weight:500;color:#111C18;">' + escHtml(r.staff_name) + '</div>'
-            + '<div style="font-size:11px;color:#6B7A73;">' + escHtml(r.leave_type) + ' · ' + from + '–' + to + '</div></div>'
+            + '<div style="flex:1;"><div style="font-size:12px;font-weight:500;color:#111C18;">' + escHtml(r.name) + '</div>'
+            + '<div style="font-size:11px;color:#6B7A73;">' + escHtml(LEAVE_FULL_NAME[r.leave_type] || r.leave_type) + '</div></div>'
             + '<span style="font-size:10px;font-weight:600;padding:2px 6px;border-radius:10px;background:#FAEEDA;color:#854F0B;">' + shortType + '</span></div>';
         }).join('');
       }

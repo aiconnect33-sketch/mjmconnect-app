@@ -1,210 +1,144 @@
-// ── tab-leave.js — Leave tab + Home today on leave ──
+// ── tab-leave.js — Leave tab + Home "Today on Leave" card ──
+//
+// Read-only: leave is managed in OPISPRO, not here. Pulled via the
+// opispro-get-leaves Edge Function (see docs/opispro-leaves-setup.md),
+// which merges HQ/MILL/ESTATE into one call. No self-entry, no edit, no
+// delete -- OPISPRO is the single source of truth for leave.
+
+// Same shared-secret pattern as OPISPRO_CLIENT_SECRET in login.html --
+// this just blocks drive-by hits on the function URL; it isn't, and can't
+// be, a real secret since it ships in this public file.
+var OPISPRO_CLIENT_SECRET = 'mWfK3xNqL8vY2bRz6cTdP9hJ4sAeU1oG';
+
+var LEAVE_SHORT_CODE = {
+  ANNUAL: 'AL', SICK: 'MC', HOSPITALIZATION: 'HL', COMPASSIONATE: 'CL',
+  MATERNITY: 'ML', PATERNITY: 'PL', UNPAID: 'UL'
+};
+var LEAVE_FULL_NAME = {
+  ANNUAL: 'Annual Leave', SICK: 'Sick Leave', HOSPITALIZATION: 'Hospitalisation Leave',
+  COMPASSIONATE: 'Compassionate Leave', MATERNITY: 'Maternity Leave', PATERNITY: 'Paternity Leave',
+  UNPAID: 'Unpaid Leave'
+};
+
+async function fetchOpisproLeaves(date, days) {
+  try {
+    var res = await fetch(SURL + '/functions/v1/opispro-get-leaves', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secret: OPISPRO_CLIENT_SECRET, date: date, days: days })
+    });
+    var result = await res.json();
+    return (result && result.ok) ? result.data : null;
+  } catch (e) { return null; }
+}
+
+// Merges consecutive calendar days with the same leave_type into one run,
+// so a 3-day annual leave reads as one row ("ANNUAL · 13-15 Oct") instead
+// of three. Assumes `leaves` is already sorted by date (OPISPRO guarantees it).
+function groupLeaveRuns(leaves) {
+  var runs = [];
+  leaves.forEach(function(lv) {
+    var last = runs[runs.length - 1];
+    if (last && last.leave_type === lv.leave_type) {
+      var next = new Date(last.to + 'T00:00:00');
+      next.setDate(next.getDate() + 1);
+      var nextStr = next.getFullYear() + '-' + String(next.getMonth()+1).padStart(2,'0') + '-' + String(next.getDate()).padStart(2,'0');
+      if (nextStr === lv.date) { last.to = lv.date; last.dayType = lv.day_type; return; }
+    }
+    runs.push({ from: lv.date, to: lv.date, leave_type: lv.leave_type, dayType: lv.day_type });
+  });
+  return runs;
+}
+
+function leaveBadgeCls(type) {
+  return (type === 'SICK' || type === 'HOSPITALIZATION') ? 'badge-urgent' : 'badge-amber';
+}
+
+function fmtLeaveDate(d) {
+  return new Date(d + 'T00:00:00').toLocaleDateString('en-MY', { day: 'numeric', month: 'short' });
+}
+
+function leaveRunLabel(run) {
+  var code = LEAVE_SHORT_CODE[run.leave_type] || run.leave_type;
+  if (run.from === run.to && run.dayType && run.dayType !== 'FULL') {
+    code += ' · ' + (run.dayType === 'AM' ? 'AM' : run.dayType === 'PM' ? 'PM' : 'Hourly');
+  }
+  return code;
+}
 
 async function loadLeave() {
   if (window.location.protocol === 'file:') return;
   var today = localDateStr();
   var avColors = ['av-green','av-amber','av-coral','av-blue','av-purple','av-red'];
 
+  var data = await fetchOpisproLeaves(today, 31);
+  var users = (data && data.users) || [];
+
   // ── HOME TAB: today on leave ──
   var homeEl = document.getElementById('home-leave-today');
   if (homeEl) {
-    try {
-      var url = SURL + '/rest/v1/leave_records?date_from=lte.' + today + '&date_to=gte.' + today + '&order=staff_name.asc&limit=20';
-      var res  = await fetch(url, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
-      var data = await res.json();
-      if (data && data.length) {
-        var names = data.map(function(r){ return r.staff_name; }).join(', ');
-        homeEl.innerHTML = '<div class="home-summary-card" onclick="switchTabByName(\'leave\')">'
-          + '<div class="home-summary-ic" style="background:var(--green-bg);color:var(--green-text);"><i class="ti ti-leaf"></i></div>'
-          + '<div style="flex:1;min-width:0;"><div class="home-summary-title">Today on Leave</div>'
-          + '<div class="home-summary-sub" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escHtml(names) + '</div></div>'
-          + '<div class="home-summary-count">' + data.length + '</div>'
-          + '<i class="ti ti-chevron-right home-summary-chev"></i>'
-          + '</div>';
-      } else {
-        homeEl.innerHTML = '<div class="card" style="cursor:pointer;" onclick="switchTabByName(\'leave\')"><div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:8px 0;">No one on leave today.</div></div>';
-      }
-    } catch(e) {}
-  }
-
-  // ── LEAVE TAB: current + upcoming (open to all staff) ──
-  var tabEl = document.getElementById('leave-tab-list');
-  var addTrigger = document.getElementById('leave-add-trigger');
-  if (addTrigger) addTrigger.style.display = 'block';
-  var rawUser = localStorage.getItem('mjm_user');
-  var me = rawUser ? JSON.parse(rawUser) : {};
-  var myName  = me.name || '';
-  var isAdminUser = me.role === 'hradmin' || me.role === 'superadmin';
-
-  if (tabEl) {
-    try {
-      var url2 = SURL + '/rest/v1/leave_records?date_to=gte.' + today + '&order=date_from.asc&limit=100';
-      var res2 = await fetch(url2, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
-      var data2 = await res2.json();
-      if (!data2 || !data2.length) {
-        tabEl.innerHTML = '<div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">No leave records.</div>';
-        return;
-      }
-      var oneMonthOut = new Date(); oneMonthOut.setMonth(oneMonthOut.getMonth() + 1);
-      var oneMonthStr = localDateStr(oneMonthOut);
-      var current  = data2.filter(function(r){ return r.date_from <= today && today <= r.date_to; });
-      var upcoming = data2.filter(function(r){ return r.date_from > today && r.date_from <= oneMonthStr; });
-      var html2 = '';
-      function renderGroup(title, items) {
-        if (!items.length) return '';
-        // "Currently on Leave" gets a filled green dot + green heading,
-        // "Upcoming Leave" an outlined dark dot + near-black heading, so
-        // which group a row belongs to reads at a glance without relying
-        // on remembering which section is which.
-        var isCurrent = title === 'Currently on Leave';
-        var dotStyle = isCurrent
-          ? 'width:8px;height:8px;border-radius:50%;background:var(--green-dark);flex-shrink:0;'
-          : 'width:8px;height:8px;border-radius:50%;border:1.5px solid var(--text-primary);flex-shrink:0;';
-        var titleColor = isCurrent ? 'var(--green-dark)' : 'var(--text-primary)';
-        var cardBorder = isCurrent ? 'border:1.5px solid var(--green-dark);' : '';
-        var h = '<div class="section-row"><div class="section-title" style="display:flex;align-items:center;gap:7px;color:' + titleColor + ';">'
-          + '<span style="' + dotStyle + '"></span>' + title + '</div></div><div class="card" style="' + cardBorder + '">';
-        items.forEach(function(r, i) {
-          var ini = r.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
-          var avCls = avColors[i % avColors.length];
-          var shortType = r.leave_type === 'Annual Leave' ? 'AL' : r.leave_type === 'Medical Leave' ? 'MC' : 'CL';
-          if (r.day_period === 'am') shortType += ' · AM';
-          else if (r.day_period === 'pm') shortType += ' · PM';
-          var badgeCls  = r.leave_type === 'Medical Leave' ? 'badge-urgent' : 'badge-amber';
-          var from = new Date(r.date_from+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'});
-          var to   = new Date(r.date_to+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'});
-          var canManage = isAdminUser || (myName && r.staff_name.toLowerCase() === myName.toLowerCase());
-          var editBtn = canManage
-            ? '<div style="cursor:pointer;color:var(--text-secondary);margin-left:6px;" onclick="editLeaveRequest(\'' + escJsAttr(r.id) + '\',\'' + escJsAttr(r.leave_type) + '\',\'' + escJsAttr(r.date_from) + '\',\'' + escJsAttr(r.date_to) + '\',\'' + escJsAttr(r.day_period || 'full') + '\')"><i class="ti ti-pencil"></i></div>'
-            : '';
-          var delBtn = canManage
-            ? '<div style="cursor:pointer;color:var(--red-text);margin-left:6px;" onclick="deleteLeaveRequest(\'' + escJsAttr(r.id) + '\')"><i class="ti ti-trash"></i></div>'
-            : '';
-          h += '<div class="person-row" data-leave-id="' + escHtml(r.id) + '" data-staff-name="' + escHtml(r.staff_name) + '">'
-            + '<div class="avatar ' + avCls + '">' + ini + '</div>'
-            + '<div style="flex:1;"><div class="person-name">' + escHtml(r.staff_name) + '</div>'
-            + '<div class="person-sub">' + escHtml(r.leave_type) + ' · ' + from + (from !== to ? ' – ' + to : '') + '</div></div>'
-            + '<span class="badge ' + badgeCls + '">' + shortType + '</span>'
-            + editBtn
-            + delBtn
-            + '</div>';
-        });
-        h += '</div>';
-        return h;
-      }
-      html2 += renderGroup('Currently on Leave', current);
-      html2 += renderGroup('Upcoming Leave', upcoming);
-      tabEl.innerHTML = html2;
-    } catch(e) {
-      tabEl.innerHTML = '<div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">Could not load leave records.</div>';
-    }
-  }
-}
-
-// ── LEAVE — STAFF SELF-SERVICE (open to all staff) ──
-var editingLeaveId = null;
-var leaveDuration = 'full';
-
-function setLeaveDuration(val) {
-  leaveDuration = val;
-  document.getElementById('leave-duration-full').className = 'duration-pill' + (val === 'full' ? ' active' : '');
-  document.getElementById('leave-duration-am').className   = 'duration-pill' + (val === 'am'   ? ' active' : '');
-  document.getElementById('leave-duration-pm').className   = 'duration-pill' + (val === 'pm'   ? ' active' : '');
-}
-
-// Half-day only makes sense for a single-day leave, so the Duration picker
-// only shows once From and To match.
-function updateLeaveDurationVisibility() {
-  var from = document.getElementById('leave-form-from').value;
-  var to   = document.getElementById('leave-form-to').value;
-  var group = document.getElementById('leave-duration-group');
-  if (from && to && from === to) {
-    group.style.display = 'block';
-  } else {
-    group.style.display = 'none';
-    setLeaveDuration('full');
-  }
-}
-
-function showLeaveForm() {
-  var raw = localStorage.getItem('mjm_user');
-  var user = raw ? JSON.parse(raw) : {};
-  editingLeaveId = null;
-  document.getElementById('leave-form-title').textContent = 'Add Leave';
-  document.getElementById('leave-form-name').value = user.name || user.email || '';
-  document.getElementById('leave-form-type').value = 'Annual Leave';
-  document.getElementById('leave-form-from').value = '';
-  document.getElementById('leave-form-to').value   = '';
-  setLeaveDuration('full');
-  document.getElementById('leave-duration-group').style.display = 'none';
-  document.getElementById('leave-form').style.display = 'block';
-  document.getElementById('leave-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-function hideLeaveForm() {
-  document.getElementById('leave-form').style.display = 'none';
-  editingLeaveId = null;
-}
-
-// HR Admin/Super Admin can manage any leave record; everyone else can only
-// manage their own, matched by staff name -- the same ownership signal
-// already used for the Delete button on this tab, since the "Staff" field
-// is locked to the logged-in user's own name when adding a new record.
-function canManageLeave(id) {
-  var raw = localStorage.getItem('mjm_user');
-  var me = raw ? JSON.parse(raw) : {};
-  if (me.role === 'hradmin' || me.role === 'superadmin') return true;
-  var row = document.querySelector('[data-leave-id="' + id + '"]');
-  var ownerName = row ? (row.getAttribute('data-staff-name') || '') : '';
-  return !!(me.name && ownerName && me.name.toLowerCase() === ownerName.toLowerCase());
-}
-
-function editLeaveRequest(id, type, from, to, dayPeriod) {
-  if (!canManageLeave(id)) return;
-  var raw = localStorage.getItem('mjm_user');
-  var user = raw ? JSON.parse(raw) : {};
-  var row = document.querySelector('[data-leave-id="' + id + '"]');
-  var ownerName = row ? row.getAttribute('data-staff-name') : (user.name || user.email || '');
-  editingLeaveId = id;
-  document.getElementById('leave-form-title').textContent = 'Edit Leave';
-  document.getElementById('leave-form-name').value = ownerName;
-  document.getElementById('leave-form-type').value = type;
-  document.getElementById('leave-form-from').value = from;
-  document.getElementById('leave-form-to').value   = to;
-  setLeaveDuration(dayPeriod === 'am' || dayPeriod === 'pm' ? dayPeriod : 'full');
-  updateLeaveDurationVisibility();
-  document.getElementById('leave-form').style.display = 'block';
-  document.getElementById('leave-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-async function saveLeaveRequest() {
-  if (editingLeaveId && !canManageLeave(editingLeaveId)) { alert('You can only edit your own leave records.'); return; }
-  var name = document.getElementById('leave-form-name').value.trim();
-  var type = document.getElementById('leave-form-type').value;
-  var from = document.getElementById('leave-form-from').value;
-  var to   = document.getElementById('leave-form-to').value;
-  if (!name || !from || !to) { alert('Please fill in the leave dates.'); return; }
-  if (from > to) { alert('The "From" date must be before the "To" date.'); return; }
-  var dayPeriod = (from === to) ? leaveDuration : 'full';
-  try {
-    if (editingLeaveId) {
-      await sbWrite('PATCH', 'leave_records', { leave_type: type, date_from: from, date_to: to, day_period: dayPeriod }, 'id=eq.' + editingLeaveId);
-      editingLeaveId = null;
+    var todayUsers = users.filter(function(u) { return u.leaves.some(function(lv) { return lv.date === today; }); });
+    if (todayUsers.length) {
+      var names = todayUsers.map(function(u){ return u.name; }).join(', ');
+      homeEl.innerHTML = '<div class="home-summary-card" onclick="switchTabByName(\'leave\')">'
+        + '<div class="home-summary-ic" style="background:var(--green-bg);color:var(--green-text);"><i class="ti ti-leaf"></i></div>'
+        + '<div style="flex:1;min-width:0;"><div class="home-summary-title">Today on Leave</div>'
+        + '<div class="home-summary-sub" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escHtml(names) + '</div></div>'
+        + '<div class="home-summary-count">' + todayUsers.length + '</div>'
+        + '<i class="ti ti-chevron-right home-summary-chev"></i>'
+        + '</div>';
     } else {
-      await sbWrite('POST', 'leave_records', { staff_name: name, leave_type: type, date_from: from, date_to: to, day_period: dayPeriod });
+      homeEl.innerHTML = '<div class="card" style="cursor:pointer;" onclick="switchTabByName(\'leave\')"><div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:8px 0;">No one on leave today.</div></div>';
     }
-    hideLeaveForm();
-    loadLeave();
-    if (typeof loadStaffCalendar === 'function') loadStaffCalendar();
-  } catch(e) { alert('Could not save leave. Please try again.'); }
-}
+  }
 
-async function deleteLeaveRequest(id) {
-  if (!canManageLeave(id)) { alert('You can only delete your own leave records.'); return; }
-  if (!confirm('Delete this leave record?')) return;
-  try {
-    await sbWrite('DELETE', 'leave_records', null, 'id=eq.' + id);
-    loadLeave();
-    if (typeof loadStaffCalendar === 'function') loadStaffCalendar();
-  } catch(e) { alert('Could not delete leave record. Please try again.'); }
+  // ── LEAVE TAB: currently + upcoming (read-only) ──
+  var tabEl = document.getElementById('leave-tab-list');
+  if (!tabEl) return;
+  if (!data) {
+    tabEl.innerHTML = '<div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">Could not load leave records.</div>';
+    return;
+  }
+  if (!users.length) {
+    tabEl.innerHTML = '<div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">No leave records.</div>';
+    return;
+  }
+
+  function renderGroup(title, rows) {
+    if (!rows.length) return '';
+    var isCurrent = title === 'Currently on Leave';
+    var dotStyle = isCurrent
+      ? 'width:8px;height:8px;border-radius:50%;background:var(--green-dark);flex-shrink:0;'
+      : 'width:8px;height:8px;border-radius:50%;border:1.5px solid var(--text-primary);flex-shrink:0;';
+    var titleColor = isCurrent ? 'var(--green-dark)' : 'var(--text-primary)';
+    var cardBorder = isCurrent ? 'border:1.5px solid var(--green-dark);' : '';
+    var h = '<div class="section-row"><div class="section-title" style="display:flex;align-items:center;gap:7px;color:' + titleColor + ';">'
+      + '<span style="' + dotStyle + '"></span>' + title + '</div></div><div class="card" style="' + cardBorder + '">';
+    rows.forEach(function(row, i) {
+      var ini = row.name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
+      var avCls = avColors[i % avColors.length];
+      var from = fmtLeaveDate(row.run.from), to = fmtLeaveDate(row.run.to);
+      h += '<div class="person-row">'
+        + '<div class="avatar ' + avCls + '">' + ini + '</div>'
+        + '<div style="flex:1;"><div class="person-name">' + escHtml(row.name) + '</div>'
+        + '<div class="person-sub">' + (LEAVE_FULL_NAME[row.run.leave_type] || row.run.leave_type) + ' · ' + from + (from !== to ? ' – ' + to : '') + '</div></div>'
+        + '<span class="badge ' + leaveBadgeCls(row.run.leave_type) + '">' + leaveRunLabel(row.run) + '</span>'
+        + '</div>';
+    });
+    h += '</div>';
+    return h;
+  }
+
+  var current = [], upcoming = [];
+  users.forEach(function(u) {
+    var todayLeaves = u.leaves.filter(function(lv){ return lv.date === today; });
+    var futureLeaves = u.leaves.filter(function(lv){ return lv.date > today; });
+    todayLeaves.forEach(function(lv) { current.push({ name: u.name, run: { from: lv.date, to: lv.date, leave_type: lv.leave_type, dayType: lv.day_type } }); });
+    groupLeaveRuns(futureLeaves).forEach(function(run) { upcoming.push({ name: u.name, run: run }); });
+  });
+
+  tabEl.innerHTML = renderGroup('Currently on Leave', current) + renderGroup('Upcoming Leave', upcoming);
+  if (!current.length && !upcoming.length) {
+    tabEl.innerHTML = '<div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">No leave records.</div>';
+  }
 }

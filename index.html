@@ -933,50 +933,9 @@
     </div><!-- /event -->
 
     <!-- ── LEAVE ── -->
+    <!-- Read-only: leave is pulled live from OPISPRO (see
+         docs/opispro-leaves-setup.md) -- no self-entry anymore. -->
     <div class="screen-section" id="screen-leave">
-      <div id="leave-add-trigger" style="display:none;margin-bottom:10px;">
-        <button class="book-btn-primary" style="width:100%;" onclick="showLeaveForm()"><i class="ti ti-plus"></i> Add Leave</button>
-      </div>
-      <div id="leave-form" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin-bottom:12px;">
-        <div class="book-form-title" id="leave-form-title">Add Leave</div>
-        <div class="book-form-group">
-          <label class="book-form-label">Staff</label>
-          <input class="book-form-input" type="text" id="leave-form-name" disabled style="opacity:0.7;">
-        </div>
-        <div class="book-form-group">
-          <label class="book-form-label">Leave Type</label>
-          <select class="book-form-input" id="leave-form-type">
-            <option value="Annual Leave">Annual Leave</option>
-            <option value="Medical Leave">Medical Leave</option>
-            <option value="Paternity Leave">Paternity Leave</option>
-            <option value="Maternity Leave">Maternity Leave</option>
-            <option value="Compassionate Leave">Compassionate Leave</option>
-            <option value="Unpaid Leave">Unpaid Leave</option>
-          </select>
-        </div>
-        <div style="display:flex;gap:10px;">
-          <div class="book-form-group" style="flex:1;">
-            <label class="book-form-label">From</label>
-            <input class="book-form-input" type="date" id="leave-form-from" onchange="updateLeaveDurationVisibility()">
-          </div>
-          <div class="book-form-group" style="flex:1;">
-            <label class="book-form-label">To</label>
-            <input class="book-form-input" type="date" id="leave-form-to" onchange="updateLeaveDurationVisibility()">
-          </div>
-        </div>
-        <div class="book-form-group" id="leave-duration-group" style="display:none;">
-          <label class="book-form-label">Duration</label>
-          <div class="duration-row">
-            <div class="duration-pill active" id="leave-duration-full" onclick="setLeaveDuration('full')">Full Day</div>
-            <div class="duration-pill" id="leave-duration-am" onclick="setLeaveDuration('am')">Morning (AM)</div>
-            <div class="duration-pill" id="leave-duration-pm" onclick="setLeaveDuration('pm')">Afternoon (PM)</div>
-          </div>
-        </div>
-        <div style="display:flex;gap:8px;">
-          <button class="book-btn-primary" style="flex:1;" onclick="saveLeaveRequest()">Save</button>
-          <button class="book-btn-ghost" style="flex:1;" onclick="hideLeaveForm()">Cancel</button>
-        </div>
-      </div>
       <div id="leave-tab-list">
         <div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">Loading...</div>
       </div>
