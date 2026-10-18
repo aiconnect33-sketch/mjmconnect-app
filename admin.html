@@ -3435,7 +3435,8 @@ html, body {
         headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY }
       });
       if (res.ok) {
-        loadSettings();
+        await loadDbProfiles();
+        renderSettingsPage();
       } else {
         alert('Could not remove staff. Please try again.');
       }
@@ -6041,6 +6042,8 @@ html, body {
       showApprovalFeedback(true, email + ' approved — they now have Staff access.');
       loadPendingApprovals();
       loadInviteLog();
+      await loadDbProfiles();
+      renderSettingsPage();
     } catch(e) {
       showApprovalFeedback(false, 'Connection error. Please try again.');
     }
