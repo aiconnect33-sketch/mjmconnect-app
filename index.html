@@ -99,6 +99,16 @@
     height: 100vh;
     height: 100dvh;
   }
+  /* .screen-body's own native elastic overscroll (-webkit-overflow-scrolling:
+     touch, below) can momentarily stretch it past its own box on iOS --
+     pulling/releasing faster than our pull-to-refresh JS can arm and
+     preventDefault() it -- which reveals whatever's behind it for an
+     instant. That's normally .phone's plain white background; while Home
+     is open it should be the same dark gradient as Home's hero instead, so
+     that reveal blends in rather than flashing white. */
+  .phone:has(#screen-home.active) {
+    background: var(--home-gradient);
+  }
   .status-bar {
     background: var(--green-dark); color: #fff;
     font-size: 11px; font-weight: 500;
@@ -152,6 +162,14 @@
     display: none;
   }
   .tab-btn.active { color: var(--green-dark); border-bottom-color: var(--green-dark); font-weight: 600; }
+  /* Home content can be shorter than the viewport, so colour the whole
+     scrollable area whenever it's active rather than relying only on
+     .home-hero's own bleed below -- keeps the green flush with the bottom
+     nav even when there's little data to show, and (more importantly)
+     means .screen-body's native elastic overscroll on iOS reveals matching
+     green instead of this light background if it stretches past its own
+     box before our pull-to-refresh JS can intervene. */
+  .screen-body:has(#screen-home.active) { background: var(--home-gradient); }
   .home-hero {
     background: var(--home-gradient);
     margin: -12px -12px -24px; padding: 20px 20px 20px;
