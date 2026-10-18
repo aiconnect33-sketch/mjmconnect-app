@@ -59,6 +59,7 @@ html, body {
   background: var(--bg);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
 }
 
 /* ── PHONE SHELL ── */
@@ -168,6 +169,11 @@ html, body {
   flex: 1; overflow-y: auto;
   padding: 14px 14px 20px;
   -webkit-overflow-scrolling: touch;
+  /* Without this, overscrolling past the top/bottom edge chains the
+     scroll up to the document, which on iOS triggers the browser's
+     native pull-to-reload gesture (and a blank white flash while it
+     swaps the page) instead of just rubber-banding in place. */
+  overscroll-behavior-y: contain;
 }
 .screen-section { display: none; }
 .screen-section.active { display: block; }
