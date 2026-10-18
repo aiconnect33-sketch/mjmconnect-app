@@ -7,6 +7,16 @@ Get-Leaves endpoint instead, in both `index.html` (staff) and `admin.html`
 (admin). OPISPRO is the single source of truth for leave; MJMConnect never
 writes leave data anywhere anymore.
 
+**Only staff with approved MJMConnect access are shown.** OPISPRO returns
+leave for everyone at the company, including people who have never signed
+up for MJMConnect or whose sign-up is still sitting in the Pending
+Approvals queue. The function cross-checks each OPISPRO `user_id` against
+the `profiles` table (matched via `opispro_user_id`, saved on `profiles`
+the first time someone signs in — see `docs/opispro-login-schema.sql`) and
+drops anyone whose `role` is `pending` or who has no matching profile at
+all. Only people an admin has actually approved show up anywhere in
+MJMConnect's leave UI.
+
 ## Why this needs a server-side piece
 
 Same reasoning as `opispro-login`: Get-Leaves needs the same OPISPRO
@@ -15,10 +25,15 @@ A Supabase Edge Function (`opispro-get-leaves`) holds it server-side and
 relays the call — and since Get-Leaves is scoped to one location per call
 (`HQ`, `MILL` or `ESTATE`), this function calls it three times (one per
 location) and merges the results, so the app only ever makes one request.
+The same function also queries `profiles` (using the Edge Function's
+built-in `SUPABASE_SERVICE_ROLE_KEY`, auto-provided by Supabase on every
+project — nothing to set up) to filter the merged list down to approved
+staff before returning it.
 
 **No new secrets needed.** This reuses `OPISPRO_TOKEN` and
 `OPISPRO_CLIENT_SECRET`, both already set up for `opispro-login` on this
-same Supabase project.
+same Supabase project, plus the `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY`
+that Supabase automatically injects into every Edge Function.
 
 ## One-time setup
 
@@ -48,6 +63,10 @@ That's it — no schema changes, no new secrets.
    anywhere.
 3. Tap a day with a leave dot on the calendar — the day-detail sheet
    should list who's on leave that day.
+4. If someone in OPISPRO is on leave but has never signed up for
+   MJMConnect, or is still sitting in the Pending Approvals queue, they
+   should **not** appear anywhere in the Leave tab, the calendar, or the
+   "Today on Leave" card — only approved MJMConnect staff show up.
 
 ## Edge Function code
 
@@ -60,13 +79,21 @@ That's it — no schema changes, no new secrets.
 // location per call, so this fans out to HQ/MILL/ESTATE and merges the
 // results -- the app only ever makes one request to this function.
 //
+// Only approved MJMConnect staff are returned: OPISPRO's user_id is
+// cross-checked against profiles.opispro_user_id, and anyone with no
+// matching profile, or whose profile is still role:'pending', is dropped.
+//
 // Needs two secrets already set on this Supabase project for
 // opispro-login (nothing new to add):
 //   OPISPRO_TOKEN          - the Sanctum service bearer token from the OPISPRO team
 //   OPISPRO_CLIENT_SECRET  - must match OPISPRO_CLIENT_SECRET in the calling pages
+// Plus SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY, which Supabase injects
+// into every Edge Function automatically -- nothing to set up for those.
 
 const OPISPRO_TOKEN = Deno.env.get('OPISPRO_TOKEN') || '';
 const OPISPRO_CLIENT_SECRET = Deno.env.get('OPISPRO_CLIENT_SECRET') || '';
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 const OPISPRO_BASE_URL = 'https://opispro.com';
 const LOCATIONS = ['HQ', 'MILL', 'ESTATE'];
 
@@ -99,6 +126,22 @@ async function getLeavesForLocation(date: string, location: string, days: number
   return (body.data.users || []) as OpisproUser[];
 }
 
+// Approved = has a profile row, linked by opispro_user_id, whose role
+// isn't 'pending'. Returned as strings since Postgres bigint can exceed
+// JS's safe integer range -- compare opispro_user_id as a string too.
+async function getApprovedOpisproUserIds(): Promise<Set<string>> {
+  const url = SUPABASE_URL + '/rest/v1/profiles?role=neq.pending&opispro_user_id=not.is.null&select=opispro_user_id';
+  const res = await fetch(url, {
+    headers: {
+      'apikey': SUPABASE_SERVICE_ROLE_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_SERVICE_ROLE_KEY
+    }
+  });
+  if (!res.ok) return new Set();
+  const rows = await res.json();
+  return new Set((rows || []).map((r: { opispro_user_id: number | string }) => String(r.opispro_user_id)));
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders() });
   if (req.method !== 'POST') return new Response('method not allowed', { status: 405, headers: corsHeaders() });
@@ -120,13 +163,16 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const results = await Promise.all(
-      LOCATIONS.map((loc) => getLeavesForLocation(date, loc, days))
-    );
+    const [results, approvedIds] = await Promise.all([
+      Promise.all(LOCATIONS.map((loc) => getLeavesForLocation(date, loc, days))),
+      getApprovedOpisproUserIds()
+    ]);
 
     const users: (OpisproUser & { location: string })[] = [];
     results.forEach((locUsers, i) => {
-      locUsers.forEach((u) => users.push({ ...u, location: LOCATIONS[i] }));
+      locUsers.forEach((u) => {
+        if (approvedIds.has(String(u.user_id))) users.push({ ...u, location: LOCATIONS[i] });
+      });
     });
     users.sort((a, b) => a.name.localeCompare(b.name));
 
