@@ -243,7 +243,16 @@ function initPullToRefresh() {
     if (pulled >= THRESHOLD) {
       refreshing = true;
       indicator.style.height = '50px';
-      location.reload();
+      // A real location.reload() tears the whole page down -- index.html
+      // alone re-fetches itself plus nine js/tab-*.js files before anything
+      // can paint again, so the browser's blank-navigation interval (a
+      // flash of plain white, unstyled by any of this page's CSS) is long
+      // enough to be obvious. Refreshing the data in place instead means
+      // the page never unloads, so there's nothing to flash.
+      refreshAppData().finally(function() {
+        refreshing = false;
+        indicator.style.height = '0px';
+      });
     } else {
       indicator.style.height = '0px';
     }
@@ -349,6 +358,27 @@ function showPendingApprovalScreen(u) {
     '</div>';
 }
 
+// Re-fetches every tab's live data and the calendar in place, without
+// navigating -- used both on initial load and by the pull-to-refresh
+// gesture below, so "pull to refresh" never has to fall back to a real
+// location.reload() (which blanks the whole page while index.html and
+// every js/tab-*.js file it loads re-fetch over the network).
+async function refreshAppData() {
+  if (window.location.protocol !== 'file:') {
+    await Promise.all([
+      loadAnnouncements(),
+      loadLeave(),
+      loadDuty(),
+      loadStaffEvents(),
+      typeof loadEstateTrips === 'function' ? loadEstateTrips() : null,
+      typeof loadTimeOff === 'function' ? loadTimeOff() : null,
+      typeof loadNotifications === 'function' ? loadNotifications() : null
+    ]);
+    if (typeof checkPushAutoPrompt === 'function') checkPushAutoPrompt();
+  }
+  if (typeof initStaffCalendar === 'function') initStaffCalendar();
+}
+
 // ── DOMContentLoaded bootstrap ──
 window.addEventListener('DOMContentLoaded', function() {
   var rawEarly = localStorage.getItem('mjm_user');
@@ -373,19 +403,7 @@ window.addEventListener('DOMContentLoaded', function() {
     var greetEl = document.getElementById('greet-name-text');
     if (greetEl && (u.name || u.email)) greetEl.textContent = u.name || u.email;
   }
-  // Load live data
-  if (window.location.protocol !== 'file:') {
-    loadAnnouncements();
-    loadLeave();
-    loadDuty();
-    loadStaffEvents();
-    if (typeof loadEstateTrips === 'function') loadEstateTrips();
-    if (typeof loadTimeOff === 'function') loadTimeOff();
-    if (typeof loadNotifications === 'function') loadNotifications();
-    if (typeof checkPushAutoPrompt === 'function') checkPushAutoPrompt();
-  }
-  // Always init calendar
-  if (typeof initStaffCalendar === 'function') initStaffCalendar();
+  refreshAppData();
   // Auto-switch to tab based on URL hash
   if (window.location.hash === '#book') {
     switchNav('book');
