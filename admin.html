@@ -622,6 +622,19 @@ html, body {
 .fc-photo-view { display: block; margin-top: 8px; }
 .fc-photo-view img { display: block; max-width: 220px; max-height: 160px; border-radius: var(--r-sm); border: 1px solid var(--border); }
 
+/* ── FAULTY COMPLAINT REPORT (admin-only) ── */
+.fr-tile { background: var(--surface); border: 1px solid #C3D2CB; border-radius: var(--r-lg); padding: 12px 14px; flex: 1; min-width: 0; }
+.fr-tile-num { font-size: 19px; font-weight: 800; color: var(--text); }
+.fr-tile-label { font-size: 10.5px; color: var(--text2); margin-top: 2px; }
+.fr-pill { font-size: 11.5px; font-weight: 700; padding: 6px 13px; border-radius: 16px; border: 1px solid #C3D2CB; color: var(--text2); background: var(--surface); cursor: pointer; font-family: inherit; }
+.fr-pill.active { background: var(--green); border-color: var(--green); color: #fff; }
+.fr-select { font-size: 11.5px; font-weight: 600; color: var(--text2); border: 1px solid #C3D2CB; border-radius: 16px; padding: 6px 11px; background: var(--surface); font-family: inherit; cursor: pointer; }
+.fr-search { font-size: 12px; font-family: inherit; border: 1px solid #C3D2CB; border-radius: 9px; padding: 7px 11px; color: var(--text); background: var(--surface); width: 100%; }
+.fr-table { width: 100%; border-collapse: collapse; }
+.fr-table th { font-size: 10px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: .04em; text-align: left; padding: 10px 12px; background: var(--bg); }
+.fr-table td { font-size: 12px; color: var(--text); padding: 10px 12px; border-top: 1px solid #C3D2CB; vertical-align: top; }
+.fr-table-wrap { background: var(--surface); border: 1px solid #C3D2CB; border-radius: var(--r-lg); overflow: hidden; overflow-x: auto; }
+
 /* ── CALENDAR CARD (Booking availability) ── */
 .cal-card {
   background: var(--surface); border-radius: 24px;
@@ -1170,6 +1183,9 @@ html, body {
   <div class="dsk-section-label">Team</div>
   <div class="dsk-item" id="dsknav-duty" onclick="switchTabByName('duty')"><i class="ti ti-users"></i>Duty Roster</div>
   <div class="dsk-item" id="dsknav-estatetrip" onclick="switchTabByName('estatetrip')"><i class="ti ti-map-pin"></i>Estate Trip</div>
+
+  <div class="dsk-section-label">Report</div>
+  <div class="dsk-item admin-only" id="dsknav-faultyreport" onclick="switchNav('faultyreport')"><i class="ti ti-file-text"></i>Faulty Report</div>
 
   <div class="dsk-section-label">Admin Only</div>
   <div class="dsk-item admin-only" id="dsknav-invite" onclick="switchNav('invite')"><i class="ti ti-user-check"></i>Approvals<span class="dsk-item-badge" id="dsknav-invite-badge"></span></div>
@@ -2054,6 +2070,75 @@ html, body {
     </div><!-- /faulty -->
 
     <!-- ═══════════════════════════
+         FAULTY COMPLAINT REPORT (admin-only)
+    ═══════════════════════════ -->
+    <div class="screen-section" id="screen-faultyreport">
+
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap;">
+        <div>
+          <div class="sec-title" style="margin-bottom:4px;">Faulty Complaint Report</div>
+          <div style="font-size:11.5px;color:var(--text3);">Every submission, pulled live — no need to check the Google Sheet.</div>
+        </div>
+        <button class="book-btn-primary" style="width:auto;margin-bottom:0;padding:9px 16px;" onclick="downloadFaultyReportCsv()">
+          <i class="ti ti-download"></i> Download CSV
+        </button>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+        <div class="fr-tile">
+          <div class="fr-tile-num" id="fr-stat-total">—</div>
+          <div class="fr-tile-label" id="fr-stat-total-label">Total</div>
+        </div>
+        <div class="fr-tile">
+          <div class="fr-tile-num" style="color:var(--amber-text);" id="fr-stat-open">—</div>
+          <div class="fr-tile-label">Open</div>
+        </div>
+        <div class="fr-tile">
+          <div class="fr-tile-num" style="color:var(--green-text);" id="fr-stat-resolved">—</div>
+          <div class="fr-tile-label">Resolved</div>
+        </div>
+        <div class="fr-tile" style="border-color:#E6B4B4;">
+          <div class="fr-tile-num" style="color:var(--red-text);" id="fr-stat-immediate">—</div>
+          <div class="fr-tile-label">Immediate, still open</div>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+        <button class="fr-pill active" id="fr-filter-all" onclick="setFaultyReportFilter('all')">All</button>
+        <button class="fr-pill" id="fr-filter-open" onclick="setFaultyReportFilter('open')">Open</button>
+        <button class="fr-pill" id="fr-filter-resolved" onclick="setFaultyReportFilter('resolved')">Resolved</button>
+        <select class="fr-select" id="fr-range-select" onchange="loadFaultyReport()">
+          <option value="30">Last 30 days</option>
+          <option value="90">Last 90 days</option>
+          <option value="0">All time</option>
+        </select>
+        <div style="flex:1;min-width:140px;">
+          <input class="fr-search" id="fr-search-input" placeholder="Search item or location…" oninput="renderFaultyReportTable()">
+        </div>
+      </div>
+
+      <div class="fr-table-wrap">
+        <table class="fr-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Submitted By</th>
+              <th>Location</th>
+              <th>Item</th>
+              <th>Urgency</th>
+              <th>Status</th>
+              <th>Resolved By</th>
+            </tr>
+          </thead>
+          <tbody id="fr-table-body">
+            <tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px;">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div><!-- /faultyreport -->
+
+    <!-- ═══════════════════════════
          SETTINGS
     ═══════════════════════════ -->
     <div class="screen-section" id="screen-menu">
@@ -2079,6 +2164,11 @@ html, body {
       <div class="menu-row" onclick="switchTabByName('estatetrip')">
         <div class="menu-ic" style="background:var(--green-bg);color:var(--green-text);"><i class="ti ti-car"></i></div>
         <div class="menu-label">Estate Trip</div>
+        <i class="ti ti-chevron-right menu-chev"></i>
+      </div>
+      <div class="menu-row" onclick="switchNav('faultyreport')">
+        <div class="menu-ic" style="background:var(--coral-bg);color:var(--coral-text);"><i class="ti ti-file-text"></i></div>
+        <div class="menu-label">Faulty Report</div>
         <i class="ti ti-chevron-right menu-chev"></i>
       </div>
 
@@ -2319,6 +2409,7 @@ html, body {
     if (name === 'timeoff')  { loadDbTimeOff(); loadAdminTimeOffSelf(); }
     if (name === 'book')     initBookTab();
     if (name === 'faulty')   initFaultyTab();
+    if (name === 'faultyreport') loadFaultyReport();
     rememberTab(name);
   }
   function switchTabByName(name) {
@@ -4897,6 +4988,119 @@ html, body {
       var field = aR ? 'resolved_at' : 'created_at';
       return new Date(b[field] || 0) - new Date(a[field] || 0);
     });
+  }
+
+  // ── FAULTY COMPLAINT REPORT (admin-only) ──
+  // Unlike loadAllComplaints() (the action list), this keeps every record in
+  // the chosen date range -- including complaints resolved long ago -- since
+  // the point of a report is the full history the Google Sheet already has.
+  var frReportData = [];
+  var frReportFilter = 'all'; // 'all' | 'open' | 'resolved'
+
+  async function loadFaultyReport() {
+    var tbody = document.getElementById('fr-table-body');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px;">Loading…</td></tr>';
+    try {
+      var days = Number(document.getElementById('fr-range-select').value) || 0;
+      var filter = 'order=created_at.desc&limit=1000';
+      if (days > 0) {
+        var cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+        filter = 'created_at=gte.' + cutoff + '&' + filter;
+      }
+      frReportData = (await sbGet('faulty_complaints', filter)) || [];
+      renderFaultyReportStats(days);
+      renderFaultyReportTable();
+    } catch (e) {
+      frReportData = [];
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px;">Could not load report.</td></tr>';
+    }
+  }
+
+  function renderFaultyReportStats(days) {
+    var total = frReportData.length;
+    var open = frReportData.filter(function (c) { return c.status !== 'resolved'; }).length;
+    var immediateOpen = frReportData.filter(function (c) { return c.status !== 'resolved' && c.urgency === 'immediate'; }).length;
+    document.getElementById('fr-stat-total').textContent = total;
+    document.getElementById('fr-stat-open').textContent = open;
+    document.getElementById('fr-stat-resolved').textContent = total - open;
+    document.getElementById('fr-stat-immediate').textContent = immediateOpen;
+    document.getElementById('fr-stat-total-label').textContent = days > 0 ? 'Total (last ' + days + ' days)' : 'Total (all time)';
+  }
+
+  function setFaultyReportFilter(f) {
+    frReportFilter = f;
+    ['all', 'open', 'resolved'].forEach(function (k) {
+      var el = document.getElementById('fr-filter-' + k);
+      if (el) el.classList.toggle('active', k === f);
+    });
+    renderFaultyReportTable();
+  }
+
+  function frMatchesFilter(c) {
+    if (frReportFilter === 'open') return c.status !== 'resolved';
+    if (frReportFilter === 'resolved') return c.status === 'resolved';
+    return true;
+  }
+
+  function frVisibleRows() {
+    var q = (document.getElementById('fr-search-input').value || '').trim().toLowerCase();
+    return frReportData.filter(frMatchesFilter).filter(function (c) {
+      if (!q) return true;
+      var itemLabel = (c.item === 'Other Issues' && c.item_other) ? c.item_other : (c.item || '');
+      return itemLabel.toLowerCase().indexOf(q) !== -1 || (c.location || '').toLowerCase().indexOf(q) !== -1;
+    });
+  }
+
+  function renderFaultyReportTable() {
+    var tbody = document.getElementById('fr-table-body');
+    if (!tbody) return;
+    var rows = frVisibleRows();
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px;">No complaints match.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map(function (c) {
+      var itemLabel = (c.item === 'Other Issues' && c.item_other) ? c.item_other : (c.item || '');
+      return '<tr>'
+        + '<td>' + fcDateTime(c.created_at) + '</td>'
+        + '<td>' + escHtml(c.staff_name || '') + '</td>'
+        + '<td>' + escHtml(c.location || '') + '</td>'
+        + '<td>' + escHtml(itemLabel) + '</td>'
+        + '<td>' + fcUrgencyBadge(c.urgency) + '</td>'
+        + '<td>' + fcStatusBadge(c.status) + '</td>'
+        + '<td>' + (c.resolved_by ? escHtml(c.resolved_by) : '<span style="color:var(--text3);">—</span>') + '</td>'
+        + '</tr>';
+    }).join('');
+  }
+
+  // Exports exactly what's currently filtered/searched -- what you see is
+  // what you get, same convention as the table itself.
+  function downloadFaultyReportCsv() {
+    var rows = frVisibleRows();
+    var headers = ['Timestamp', 'Staff Name', 'Location', 'Item', 'Description', 'Urgency', 'Status', 'Resolved By', 'Resolved At'];
+    function csvEscape(v) {
+      v = String(v == null ? '' : v);
+      if (/[",\n]/.test(v)) v = '"' + v.replace(/"/g, '""') + '"';
+      return v;
+    }
+    var lines = [headers.join(',')];
+    rows.forEach(function (c) {
+      var itemLabel = (c.item === 'Other Issues' && c.item_other) ? c.item_other : (c.item || '');
+      lines.push([
+        fcDateTime(c.created_at), c.staff_name, c.location, itemLabel, c.description,
+        c.urgency, c.status, c.resolved_by || '', c.resolved_at ? fcDateTime(c.resolved_at) : ''
+      ].map(csvEscape).join(','));
+    });
+    var blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'faulty-complaints-' + localDateStr() + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
   async function loadAllComplaints() {
