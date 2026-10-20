@@ -116,7 +116,17 @@ function notifyAnnouncementPush(title, body) {
 // tends to get a reflexive "Don't Allow", which the OS then remembers and
 // never offers again). Shown once per device until enabled or dismissed;
 // never shown again once denied, subscribed, or unsupported.
+//
+// Also arms a one-time, page-wide click listener (see below) so the very
+// first tap anywhere on Home -- not just specifically on "Enable" -- fires
+// the real permission dialog, so a freshly-approved staff member ends up
+// notifications-on without having to specifically find and tap a button.
+// This still rides on a genuine user gesture (the browser's own
+// requirement for showing the real dialog instead of a suppressed "quiet
+// UI" request) -- there is no way to turn push on with zero interaction
+// at all; browsers block that outright, for any site.
 var PUSH_PROMPT_DISMISS_KEY = 'mjm_push_prompt_dismissed';
+var pushAutoTriggerArmed = false;
 
 async function checkPushAutoPrompt() {
   var el = document.getElementById('push-prompt-banner');
@@ -143,11 +153,31 @@ async function checkPushAutoPrompt() {
     +     '</div>'
     +   '</div>'
     +   '<div style="display:flex;gap:8px;justify-content:flex-end;">'
-    +     '<button onclick="pushPromptDismiss()" style="border:none;background:none;color:#3E5B51;font-size:13px;font-weight:600;font-family:inherit;padding:9px 12px;cursor:pointer;">Not now</button>'
-    +     '<button onclick="pushPromptEnableTap()" style="border:none;background:#0F6E56;color:#fff;font-size:13px;font-weight:700;font-family:inherit;padding:9px 18px;border-radius:10px;cursor:pointer;">Enable</button>'
+    +     '<button id="push-prompt-dismiss-btn" onclick="pushPromptDismiss()" style="border:none;background:none;color:#3E5B51;font-size:13px;font-weight:600;font-family:inherit;padding:9px 12px;cursor:pointer;">Not now</button>'
+    +     '<button id="push-prompt-enable-btn" onclick="pushPromptEnableTap()" style="border:none;background:#0F6E56;color:#fff;font-size:13px;font-weight:700;font-family:inherit;padding:9px 18px;border-radius:10px;cursor:pointer;">Enable</button>'
     +   '</div>'
     + '</div>';
   el.style.display = 'block';
+
+  if (!pushAutoTriggerArmed) {
+    pushAutoTriggerArmed = true;
+    document.addEventListener('click', pushAutoTriggerOnFirstTap, { capture: true, once: true });
+  }
+}
+
+// Fires on the first tap anywhere on the page while the banner is showing,
+// except a tap directly on its own two buttons (which already handle
+// themselves via onclick, and would otherwise double-fire since this runs
+// in the capture phase, ahead of the button's own bubble-phase handler).
+// Doesn't preventDefault/stopPropagation, so whatever the user actually
+// meant to tap still happens normally alongside the permission dialog.
+async function pushAutoTriggerOnFirstTap(e) {
+  if (e.target.closest && (e.target.closest('#push-prompt-enable-btn') || e.target.closest('#push-prompt-dismiss-btn'))) return;
+  var el = document.getElementById('push-prompt-banner');
+  if (!el || el.style.display === 'none') return; // already resolved by something else
+  await enablePushNotifications();
+  try { localStorage.setItem(PUSH_PROMPT_DISMISS_KEY, '1'); } catch (e) {}
+  el.style.display = 'none';
 }
 
 function pushPromptDismiss() {
