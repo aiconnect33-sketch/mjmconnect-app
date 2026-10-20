@@ -3233,7 +3233,7 @@ html, body {
           var permsBtn = canPromote
             ? '<div class="btn-icon" onclick="openPermissionsModal(\'' + escJsAttr(u.email) + '\')" title="Manage Permissions" style="color:var(--blue-text);border-color:var(--blue-bg);background:var(--blue-bg);"><i class="ti ti-adjustments-horizontal"></i></div>'
             : '';
-          var deleteBtn = '<div class="btn-icon" onclick="deleteStaff(\'' + escJsAttr(u.id) + '\',\'' + escJsAttr(u.name) + '\')" title="Remove staff" style="color:#c0392b;border-color:#fde8e8;background:#fde8e8;"><i class="ti ti-trash"></i></div>';
+          var deleteBtn = '<div class="btn-icon" onclick="deleteStaff(\'' + escJsAttr(u.id) + '\',\'' + escJsAttr(u.name) + '\',\'' + escJsAttr(u.email) + '\')" title="Remove staff" style="color:#c0392b;border-color:#fde8e8;background:#fde8e8;"><i class="ti ti-trash"></i></div>';
           return '<div class="person-row">'
             + '<div class="av ' + avCls + '">' + ini + '</div>'
             + '<div style="flex:1;">'
@@ -3404,7 +3404,7 @@ html, body {
     }).join('');
   }
 
-  async function deleteStaff(id, name) {
+  async function deleteStaff(id, name, email) {
     if (!confirm('Remove ' + name + ' from MJMConnect? This cannot be undone.')) return;
     try {
       var res = await fetch(SURL + '/rest/v1/profiles?id=eq.' + id, {
@@ -3412,6 +3412,7 @@ html, body {
         headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY }
       });
       if (res.ok) {
+        if (email) await deleteAuthUserByEmail(email);
         await loadDbProfiles();
         renderSettingsPage();
       } else {
@@ -3722,7 +3723,7 @@ html, body {
   // ── SUPABASE CONFIG ──
   var SURL  = 'https://hbxzbowkucpqlhxdomap.supabase.co';
   var SKEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhieHpib3drdWNwcWxoeGRvbWFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5OTEwMjYsImV4cCI6MjEwMjU2NzAyNn0.tZMdtKy92OUdLEOxKkO2XAa2bgXzkEeQtCAjtYF8yGA';
-  var SVCKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhieHpib3drdWNwcWxoeGRvbWFwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4Njk5MTAyNiwiZXhwIjoyMTAyNTY3MDI2fQ.D7j3EkxjNswBWNraJwrqhoUhSwo4AGv7pXNXVG89STU'; // service role — only used by deleteInvite() to clean up pre-OPISPRO accounts that still have a real Supabase Auth user. New OPISPRO sign-ins never create one, so this key's remaining footprint will shrink as those legacy rows are cleared.
+  var SVCKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhieHpib3drdWNwcWxoeGRvbWFwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4Njk5MTAyNiwiZXhwIjoyMTAyNTY3MDI2fQ.D7j3EkxjNswBWNraJwrqhoUhSwo4AGv7pXNXVG89STU'; // service role — used by sendApprovalEmail() to send the "you're approved" email via Supabase's Invite endpoint (which creates a real Supabase Auth user as a side effect, for every approval, not just legacy pre-OPISPRO accounts), and by deleteAuthUserByEmail() (deleteInvite() and deleteStaff()) to best-effort clean that Auth user back up when the profiles row it belongs to is removed.
   // Mirrors js/core.js's DEFAULT_PERMISSIONS (admin.html doesn't include core.js)
   var DEFAULT_PERMISSIONS = { announcements: 'view', duty: 'view', dutyRoles: 'view', events: 'view', faulty: 'view', timeoff: 'view' };
 
@@ -6253,12 +6254,13 @@ html, body {
     }
   }
 
-  // Delete a pending invite (e.g. sent to a mistyped email) so the address
-  // is freed up to be re-invited. Best-effort revokes the underlying
-  // Supabase Auth invited user too, but the profiles row -- what actually
-  // shows in the Invite Log -- is always removed regardless.
-  async function deleteInvite(email) {
-    if (!confirm('Delete this invite? ' + email + ' will need to be re-invited to join.')) return;
+  // approveStaff() -> sendApprovalEmail() creates a real Supabase Auth user
+  // as a side effect of Supabase's own Invite-email endpoint (see its
+  // comment above), so every approved staff member -- not just legacy
+  // pre-OPISPRO accounts -- ends up with one. Best-effort only: swallows
+  // its own errors so a lookup/delete failure here never blocks whatever
+  // profiles-row deletion the caller does next.
+  async function deleteAuthUserByEmail(email) {
     try {
       var lookup = await fetch(SURL + '/auth/v1/admin/users?email=' + encodeURIComponent(email), {
         headers: { 'apikey': SVCKEY, 'Authorization': 'Bearer ' + SVCKEY }
@@ -6274,7 +6276,16 @@ html, body {
           });
         }
       }
-    } catch(e) { /* best-effort only -- profiles row deletion below is what matters */ }
+    } catch(e) { /* best-effort only */ }
+  }
+
+  // Delete a pending invite (e.g. sent to a mistyped email) so the address
+  // is freed up to be re-invited. Best-effort revokes the underlying
+  // Supabase Auth invited user too, but the profiles row -- what actually
+  // shows in the Invite Log -- is always removed regardless.
+  async function deleteInvite(email) {
+    if (!confirm('Delete this invite? ' + email + ' will need to be re-invited to join.')) return;
+    await deleteAuthUserByEmail(email);
     try {
       var deleted = await sbFetch('DELETE', '/rest/v1/profiles?email=eq.' + encodeURIComponent(email));
       if (!deleted || deleted.length === 0) {
