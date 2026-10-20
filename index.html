@@ -3,9 +3,21 @@
 <head>
 <script>
   (function() {
-    if (!localStorage.getItem('mjm_user')) {
+    var raw = localStorage.getItem('mjm_user');
+    if (!raw) {
       window.location.replace('login.html');
+      return;
     }
+    // Mirrors admin.html's own guard (which bounces non-admins here) --
+    // without this, an admin who's already signed in and opens the shared
+    // root link (which resolves to this file) would see the staff app
+    // instead of being sent to admin.html.
+    try {
+      var role = JSON.parse(raw).role;
+      if (role === 'superadmin' || role === 'hradmin') {
+        window.location.replace('admin.html');
+      }
+    } catch (e) {}
   })();
 </script>
 <meta charset="UTF-8">
