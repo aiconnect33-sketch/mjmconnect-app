@@ -193,6 +193,20 @@ async function handleSignIn() {
       name = profile[0].full_name || result.data.name;
       permissions = profile[0].permissions || null;
       location = profile[0].opispro_location || location;
+      // Profiles created before opispro_user_id existed (or before this
+      // sign-in ever ran for them) have it unset -- without it,
+      // opispro-get-leaves' approved-staff filter can never match them, so
+      // their OPISPRO leave silently never shows up anywhere in
+      // MJMConnect even though they're a perfectly valid approved account.
+      // Backfill it the first time we see them sign in after the fact,
+      // rather than requiring a manual SQL fix per legacy account.
+      if (!profile[0].opispro_user_id && result.data.user_id) {
+        try {
+          await sbFetch('PATCH', '/rest/v1/profiles?email=eq.' + encodeURIComponent(email), {
+            opispro_user_id: result.data.user_id
+          });
+        } catch (e) {}
+      }
     } else {
       role = 'pending';
       name = result.data.name;
