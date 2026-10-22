@@ -71,7 +71,7 @@ async function loadLeave() {
   var today = localDateStr();
   var avColors = ['av-green','av-amber','av-coral','av-blue','av-purple','av-red'];
 
-  var data = await fetchOpisproLeaves(today, 31);
+  var data = await fetchOpisproLeaves(today, 14);
   var users = (data && data.users) || [];
 
   // ── HOME TAB: today on leave ──
