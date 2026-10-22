@@ -1186,6 +1186,7 @@ html, body {
 
   <div class="dsk-section-label">Report</div>
   <div class="dsk-item admin-only" id="dsknav-faultyreport" onclick="switchNav('faultyreport')"><i class="ti ti-file-text"></i>Faulty Report</div>
+  <div class="dsk-item admin-only" id="dsknav-timeoffreport" onclick="switchNav('timeoffreport')"><i class="ti ti-clock-hour-4"></i>Time Off Report</div>
 
   <div class="dsk-section-label">Admin Only</div>
   <div class="dsk-item admin-only" id="dsknav-invite" onclick="switchNav('invite')"><i class="ti ti-user-check"></i>Approvals<span class="dsk-item-badge" id="dsknav-invite-badge"></span></div>
@@ -2139,6 +2140,76 @@ html, body {
     </div><!-- /faultyreport -->
 
     <!-- ═══════════════════════════
+         TIME OFF REPORT (admin-only)
+    ═══════════════════════════ -->
+    <div class="screen-section" id="screen-timeoffreport">
+
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap;">
+        <div>
+          <div class="sec-title" style="margin-bottom:4px;">Time Off Report</div>
+          <div style="font-size:11.5px;color:var(--text3);">Every Time Off trip, pulled live — no need to check the Google Sheet.</div>
+        </div>
+        <button class="book-btn-primary" style="width:auto;margin-bottom:0;padding:9px 16px;" onclick="downloadTimeOffReportCsv()">
+          <i class="ti ti-download"></i> Download CSV
+        </button>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+        <div class="fr-tile">
+          <div class="fr-tile-num" id="tor-stat-total">—</div>
+          <div class="fr-tile-label" id="tor-stat-total-label">Total</div>
+        </div>
+        <div class="fr-tile">
+          <div class="fr-tile-num" style="color:var(--blue-text);" id="tor-stat-out">—</div>
+          <div class="fr-tile-label">Currently Out</div>
+        </div>
+        <div class="fr-tile" style="border-color:#E6B4B4;">
+          <div class="fr-tile-num" style="color:var(--red-text);" id="tor-stat-overlimit">—</div>
+          <div class="fr-tile-label">Over 2.5h limit</div>
+        </div>
+        <div class="fr-tile">
+          <div class="fr-tile-num" style="color:var(--green-text);" id="tor-stat-hours">—</div>
+          <div class="fr-tile-label">Total hours</div>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+        <button class="fr-pill active" id="tor-filter-all" onclick="setTimeOffReportFilter('all')">All</button>
+        <button class="fr-pill" id="tor-filter-out" onclick="setTimeOffReportFilter('out')">Currently Out</button>
+        <button class="fr-pill" id="tor-filter-completed" onclick="setTimeOffReportFilter('completed')">Completed</button>
+        <button class="fr-pill" id="tor-filter-voided" onclick="setTimeOffReportFilter('voided')">Voided</button>
+        <select class="fr-select" id="tor-range-select" onchange="loadTimeOffReport()">
+          <option value="30">Last 30 days</option>
+          <option value="90">Last 90 days</option>
+          <option value="0">All time</option>
+        </select>
+        <div style="flex:1;min-width:140px;">
+          <input class="fr-search" id="tor-search-input" placeholder="Search staff or reason…" oninput="renderTimeOffReportTable()">
+        </div>
+      </div>
+
+      <div class="fr-table-wrap">
+        <table class="fr-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Staff Name</th>
+              <th>Time Out</th>
+              <th>Time In</th>
+              <th>Duration</th>
+              <th>Reason</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="tor-table-body">
+            <tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px;">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div><!-- /timeoffreport -->
+
+    <!-- ═══════════════════════════
          SETTINGS
     ═══════════════════════════ -->
     <div class="screen-section" id="screen-menu">
@@ -2169,6 +2240,11 @@ html, body {
       <div class="menu-row" onclick="switchNav('faultyreport')">
         <div class="menu-ic" style="background:var(--coral-bg);color:var(--coral-text);"><i class="ti ti-file-text"></i></div>
         <div class="menu-label">Faulty Report</div>
+        <i class="ti ti-chevron-right menu-chev"></i>
+      </div>
+      <div class="menu-row" onclick="switchNav('timeoffreport')">
+        <div class="menu-ic" style="background:var(--blue-bg);color:var(--blue-text);"><i class="ti ti-clock-hour-4"></i></div>
+        <div class="menu-label">Time Off Report</div>
         <i class="ti ti-chevron-right menu-chev"></i>
       </div>
 
@@ -2410,6 +2486,7 @@ html, body {
     if (name === 'book')     initBookTab();
     if (name === 'faulty')   initFaultyTab();
     if (name === 'faultyreport') loadFaultyReport();
+    if (name === 'timeoffreport') loadTimeOffReport();
     rememberTab(name);
   }
   function switchTabByName(name) {
@@ -5098,6 +5175,136 @@ html, body {
     var a = document.createElement('a');
     a.href = url;
     a.download = 'faulty-complaints-' + localDateStr() + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // ── TIME OFF REPORT (admin-only) ──
+  // Same shape as the Faulty Complaint Report above: full history in the
+  // chosen date range (not just the 150-row working list tab-timeoff.js
+  // keeps for the Time Off tab itself), so it can replace the Google Sheet.
+  var torReportData = [];
+  var torReportFilter = 'all'; // 'all' | 'out' | 'completed' | 'voided'
+
+  async function loadTimeOffReport() {
+    var tbody = document.getElementById('tor-table-body');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px;">Loading…</td></tr>';
+    try {
+      var days = Number(document.getElementById('tor-range-select').value) || 0;
+      var filter = 'order=time_out.desc&limit=1000';
+      if (days > 0) {
+        var cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+        filter = 'time_out=gte.' + cutoff + '&' + filter;
+      }
+      torReportData = (await sbGet('time_off_records', filter)) || [];
+      renderTimeOffReportStats(days);
+      renderTimeOffReportTable();
+    } catch (e) {
+      torReportData = [];
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px;">Could not load report.</td></tr>';
+    }
+  }
+
+  function torStatus(r) {
+    if (r.entry_type === 'voided') return 'voided';
+    if (!r.time_in) return 'out';
+    return 'completed';
+  }
+
+  function torStatusBadge(r) {
+    var status = torStatus(r);
+    var badge = status === 'voided' ? '<span class="badge b-red">Voided</span>'
+      : status === 'out' ? '<span class="badge b-blue">Currently Out</span>'
+      : '<span class="badge b-green">Completed</span>';
+    if (r.entry_type === 'edited') badge += ' <span style="color:var(--amber-text);font-weight:700;font-size:10px;">(edited)</span>';
+    if (r.entry_type === 'backfilled') badge += ' <span style="color:var(--red-text);font-weight:700;font-size:10px;">(backfilled)</span>';
+    return badge;
+  }
+
+  function renderTimeOffReportStats(days) {
+    var total = torReportData.length;
+    var out = torReportData.filter(function (r) { return torStatus(r) === 'out'; }).length;
+    var overLimit = torReportData.filter(function (r) { return torStatus(r) !== 'voided' && r.duration_minutes > 150; }).length;
+    var totalMinutes = torReportData.filter(function (r) { return torStatus(r) !== 'voided'; })
+      .reduce(function (sum, r) { return sum + (r.duration_minutes || 0); }, 0);
+    document.getElementById('tor-stat-total').textContent = total;
+    document.getElementById('tor-stat-out').textContent = out;
+    document.getElementById('tor-stat-overlimit').textContent = overLimit;
+    document.getElementById('tor-stat-hours').textContent = (totalMinutes / 60).toFixed(1);
+    document.getElementById('tor-stat-total-label').textContent = days > 0 ? 'Total (last ' + days + ' days)' : 'Total (all time)';
+  }
+
+  function setTimeOffReportFilter(f) {
+    torReportFilter = f;
+    ['all', 'out', 'completed', 'voided'].forEach(function (k) {
+      var el = document.getElementById('tor-filter-' + k);
+      if (el) el.classList.toggle('active', k === f);
+    });
+    renderTimeOffReportTable();
+  }
+
+  function torMatchesFilter(r) {
+    if (torReportFilter === 'all') return true;
+    return torStatus(r) === torReportFilter;
+  }
+
+  function torVisibleRows() {
+    var q = (document.getElementById('tor-search-input').value || '').trim().toLowerCase();
+    return torReportData.filter(torMatchesFilter).filter(function (r) {
+      if (!q) return true;
+      return (r.staff_name || '').toLowerCase().indexOf(q) !== -1 || (r.reason || '').toLowerCase().indexOf(q) !== -1;
+    });
+  }
+
+  function renderTimeOffReportTable() {
+    var tbody = document.getElementById('tor-table-body');
+    if (!tbody) return;
+    var rows = torVisibleRows();
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px;">No Time Off trips match.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map(function (r) {
+      var outParts = fcDateTime(r.time_out).split(', ');
+      var inParts = r.time_in ? fcDateTime(r.time_in).split(', ') : null;
+      return '<tr' + (torStatus(r) === 'voided' ? ' style="opacity:.6;"' : '') + '>'
+        + '<td>' + outParts[0] + '</td>'
+        + '<td>' + escHtml(r.staff_name || '') + '</td>'
+        + '<td>' + outParts[1] + '</td>'
+        + '<td>' + (inParts ? inParts[1] : '<span style="color:var(--text3);">—</span>') + '</td>'
+        + '<td>' + (r.duration_minutes != null ? fmtTimeOffDuration(r.duration_minutes) : '<span style="color:var(--text3);">—</span>') + '</td>'
+        + '<td>' + escHtml(r.reason || '') + '</td>'
+        + '<td>' + torStatusBadge(r) + '</td>'
+        + '</tr>';
+    }).join('');
+  }
+
+  // Exports exactly what's currently filtered/searched, same convention as
+  // the Faulty Complaint Report's CSV above.
+  function downloadTimeOffReportCsv() {
+    var rows = torVisibleRows();
+    var headers = ['Date', 'Staff Name', 'Time Out', 'Time In', 'Duration (min)', 'Reason', 'Status'];
+    function csvEscape(v) {
+      v = String(v == null ? '' : v);
+      if (/[",\n]/.test(v)) v = '"' + v.replace(/"/g, '""') + '"';
+      return v;
+    }
+    var lines = [headers.join(',')];
+    rows.forEach(function (r) {
+      lines.push([
+        fcDateTime(r.time_out).split(',')[0], r.staff_name, fcDateTime(r.time_out),
+        r.time_in ? fcDateTime(r.time_in) : '', r.duration_minutes != null ? r.duration_minutes : '',
+        r.reason, torStatus(r)
+      ].map(csvEscape).join(','));
+    });
+    var blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'time-off-' + localDateStr() + '.csv';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
