@@ -5300,6 +5300,7 @@ html, body {
         upcoming.push({ name: u.name, run: run });
       });
     });
+    upcoming.sort(function(a, b) { return a.run.from < b.run.from ? -1 : a.run.from > b.run.from ? 1 : 0; });
 
     function renderLeaveGroup(label, rows) {
       if (!rows.length) return '';
