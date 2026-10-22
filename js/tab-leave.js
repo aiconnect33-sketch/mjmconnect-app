@@ -136,6 +136,7 @@ async function loadLeave() {
     todayLeaves.forEach(function(lv) { current.push({ name: u.name, run: { from: lv.date, to: lv.date, leave_type: lv.leave_type, dayType: lv.day_type } }); });
     groupLeaveRuns(futureLeaves).forEach(function(run) { upcoming.push({ name: u.name, run: run }); });
   });
+  upcoming.sort(function(a, b) { return a.run.from < b.run.from ? -1 : a.run.from > b.run.from ? 1 : 0; });
 
   tabEl.innerHTML = renderGroup('Currently on Leave', current) + renderGroup('Upcoming Leave', upcoming);
   if (!current.length && !upcoming.length) {
