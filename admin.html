@@ -4,11 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="color-scheme" content="light">
-<meta name="theme-color" content="#075E54">
+<meta name="theme-color" content="#0F6E5C">
 <link rel="manifest" href="manifest.json">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="#075E54">
+<meta name="apple-mobile-web-app-status-bar-style" content="#0F6E5C">
 <meta name="apple-mobile-web-app-title" content="MJMConnect">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <title>MJMConnect — HR Admin</title>
@@ -19,9 +19,9 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {color-scheme:light;
-  --green:       #075E54;
-  --green-mid:   #16B890;
-  --green-lite:  #8EF0CF;
+  --green:       #0F6E5C;
+  --green-mid:   #22C39A;
+  --green-lite:  #9FF3D6;
   --green-bg:    #E1F5EE;
   --green-text:  #085041;
   --red-bg:      #FCEBEB;
@@ -969,7 +969,7 @@ html, body {
      scrollable area whenever it's active rather than relying only on
      .home-hero's own bleed -- keeps the green flush with the bottom nav
      even when there's little data to show. */
-  .screen-body:has(#screen-dashboard.active) { background: linear-gradient(180deg, #0B7A63 0%, #08705C 55%, var(--green) 100%); }
+  .screen-body:has(#screen-dashboard.active) { background: linear-gradient(180deg, #129179 0%, #0F7F69 55%, var(--green) 100%); }
   .home-hero {
     margin: -14px -14px 0; padding: 18px 16px 4px;
     position: relative;
@@ -3570,7 +3570,7 @@ html, body {
 
     var indicator = document.createElement('div');
     indicator.id = 'ptr-indicator';
-    indicator.style.cssText = 'position:fixed;top:0;left:0;right:0;height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;z-index:9999;background:#075E54;pointer-events:none;';
+    indicator.style.cssText = 'position:fixed;top:0;left:0;right:0;height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;z-index:9999;background:#0F6E5C;pointer-events:none;';
     indicator.innerHTML = '<div style="width:20px;height:20px;border:2.5px solid rgba(255,255,255,0.35);border-top-color:#fff;border-radius:50%;animation:ptr-spin 0.6s linear infinite;"></div>';
     document.body.appendChild(indicator);
 
@@ -5309,10 +5309,10 @@ html, body {
       // on remembering which section is which.
       var isCurrent = label === 'Currently on Leave';
       var dotStyle = isCurrent
-        ? 'width:7px;height:7px;border-radius:50%;background:#075E54;flex-shrink:0;'
+        ? 'width:7px;height:7px;border-radius:50%;background:#0F6E5C;flex-shrink:0;'
         : 'width:7px;height:7px;border-radius:50%;border:1.5px solid #111C18;flex-shrink:0;';
-      var labelColor = isCurrent ? '#075E54' : '#111C18';
-      var cardBorder = isCurrent ? 'border:1.5px solid #075E54;' : '';
+      var labelColor = isCurrent ? '#0F6E5C' : '#111C18';
+      var cardBorder = isCurrent ? 'border:1.5px solid #0F6E5C;' : '';
       return '<div class="card" style="' + cardBorder + '"><div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">'
         + '<span style="' + dotStyle + '"></span>'
         + '<span class="card-label" style="margin-bottom:0;font-weight:800;color:' + labelColor + ';">' + label + '</span>'
