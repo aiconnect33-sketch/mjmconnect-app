@@ -127,6 +127,11 @@ function recordScreenChange(name) {
   }
   currentScreenName = name;
   updatePageSubheader(name);
+  // Every screen-section shares the one scrollable .screen-body, so without
+  // this a screen opens wherever the PREVIOUS screen happened to be
+  // scrolled to -- e.g. Booking showing halfway down instead of its top.
+  var body = document.querySelector('.screen-body');
+  if (body) body.scrollTop = 0;
 }
 
 function goBackScreen() {
