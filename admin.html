@@ -416,12 +416,9 @@ html, body {
 .to-correct-field label { display: block; font-size: 9px; font-weight: 600; color: var(--text3); text-transform: uppercase; margin-bottom: 4px; }
 .to-correct-row input { width: 100%; box-sizing: border-box; border: 1px solid var(--blue-text); border-radius: 8px; padding: 8px 10px; font-size: 13px; font-family: inherit; }
 .to-edit-icon { flex-shrink: 0; cursor: pointer; color: var(--text3); font-size: 14px; padding: 4px 6px; margin: -4px -6px; }
-.to-toggle-row { width: 100%; display: flex; align-items: center; justify-content: space-between; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 13px 14px; margin: 16px 0 8px; font-family: inherit; cursor: pointer; }
-.to-toggle-left { display: flex; align-items: center; gap: 10px; }
-.to-toggle-ic { width: 34px; height: 34px; border-radius: var(--r-md); background: var(--blue-bg); color: var(--blue-text); display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
-.to-toggle-title { font-size: 13.5px; font-weight: 700; color: var(--text); text-align: left; }
-.to-toggle-sub { font-size: 10.5px; color: var(--text2); text-align: left; }
-.to-toggle-chev { font-size: 11px; color: var(--text3); transition: transform .15s ease; }
+.to-pill-wrap { display: flex; background: var(--surface); border-radius: var(--r-lg); border: 0.5px solid var(--border); padding: 4px; gap: 4px; margin: 16px 0 10px; }
+.to-pill { flex: 1; padding: 7px; border-radius: var(--r-md); border: none; font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+.to-meta { font-size: 11px; color: var(--text2); margin: 2px 0 10px; }
 .to-day-label { font-size: 10px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.04em; margin: 10px 0 6px; }
 .to-cancel-toggle { width: 100%; margin-top: 2px; background: none; border: 1px dashed var(--border); color: var(--text2); font-size: 11px; font-weight: 600; border-radius: var(--r-md); padding: 8px; font-family: inherit; cursor: pointer; }
 
@@ -1716,16 +1713,28 @@ html, body {
         <button class="btn-ghost" onclick="adminHideBackfillForm()">Cancel</button>
       </div>
 
-      <div id="admin-timeoff-my-records">
-      </div>
-
       <div class="sec-hdr" style="margin-top:16px;">
         <div class="sec-title">Staff Overview</div>
       </div>
       <div id="timeoff-overview">
       </div>
 
-      <div id="timeoff-list">
+      <!-- Pill toggle (same style as the staff app) in place of the two
+           separately-collapsible "My Records"/"All Records" rows. -->
+      <div class="to-pill-wrap">
+        <button id="admin-timeoff-pill-mine" class="to-pill" onclick="switchAdminTimeOffPill('mine')"
+          style="background:var(--green);color:#fff;">
+          <i class="ti ti-clipboard-list"></i> My Records
+        </button>
+        <button id="admin-timeoff-pill-all" class="to-pill" onclick="switchAdminTimeOffPill('all')"
+          style="background:transparent;color:var(--text2);">
+          <i class="ti ti-users"></i> All Records
+        </button>
+      </div>
+
+      <div id="admin-timeoff-my-records">
+      </div>
+      <div id="timeoff-list" style="display:none;">
       </div>
 
     </div><!-- /timeoff -->
@@ -5663,21 +5672,14 @@ html, body {
     return h + 'h ' + String(m).padStart(2, '0') + 'm';
   }
 
-  // ── Time Off — shared "tap to expand" helpers for My Records / All Records ──
-  // Both sections start collapsed to a one-line summary; each keeps its own
-  // open/cancelled-visible state across re-renders (e.g. after saving a
-  // correction) so the accordion doesn't snap shut on the admin mid-edit.
-  var timeoffMineOpen = false, timeoffAllOpen = false;
+  // ── Time Off — shared helpers for My Records / All Records, switched via
+  // a pill toggle (same pattern as the staff app). Both lists render in
+  // full on every load, same as Book's Vehicle/Room panels, so switching
+  // is just a show/hide. Each still keeps its own cancelled-visible state
+  // across re-renders (e.g. after saving a correction).
   var timeoffMineCancelledOpen = false, timeoffAllCancelledOpen = false;
   var timeoffMineDataCache = [], timeoffAllDataCache = [];
 
-  function timeoffToggleRowHtml(icon, title, summary, isOpen, onclickFn) {
-    return '<button class="to-toggle-row" onclick="' + onclickFn + '">'
-      + '<div class="to-toggle-left"><div class="to-toggle-ic">' + icon + '</div>'
-      + '<div><div class="to-toggle-title">' + title + '</div><div class="to-toggle-sub">' + escHtml(summary) + '</div></div></div>'
-      + '<span class="to-toggle-chev" style="' + (isOpen ? 'transform:rotate(180deg);' : '') + '">▾</span>'
-      + '</button>';
-  }
   function timeoffCancelToggleHtml(count, isOpen, onclickFn) {
     if (!count) return '';
     return '<button class="to-cancel-toggle" onclick="' + onclickFn + '">' + (isOpen ? 'Hide ' : 'Show ') + count + ' cancelled</button>';
@@ -5736,27 +5738,19 @@ html, body {
     var voided = data.filter(function (r) { return r.entry_type === 'voided'; });
     var staffSet = {}; data.forEach(function (r) { staffSet[r.staff_name] = 1; });
     var staffTotal = Object.keys(staffSet).length;
-    var summary = timeoffAllOpen ? 'Tap to collapse'
-      : (data.length ? (data.length + (data.length === 1 ? ' entry' : ' entries') + ' this month · ' + staffTotal + (staffTotal === 1 ? ' staff' : ' staff')) : 'No entries this month');
-    var html = timeoffToggleRowHtml('👥', 'All Records', summary, timeoffAllOpen, 'toggleTimeOffAll()');
-    if (timeoffAllOpen) {
-      if (!data.length) {
-        html += '<div style="font-size:12px;color:var(--text3);text-align:center;padding:14px 0;">No Time Off logged this month.</div>';
-      } else {
-        timeoffGroupByDate(nonVoided, today).forEach(function (g) {
-          html += '<div class="to-day-label">' + escHtml(g.label) + '</div>';
-          g.items.forEach(function (r) { html += timeoffRenderAllRow(r); });
-        });
-        html += timeoffCancelToggleHtml(voided.length, timeoffAllCancelledOpen, 'toggleTimeOffAllCancelled()');
-        if (timeoffAllCancelledOpen) voided.forEach(function (r) { html += timeoffRenderVoidedRow(r, true); });
-      }
+    var summary = data.length ? (data.length + (data.length === 1 ? ' entry' : ' entries') + ' this month · ' + staffTotal + (staffTotal === 1 ? ' staff' : ' staff')) : 'No entries this month';
+    var html = '<div class="to-meta">' + escHtml(summary) + '</div>';
+    if (!data.length) {
+      html += '<div style="font-size:12px;color:var(--text3);text-align:center;padding:14px 0;">No Time Off logged this month.</div>';
+    } else {
+      timeoffGroupByDate(nonVoided, today).forEach(function (g) {
+        html += '<div class="to-day-label">' + escHtml(g.label) + '</div>';
+        g.items.forEach(function (r) { html += timeoffRenderAllRow(r); });
+      });
+      html += timeoffCancelToggleHtml(voided.length, timeoffAllCancelledOpen, 'toggleTimeOffAllCancelled()');
+      if (timeoffAllCancelledOpen) voided.forEach(function (r) { html += timeoffRenderVoidedRow(r, true); });
     }
     return html;
-  }
-  function toggleTimeOffAll() {
-    timeoffAllOpen = !timeoffAllOpen;
-    var el = document.getElementById('timeoff-list');
-    if (el) el.innerHTML = renderTimeOffAllRecordsSection(timeoffAllDataCache, localDateStr());
   }
   function toggleTimeOffAllCancelled() {
     timeoffAllCancelledOpen = !timeoffAllCancelledOpen;
@@ -5950,32 +5944,37 @@ html, body {
     var nonVoided = records.filter(function (r) { return r.entry_type !== 'voided'; });
     var voided = records.filter(function (r) { return r.entry_type === 'voided'; });
     var totalMinutes = nonVoided.reduce(function (sum, r) { return sum + (r.duration_minutes || 0); }, 0);
-    var summary = timeoffMineOpen ? 'Tap to collapse'
-      : (records.length ? (records.length + (records.length === 1 ? ' entry' : ' entries') + ' this month · ' + fmtTimeOffDuration(totalMinutes)) : 'No entries this month');
-    var html = timeoffToggleRowHtml('🗂', 'My Records', summary, timeoffMineOpen, 'toggleTimeOffMine()');
-    if (timeoffMineOpen) {
-      if (!records.length) {
-        html += '<div style="font-size:12px;color:var(--text3);text-align:center;padding:14px 0;">No Time Off logged this month.</div>';
-      } else {
-        timeoffGroupByDate(nonVoided, today).forEach(function (g) {
-          html += '<div class="to-day-label">' + escHtml(g.label) + '</div>';
-          g.items.forEach(function (r) { html += timeoffRenderMineRow(r); });
-        });
-        html += timeoffCancelToggleHtml(voided.length, timeoffMineCancelledOpen, 'toggleTimeOffMineCancelled()');
-        if (timeoffMineCancelledOpen) voided.forEach(function (r) { html += timeoffRenderVoidedRow(r, false); });
-      }
+    var summary = records.length ? (records.length + (records.length === 1 ? ' entry' : ' entries') + ' this month · ' + fmtTimeOffDuration(totalMinutes)) : 'No entries this month';
+    var html = '<div class="to-meta">' + escHtml(summary) + '</div>';
+    if (!records.length) {
+      html += '<div style="font-size:12px;color:var(--text3);text-align:center;padding:14px 0;">No Time Off logged this month.</div>';
+    } else {
+      timeoffGroupByDate(nonVoided, today).forEach(function (g) {
+        html += '<div class="to-day-label">' + escHtml(g.label) + '</div>';
+        g.items.forEach(function (r) { html += timeoffRenderMineRow(r); });
+      });
+      html += timeoffCancelToggleHtml(voided.length, timeoffMineCancelledOpen, 'toggleTimeOffMineCancelled()');
+      if (timeoffMineCancelledOpen) voided.forEach(function (r) { html += timeoffRenderVoidedRow(r, false); });
     }
     return html;
-  }
-  function toggleTimeOffMine() {
-    timeoffMineOpen = !timeoffMineOpen;
-    var el = document.getElementById('admin-timeoff-my-records');
-    if (el) el.innerHTML = renderAdminTimeOffRecords(timeoffMineDataCache, localDateStr());
   }
   function toggleTimeOffMineCancelled() {
     timeoffMineCancelledOpen = !timeoffMineCancelledOpen;
     var el = document.getElementById('admin-timeoff-my-records');
     if (el) el.innerHTML = renderAdminTimeOffRecords(timeoffMineDataCache, localDateStr());
+  }
+  // Mirrors switchBookPill/switchTimeOffPill -- both panels are already
+  // rendered in full, so switching is just a display + pill-style toggle.
+  function switchAdminTimeOffPill(which) {
+    var isMine = which === 'mine';
+    document.getElementById('admin-timeoff-my-records').style.display = isMine ? 'block' : 'none';
+    document.getElementById('timeoff-list').style.display             = isMine ? 'none'  : 'block';
+    var pMine = document.getElementById('admin-timeoff-pill-mine');
+    var pAll  = document.getElementById('admin-timeoff-pill-all');
+    pMine.style.background = isMine ? 'var(--green)' : 'transparent';
+    pMine.style.color      = isMine ? '#fff' : 'var(--text2)';
+    pAll.style.background  = isMine ? 'transparent' : 'var(--green)';
+    pAll.style.color       = isMine ? 'var(--text2)' : '#fff';
   }
 
   function adminToggleTimeOffCorrection(key) {
