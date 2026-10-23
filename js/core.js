@@ -375,7 +375,7 @@ function showPendingApprovalScreen(u) {
           '<div style="width:72px;height:72px;border-radius:50%;background:var(--amber-bg);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;"><i class="ti ti-hourglass" style="font-size:34px;color:var(--amber-text);"></i></div>' +
           '<div style="display:inline-flex;align-items:center;gap:6px;background:var(--green-bg);border-radius:20px;padding:6px 14px;font-size:11.5px;font-weight:700;color:var(--green-text);margin-bottom:14px;"><i class="ti ti-check" style="font-size:12px;"></i> Verified with OPISPRO</div>' +
           '<div style="font-size:17px;font-weight:700;color:var(--text-primary);margin-bottom:8px;">Almost there!</div>' +
-          '<div style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:18px;">Your identity\'s confirmed, but an Admin still needs to approve your MJMConnect access. You\'ll be able to sign in and see everything as soon as that happens.</div>' +
+          '<div style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:18px;">Your identity\'s confirmed, but an Admin still needs to approve your MJMConnect access. This page checks automatically and takes you in the moment that happens — no need to do anything else.</div>' +
           '<div style="background:var(--bg);border-radius:14px;border:0.5px solid var(--border);padding:14px;display:flex;align-items:center;gap:12px;text-align:left;margin-bottom:18px;">' +
             '<div style="width:40px;height:40px;border-radius:50%;background:var(--green-bg);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--green-text);flex-shrink:0;">' + escHtml(initials) + '</div>' +
             '<div><div style="font-size:13px;font-weight:700;color:var(--text-primary);">' + escHtml(u.name || '') + '</div><div style="font-size:11.5px;color:var(--text-secondary);margin-top:1px;">' + escHtml(u.email || '') + (u.opispro_location ? ' · ' + escHtml(u.opispro_location) : '') + '</div></div>' +
@@ -384,6 +384,42 @@ function showPendingApprovalScreen(u) {
         '</div>' +
       '</div>' +
     '</div>';
+  initPendingApprovalPoll(u.email);
+}
+
+// Without this, a brand-new sign-in's localStorage role:'pending' never
+// changes on its own -- an Admin approving them in admin.html only updates
+// the database, and the only thing that ever re-reads it is signing in
+// again from login.html. Someone sitting on this screen had no way to find
+// that out: it looks identical before and after being approved, with
+// nothing telling them to sign out and back in. Polling the same profiles
+// row this page is already showing, and logging them straight in the
+// moment role stops being 'pending', removes that dead end entirely.
+function initPendingApprovalPoll(email) {
+  var checking = false;
+  async function checkApproval() {
+    if (checking) return;
+    checking = true;
+    try {
+      var res = await fetch(SURL + '/rest/v1/profiles?email=eq.' + encodeURIComponent(email) + '&select=role,full_name,permissions,opispro_location',
+        { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
+      var rows = await res.json();
+      var profile = rows && rows[0];
+      if (profile && profile.role && profile.role !== 'pending') {
+        localStorage.setItem('mjm_user', JSON.stringify({
+          email: email, role: profile.role, name: profile.full_name,
+          permissions: profile.permissions || null, opispro_location: profile.opispro_location
+        }));
+        var dest = (profile.role === 'superadmin' || profile.role === 'hradmin') ? 'admin.html' : 'index.html';
+        window.location.replace(dest);
+      }
+    } catch (e) {} finally { checking = false; }
+  }
+  checkApproval();
+  setInterval(checkApproval, 10000);
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible') checkApproval();
+  });
 }
 
 // Re-fetches every tab's live data and the calendar in place, without
