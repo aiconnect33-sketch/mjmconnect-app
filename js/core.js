@@ -98,16 +98,15 @@ function tick() {
 }
 tick(); setInterval(tick, 10000);
 
-// ── Page sub-header (back button + title) ──
+// ── Page sub-header (back button) ──
 // Shown on every screen except Home, which has its own hero and is the
 // bottom nav's own "home" destination. Back always returns to whichever
 // screen was active immediately before the current one, tracked here as a
 // simple stack -- not hardcoded to Home, since the bottom nav's Home button
 // already covers that case.
-var SCREEN_TITLES = {
-  announce: 'Announcements', leave: 'Leave', event: 'Event', duty: 'Duty',
-  estatetrip: 'Estate Trip', timeoff: 'Time Off', book: 'Book',
-  faulty: 'Faulty Report', menu: 'Menu'
+var SCREENS_WITH_BACK = {
+  announce: 1, leave: 1, event: 1, duty: 1, estatetrip: 1, timeoff: 1,
+  book: 1, faulty: 1, menu: 1
 };
 var currentScreenName = 'home';
 var screenHistory = [];
@@ -116,10 +115,9 @@ var suppressHistoryPush = false;
 function updatePageSubheader(name) {
   var bar = document.getElementById('page-subheader');
   if (!bar) return;
-  var title = SCREEN_TITLES[name];
-  if (!title) { bar.style.display = 'none'; return; }
+  if (!SCREENS_WITH_BACK[name]) { bar.style.display = 'none'; return; }
   bar.style.display = 'flex';
-  document.getElementById('page-subheader-title').textContent = title;
+  document.getElementById('page-subheader-title').textContent = 'Back';
 }
 
 function recordScreenChange(name) {
