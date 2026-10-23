@@ -41,23 +41,9 @@ async function loadDuty() {
         rr.groups[key].ids.push(r.id);
       });
 
-      tabEl.innerHTML = roleOrder.map(function(role, ri) {
+      tabEl.innerHTML = roleOrder.map(function(role) {
         var rr = roles[role];
         var roleGroups = rr.order.map(function(k) { return rr.groups[k]; });
-        var activeGroups = roleGroups.filter(function(g) { return g.date_from <= today && today <= (g.date_to || g.date_from); });
-
-        var currentHtml;
-        if (activeGroups.length) {
-          var activeNames = [];
-          activeGroups.forEach(function(g) { g.members.forEach(function(m) { activeNames.push(m.staff_name); }); });
-          var label = activeNames.length > 2 ? (activeNames[0] + ' +' + (activeNames.length - 1)) : activeNames.join(', ');
-          var ini = (activeNames[0] || '').split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
-          currentHtml = '<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-secondary);flex-shrink:0;">'
-            + '<div class="avatar ' + avColors[ri % avColors.length] + '" style="width:19px;height:19px;font-size:8.5px;">' + ini + '</div>'
-            + escHtml(label) + '</div>';
-        } else {
-          currentHtml = '<div style="font-size:11px;color:var(--text-secondary);flex-shrink:0;">No one on duty now</div>';
-        }
 
         var bodyHtml = roleGroups.map(function(g, gi) {
           var from = g.date_from ? new Date(g.date_from+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'}) : '';
@@ -93,7 +79,6 @@ async function loadDuty() {
           + '<div style="display:flex;align-items:center;gap:8px;padding:12px 14px;cursor:pointer;" onclick="toggleDutySection(this)">'
           + '<i class="ti ti-chevron-right" style="font-size:11px;color:var(--text-secondary);flex-shrink:0;transition:transform .15s ease;"></i>'
           + '<div style="flex:1;font-size:12px;font-weight:600;color:var(--text-primary);">' + escHtml(role) + '</div>'
-          + currentHtml
           + '</div>'
           + '<div style="display:none;padding:0 14px 12px 33px;">' + bodyHtml + '</div>'
           + '</div>';
