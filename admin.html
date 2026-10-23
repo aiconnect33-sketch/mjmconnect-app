@@ -965,13 +965,16 @@ html, body {
 
   /* ── HOME HERO (Dashboard only, mirrors staff app's design system) ── */
   .tab-nav { display: none; }
-  /* Dashboard content can be shorter than the viewport, so colour the whole
-     scrollable area whenever it's active rather than relying only on
-     .home-hero's own bleed -- keeps the green flush with the bottom nav
-     even when there's little data to show. */
-  .screen-body:has(#screen-dashboard.active) { background: linear-gradient(180deg, #129179 0%, #0F7F69 55%, var(--green) 100%); }
+  /* Plantation banner photo, same brand-colour scrim as the staff app's
+     Home hero -- left-to-right fade keeps the greeting text readable. */
   .home-hero {
-    margin: -14px -14px 0; padding: 18px 16px 4px;
+    background:
+      linear-gradient(90deg, rgba(0,79,66,0.72) 0%, rgba(0,79,66,0.48) 35%, rgba(0,79,66,0.15) 65%, rgba(0,79,66,0.05) 100%),
+      url('images/hero-plantation.webp');
+    background-size: 100% 100%, cover;
+    background-position: 0 0, 65% center;
+    background-repeat: no-repeat, no-repeat;
+    margin: -14px -14px 16px; padding: 14px 16px 16px;
     position: relative;
   }
   /* Sparse rising dots behind the greeting banner -- purely decorative, so
@@ -1010,7 +1013,7 @@ html, body {
     animation: wave-hand 2.8s ease-in-out infinite;
     animation-delay: 0.4s;
   }
-  .greet-sub { font-size: 17px; font-weight: 400; color: rgba(255,255,255,0.9); margin-bottom: 20px; }
+  .greet-sub { font-size: 17px; font-weight: 400; color: rgba(255,255,255,0.9); }
   .home-alert-banner {
     background: #FFFBEB; border: 0.5px solid #F5D78A; border-radius: var(--r-xl);
     padding: 16px; margin-bottom: 12px;
@@ -1040,14 +1043,19 @@ html, body {
   .home-summary-sub { font-size: 12px; color: var(--text2); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .home-summary-count { font-size: 19px; font-weight: 700; color: var(--green-text); flex-shrink: 0; margin-left: auto; }
   .home-summary-chev { color: var(--text3); font-size: 20px; flex-shrink: 0; }
-  .qa-title { font-size: 17px; font-weight: 700; color: #fff; margin: 24px 0 14px; }
+  .qa-title { font-size: 17px; font-weight: 700; color: var(--text); margin: 24px 0 14px; }
   .qa-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
   .qa-item { display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; }
   .qa-ic {
-    width: 60px; height: 60px; border-radius: 18px;
-    display: flex; align-items: center; justify-content: center; font-size: 26px;
+    width: 65px; height: 65px; border-radius: 19px;
+    display: flex; align-items: center; justify-content: center; font-size: 28px;
   }
-  .qa-label { font-size: 11px; font-weight: 600; color: #fff; text-align: center; line-height: 1.3; }
+  .qa-label { font-size: 11px; font-weight: 600; color: var(--text); text-align: center; line-height: 1.3; }
+  #admin-leave-today .card, #admin-leave-today .home-summary-card,
+  #admin-estatetrip-today .card, #admin-estatetrip-today .home-summary-card,
+  #admin-timeoff-today .card, #admin-timeoff-today .home-summary-card {
+    border: 1px solid #DCE6E0;
+  }
   .cal-day-dots { display: flex; gap: 3px; height: 5px; justify-content: center; margin-top: 2px; }
   .cal-underline { width: 5px; height: 5px; border-radius: 50%; }
   .cal-underline.leave  { background: var(--cal-leave-dot); }
@@ -1088,7 +1096,7 @@ html, body {
     .topbar { justify-content: flex-end; }
     .nav-bar-wrap { display: none; }
     .screen-body { padding: 24px 32px 32px; }
-    .home-hero { margin: -24px -32px 0; padding: 24px 32px 4px; }
+    .home-hero { background: none; margin: -24px -32px 0; padding: 24px 32px 4px; }
 
     .dsk-sidebar {
       display: flex; flex-direction: column; width: 236px; flex-shrink: 0;
@@ -1270,9 +1278,13 @@ html, body {
     </div>
     <div class="home-hero-content">
 
-      <div class="greet-hi">Hi,</div>
+      <div class="greet-hi" id="greet-date-text">Hi,</div>
       <div class="greet-name"><span id="greet-name-text">Super Admin</span> <span class="wave-emoji">👋</span></div>
       <div class="greet-sub">Here's what's happening today.</div>
+    </div><!-- /home-hero-content -->
+    </div><!-- /home-hero -->
+
+    <div style="padding:0 10px;margin-top:-14px;position:relative;z-index:2;">
 
       <!-- Push notifications pre-prompt (js/push.js) -->
       <div id="push-prompt-banner" style="display:none;"></div>
@@ -1284,9 +1296,9 @@ html, body {
       <!-- Calendar -->
       <div style="background:var(--surface);border-radius:var(--r-xl);border:0.5px solid var(--border);overflow:hidden;margin-bottom:10px;">
         <div style="background:var(--green);padding:11px 14px;display:flex;justify-content:space-between;align-items:center;">
-          <button onclick="calPrev()" style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:#E1F5EE;background:rgba(255,255,255,0.15);border-radius:var(--r-sm);border:none;cursor:pointer;"><i class="ti ti-chevron-left" style="font-size:15px;"></i></button>
+          <button onclick="calPrev()" style="width:24px;height:24px;display:flex;align-items:center;justify-content:center;color:#E1F5EE;background:rgba(255,255,255,0.15);border-radius:var(--r-sm);border:none;cursor:pointer;"><i class="ti ti-chevron-left" style="font-size:15px;"></i></button>
           <div id="cal-month-label" style="font-size:13px;font-weight:600;color:#E1F5EE;">June 2026</div>
-          <button onclick="calNext()" style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:#E1F5EE;background:rgba(255,255,255,0.15);border-radius:var(--r-sm);border:none;cursor:pointer;"><i class="ti ti-chevron-right" style="font-size:15px;"></i></button>
+          <button onclick="calNext()" style="width:24px;height:24px;display:flex;align-items:center;justify-content:center;color:#E1F5EE;background:rgba(255,255,255,0.15);border-radius:var(--r-sm);border:none;cursor:pointer;"><i class="ti ti-chevron-right" style="font-size:15px;"></i></button>
         </div>
         <div style="padding:10px 10px 12px;">
           <div id="cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;">
@@ -1348,8 +1360,8 @@ html, body {
 
       </div><!-- /dashboard-grid -->
 
-    </div><!-- /home-hero-content -->
-    </div><!-- /home-hero -->
+    </div><!-- /dashboard-content -->
+
     </div><!-- /dashboard -->
 
     <!-- ═══════════════════════════
@@ -3768,6 +3780,8 @@ html, body {
       var dskNameEl = document.getElementById('dsk-foot-name');
       if (dskNameEl && (u.name || u.email)) dskNameEl.textContent = u.name || u.email;
     }
+    var dateEl = document.getElementById('greet-date-text');
+    if (dateEl) dateEl.textContent = new Date().toLocaleDateString('en-MY', { weekday: 'long', day: 'numeric', month: 'short' });
     refreshAdminData();
     initBackButtonTrap('dashboard');
     restoreLastTab();

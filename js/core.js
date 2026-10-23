@@ -403,6 +403,8 @@ window.addEventListener('DOMContentLoaded', function() {
     var greetEl = document.getElementById('greet-name-text');
     if (greetEl && (u.name || u.email)) greetEl.textContent = u.name || u.email;
   }
+  var dateEl = document.getElementById('greet-date-text');
+  if (dateEl) dateEl.textContent = new Date().toLocaleDateString('en-MY', { weekday: 'long', day: 'numeric', month: 'short' });
   refreshAppData();
   // Auto-switch to tab based on URL hash
   if (window.location.hash === '#book') {
