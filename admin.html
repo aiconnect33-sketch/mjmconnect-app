@@ -3623,12 +3623,20 @@ html, body {
     renderSettingsPage();
   }
 
+  // Both of these only ever touched the local mjm_staff cache -- never
+  // Supabase -- so the change looked real until the next login's fresh
+  // loadDbProfiles() pull overwrote it with the database's real, untouched
+  // role. Now call syncRoleToDb like assignAdminRole does, with the same
+  // "may not have saved" warning if it fails.
   function promoteToAdmin(email) {
     var list = getStaffList();
     var idx  = list.findIndex(u => u.email.toLowerCase() === email.toLowerCase());
     if (idx === -1) return;
     list[idx].role = 'hradmin';
     saveStaffList(list);
+    syncRoleToDb(list[idx].email, 'hradmin').catch(function(){
+      alert('Role change may not have saved — please refresh and check before relying on it.');
+    });
     showAdminSuccess(list[idx].name + ' has been made HR Admin.');
     renderSettingsPage();
   }
@@ -3640,6 +3648,9 @@ html, body {
     if (idx === -1) return;
     list[idx].role = 'staff';
     saveStaffList(list);
+    syncRoleToDb(list[idx].email, 'staff').catch(function(){
+      alert('Role change may not have saved — please refresh and check before relying on it.');
+    });
     showAdminSuccess(list[idx].name + ' has been set back to Staff.');
     renderSettingsPage();
   }
@@ -6372,8 +6383,17 @@ html, body {
   }
 
   // ── SYNC ADMIN ROLE CHANGES TO SUPABASE ──
+  // Must check the returned row like every other profiles PATCH in this
+  // file (see approveStaff) -- Prefer:'' previously suppressed the response
+  // body entirely, so a write Supabase silently dropped (e.g. blocked by a
+  // profiles RLS policy) looked identical to a successful one: the local
+  // cache (mjm_staff) was already updated optimistically before this ran,
+  // so the UI showed success regardless, and only the NEXT login's fresh
+  // loadDbProfiles() pull -- reading the DB's real, unchanged role -- ever
+  // revealed the role had quietly reverted.
   async function syncRoleToDb(email, role) {
-    await sbFetch('PATCH', '/rest/v1/profiles?email=eq.' + encodeURIComponent(email), { role: role }, { 'Prefer': '' });
+    var updated = await sbFetch('PATCH', '/rest/v1/profiles?email=eq.' + encodeURIComponent(email), { role: role });
+    if (!updated || updated.length === 0) throw new Error('Role update did not persist (no row matched/returned)');
   }
 
   // ══════════════════════════════════════
