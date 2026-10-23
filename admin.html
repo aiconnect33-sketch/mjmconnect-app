@@ -1105,6 +1105,12 @@ html, body {
     #update-banner { left: 268px; bottom: 20px; }
     .screen-body { padding: 24px 32px 32px; }
     .home-hero { background: none; margin: -24px -32px 0; padding: 24px 32px 4px; }
+    /* The -8px pull-up below is a mobile-only trick (sits the calendar flush
+       against the hero's background photo, which has no bottom padding to
+       spare). Desktop's hero has no photo and plenty of its own padding, so
+       the same pull-up instead drags the dashboard grid up into the
+       greeting subtitle text, clipping "Here's what's happening today." */
+    .home-content-wrap { margin-top: 12px !important; }
 
     .dsk-sidebar {
       display: flex; flex-direction: column; width: 236px; flex-shrink: 0;
@@ -1298,7 +1304,7 @@ html, body {
     </div><!-- /home-hero-content -->
     </div><!-- /home-hero -->
 
-    <div style="padding:0 10px;margin-top:-8px;position:relative;z-index:2;">
+    <div class="home-content-wrap" style="padding:0 10px;margin-top:-8px;position:relative;z-index:2;">
 
       <!-- Push notifications pre-prompt (js/push.js) -->
       <div id="push-prompt-banner" style="display:none;"></div>
