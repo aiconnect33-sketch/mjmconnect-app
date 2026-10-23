@@ -190,7 +190,7 @@ function initPullToRefresh() {
 
   var indicator = document.createElement('div');
   indicator.id = 'ptr-indicator';
-  indicator.style.cssText = 'position:fixed;top:0;left:0;right:0;height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;z-index:9999;background:#075E54;pointer-events:none;';
+  indicator.style.cssText = 'position:fixed;top:0;left:0;right:0;height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;z-index:9999;background:#0F6E5C;pointer-events:none;';
   indicator.innerHTML = '<div style="width:20px;height:20px;border:2.5px solid rgba(255,255,255,0.35);border-top-color:#fff;border-radius:50%;animation:ptr-spin 0.6s linear infinite;"></div>';
   document.body.appendChild(indicator);
 

@@ -263,11 +263,15 @@
   .screen-body {
     background: var(--bg); flex: 1; overflow-y: auto;
     padding: 12px; padding-bottom: 24px; -webkit-overflow-scrolling: touch;
-    /* Without this, overscrolling past the top/bottom edge chains the
-       scroll up to the document, which on iOS triggers the browser's
-       native pull-to-reload gesture (and a blank white flash while it
-       swaps the page) instead of just rubber-banding in place. */
-    overscroll-behavior-y: contain;
+    /* "none" rather than "contain": contain stops the overscroll from
+       chaining to the document (so iOS's native pull-to-reload doesn't
+       fire) but still plays iOS's own rubber-band bounce ON this element,
+       which visibly drags the hero banner and everything below it down
+       with the finger during our custom pull-to-refresh gesture below.
+       "none" turns that bounce off entirely so only the ptr-indicator
+       (a separate fixed overlay) moves, and the content underneath it
+       stays put. */
+    overscroll-behavior-y: none;
   }
   .screen-section { display: none; }
   .screen-section.active { display: block; }
