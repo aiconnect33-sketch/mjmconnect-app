@@ -647,12 +647,9 @@
   .to-correct-field { margin-bottom: 8px; }
   .to-correct-field label { display: block; font-size: 9px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 4px; }
   .to-correct-row input { width: 100%; box-sizing: border-box; border: 1px solid var(--blue-text); border-radius: 8px; padding: 8px 10px; font-size: 13px; font-family: inherit; }
-  .to-toggle-row { width: 100%; display: flex; align-items: center; justify-content: space-between; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 13px 14px; margin: 16px 0 8px; font-family: inherit; cursor: pointer; }
-  .to-toggle-left { display: flex; align-items: center; gap: 10px; }
-  .to-toggle-ic { width: 34px; height: 34px; border-radius: var(--radius-md); background: var(--blue-bg); color: var(--blue-text); display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
-  .to-toggle-title { font-size: 13.5px; font-weight: 700; color: var(--text-primary); text-align: left; }
-  .to-toggle-sub { font-size: 10.5px; color: var(--text-secondary); text-align: left; }
-  .to-toggle-chev { font-size: 11px; color: var(--text-light); transition: transform .15s ease; }
+  .to-pill-wrap { display: flex; background: var(--surface); border-radius: var(--radius-lg); border: 0.5px solid var(--border); padding: 4px; gap: 4px; margin: 16px 0 10px; }
+  .to-pill { flex: 1; padding: 7px; border-radius: var(--radius-md); border: none; font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+  .to-meta { font-size: 11px; color: var(--text-secondary); margin: 2px 0 10px; }
   .to-day-label { font-size: 10px; font-weight: 700; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.04em; margin: 10px 0 6px; }
   .to-cancel-toggle { width: 100%; margin-top: 2px; background: none; border: 1px dashed var(--border); color: var(--text-secondary); font-size: 11px; font-weight: 600; border-radius: var(--radius-md); padding: 8px; font-family: inherit; cursor: pointer; }
 
@@ -1132,13 +1129,25 @@
         <button class="book-btn-ghost" onclick="hideBackfillForm()">Cancel</button>
       </div>
 
+      <div id="timeoff-overview"></div>
+
+      <!-- Pill toggle (same style as Book's Vehicle/Room) in place of the
+           two separately-collapsible "My Records"/"All Records" rows. -->
+      <div class="to-pill-wrap">
+        <button id="timeoff-pill-mine" class="to-pill" onclick="switchTimeOffPill('mine')"
+          style="background:var(--green-dark);color:#fff;">
+          <i class="ti ti-clipboard-list"></i> My Records
+        </button>
+        <button id="timeoff-pill-all" class="to-pill" onclick="switchTimeOffPill('all')"
+          style="background:transparent;color:var(--text-secondary);">
+          <i class="ti ti-users"></i> All Records
+        </button>
+      </div>
+
       <div id="timeoff-mine">
         <div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">Loading...</div>
       </div>
-
-      <div id="timeoff-overview"></div>
-
-      <div id="timeoff-all"></div>
+      <div id="timeoff-all" style="display:none;"></div>
     </div><!-- /timeoff -->
 
     <!-- ── BOOK ── -->

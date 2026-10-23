@@ -232,21 +232,14 @@ function renderTimeOffOverview(records) {
   return html;
 }
 
-// ── My Records / All Records — both start collapsed to a one-line summary,
-// tap to expand. State persists across re-renders (e.g. after a save) so
-// the accordion doesn't snap shut mid-edit. ──
+// ── My Records / All Records — a pill toggle (same pattern as Book's
+// Vehicle/Room) switches which one is visible; both are rendered in full on
+// every load, same as Book's two panels, so switching is instant. ──
 var timeoffState = {
   today: '', myEmailLow: '', allRecords: [], canManageAll: false,
-  mineOpen: false, allOpen: false, mineCancelledOpen: false, allCancelledOpen: false
+  mineCancelledOpen: false, allCancelledOpen: false
 };
 
-function timeoffToggleRowHtml(icon, title, summary, isOpen, onclickFn) {
-  return '<button class="to-toggle-row" onclick="' + onclickFn + '">'
-    + '<div class="to-toggle-left"><div class="to-toggle-ic">' + icon + '</div>'
-    + '<div><div class="to-toggle-title">' + title + '</div><div class="to-toggle-sub">' + escHtml(summary) + '</div></div></div>'
-    + '<span class="to-toggle-chev" style="' + (isOpen ? 'transform:rotate(180deg);' : '') + '">▾</span>'
-    + '</button>';
-}
 function timeoffCancelToggleHtml(count, isOpen, onclickFn) {
   if (!count) return '';
   return '<button class="to-cancel-toggle" onclick="' + onclickFn + '">' + (isOpen ? 'Hide ' : 'Show ') + count + ' cancelled</button>';
@@ -336,20 +329,17 @@ function renderTimeOffMineSection() {
   var nonVoided = mine.filter(function (r) { return r.entry_type !== 'voided'; });
   var voided = mine.filter(function (r) { return r.entry_type === 'voided'; });
   var totalMinutes = nonVoided.reduce(function (sum, r) { return sum + (r.duration_minutes || 0); }, 0);
-  var summary = timeoffState.mineOpen ? 'Tap to collapse'
-    : (mine.length ? (mine.length + (mine.length === 1 ? ' entry' : ' entries') + ' this month · ' + formatDuration(totalMinutes)) : 'No entries this month');
-  var html = timeoffToggleRowHtml('🗂', 'My Records', summary, timeoffState.mineOpen, "toggleTimeOffSection('mine')");
-  if (timeoffState.mineOpen) {
-    if (!mine.length) {
-      html += '<div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">No Time Off logged this month.</div>';
-    } else {
-      timeoffGroupByDate(nonVoided, today).forEach(function (g) {
-        html += '<div class="to-day-label">' + escHtml(g.label) + '</div>';
-        g.items.forEach(function (r) { html += renderTimeOffRow(r, myEmailLow, timeoffState.canManageAll, 'mine'); });
-      });
-      html += timeoffCancelToggleHtml(voided.length, timeoffState.mineCancelledOpen, "toggleTimeOffCancelled('mine')");
-      if (timeoffState.mineCancelledOpen) voided.forEach(function (r) { html += renderTimeOffVoidedRow(r, myEmailLow); });
-    }
+  var summary = mine.length ? (mine.length + (mine.length === 1 ? ' entry' : ' entries') + ' this month · ' + formatDuration(totalMinutes)) : 'No entries this month';
+  var html = '<div class="to-meta">' + escHtml(summary) + '</div>';
+  if (!mine.length) {
+    html += '<div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">No Time Off logged this month.</div>';
+  } else {
+    timeoffGroupByDate(nonVoided, today).forEach(function (g) {
+      html += '<div class="to-day-label">' + escHtml(g.label) + '</div>';
+      g.items.forEach(function (r) { html += renderTimeOffRow(r, myEmailLow, timeoffState.canManageAll, 'mine'); });
+    });
+    html += timeoffCancelToggleHtml(voided.length, timeoffState.mineCancelledOpen, "toggleTimeOffCancelled('mine')");
+    if (timeoffState.mineCancelledOpen) voided.forEach(function (r) { html += renderTimeOffVoidedRow(r, myEmailLow); });
   }
   return html;
 }
@@ -363,20 +353,17 @@ function renderTimeOffAllSection() {
   var voided = all.filter(function (r) { return r.entry_type === 'voided'; });
   var staffSet = {}; all.forEach(function (r) { staffSet[r.staff_name] = 1; });
   var staffTotal = Object.keys(staffSet).length;
-  var summary = timeoffState.allOpen ? 'Tap to collapse'
-    : (all.length ? (all.length + (all.length === 1 ? ' entry' : ' entries') + ' this month · ' + staffTotal + (staffTotal === 1 ? ' staff' : ' staff')) : 'No entries this month');
-  var html = timeoffToggleRowHtml('👥', 'All Records', summary, timeoffState.allOpen, "toggleTimeOffSection('all')");
-  if (timeoffState.allOpen) {
-    if (!all.length) {
-      html += '<div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">No Time Off logged this month.</div>';
-    } else {
-      timeoffGroupByDate(nonVoided, today).forEach(function (g) {
-        html += '<div class="to-day-label">' + escHtml(g.label) + '</div>';
-        g.items.forEach(function (r) { html += renderTimeOffRow(r, myEmailLow, canManageAll, 'all'); });
-      });
-      html += timeoffCancelToggleHtml(voided.length, timeoffState.allCancelledOpen, "toggleTimeOffCancelled('all')");
-      if (timeoffState.allCancelledOpen) voided.forEach(function (r) { html += renderTimeOffVoidedRow(r, myEmailLow); });
-    }
+  var summary = all.length ? (all.length + (all.length === 1 ? ' entry' : ' entries') + ' this month · ' + staffTotal + (staffTotal === 1 ? ' staff' : ' staff')) : 'No entries this month';
+  var html = '<div class="to-meta">' + escHtml(summary) + '</div>';
+  if (!all.length) {
+    html += '<div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">No Time Off logged this month.</div>';
+  } else {
+    timeoffGroupByDate(nonVoided, today).forEach(function (g) {
+      html += '<div class="to-day-label">' + escHtml(g.label) + '</div>';
+      g.items.forEach(function (r) { html += renderTimeOffRow(r, myEmailLow, canManageAll, 'all'); });
+    });
+    html += timeoffCancelToggleHtml(voided.length, timeoffState.allCancelledOpen, "toggleTimeOffCancelled('all')");
+    if (timeoffState.allCancelledOpen) voided.forEach(function (r) { html += renderTimeOffVoidedRow(r, myEmailLow); });
   }
   return html;
 }
@@ -387,10 +374,18 @@ function rerenderTimeOffSections() {
   if (mineEl) mineEl.innerHTML = renderTimeOffMineSection();
   if (allEl) allEl.innerHTML = renderTimeOffAllSection();
 }
-function toggleTimeOffSection(which) {
-  if (which === 'mine') timeoffState.mineOpen = !timeoffState.mineOpen;
-  else timeoffState.allOpen = !timeoffState.allOpen;
-  rerenderTimeOffSections();
+// Mirrors switchBookPill in js/tab-book.js -- both panels are already
+// rendered in full, so switching is just a display + pill-style toggle.
+function switchTimeOffPill(which) {
+  var isMine = which === 'mine';
+  document.getElementById('timeoff-mine').style.display = isMine ? 'block' : 'none';
+  document.getElementById('timeoff-all').style.display  = isMine ? 'none'  : 'block';
+  var pMine = document.getElementById('timeoff-pill-mine');
+  var pAll  = document.getElementById('timeoff-pill-all');
+  pMine.style.background = isMine ? 'var(--green-dark)' : 'transparent';
+  pMine.style.color      = isMine ? '#fff' : 'var(--text-secondary)';
+  pAll.style.background  = isMine ? 'transparent' : 'var(--green-dark)';
+  pAll.style.color       = isMine ? 'var(--text-secondary)' : '#fff';
 }
 function toggleTimeOffCancelled(which) {
   if (which === 'mine') timeoffState.mineCancelledOpen = !timeoffState.mineCancelledOpen;
