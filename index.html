@@ -237,19 +237,13 @@
     margin: -12px -12px 0; padding: 20px 20px 18px;
   }
   .menu-header h1 { font-size: 29px; font-weight: 700; color: #fff; }
-  .menu-row {
-    display: flex; align-items: center; gap: 14px;
-    min-height: 76px; padding: 12px 4px;
-    border-bottom: 0.5px solid var(--border);
-    cursor: pointer;
-  }
-  .menu-row:last-child { border-bottom: none; }
+  .menu-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 20px 16px 4px; }
+  .menu-row { display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; }
   .menu-ic {
-    width: 50px; height: 50px; border-radius: 14px; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center; font-size: 22px;
+    width: 65px; height: 65px; border-radius: 19px;
+    display: flex; align-items: center; justify-content: center; font-size: 28px;
   }
-  .menu-label { flex: 1; font-size: 17px; font-weight: 600; color: var(--text-primary); }
-  .menu-chev { color: var(--icon-inactive); font-size: 20px; flex-shrink: 0; }
+  .menu-label { font-size: 12px; font-weight: 600; color: var(--text-primary); text-align: center; line-height: 1.3; }
   .qa-title { font-size: 17px; font-weight: 700; color: var(--text-primary); margin: 24px 0 14px; }
   .qa-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
   .qa-item { display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; }
@@ -1425,25 +1419,23 @@
       <div class="menu-header">
         <h1>Menu</h1>
       </div>
-      <div class="menu-row" onclick="document.getElementById('app-top-header').style.display=''; switchTabByName('announce')">
-        <div class="menu-ic" style="background:var(--purple-bg);color:var(--purple-text);"><i class="ti ti-speakerphone"></i></div>
-        <div class="menu-label">Announcement</div>
-        <i class="ti ti-chevron-right menu-chev"></i>
-      </div>
-      <div class="menu-row" onclick="document.getElementById('app-top-header').style.display=''; switchTabByName('event'); loadStaffEvents()">
-        <div class="menu-ic" style="background:var(--red-bg);color:var(--red-text);"><i class="ti ti-calendar"></i></div>
-        <div class="menu-label">Event</div>
-        <i class="ti ti-chevron-right menu-chev"></i>
-      </div>
-      <div class="menu-row" onclick="document.getElementById('app-top-header').style.display=''; switchTabByName('duty')">
-        <div class="menu-ic" style="background:var(--amber-bg);color:var(--amber-text);"><i class="ti ti-users"></i></div>
-        <div class="menu-label">On Duty</div>
-        <i class="ti ti-chevron-right menu-chev"></i>
-      </div>
-      <div class="menu-row" onclick="document.getElementById('app-top-header').style.display=''; switchNav('estatetrip'); loadEstateTrips()">
-        <div class="menu-ic" style="background:var(--estate-bg);color:var(--estate-text);"><i class="ti ti-car"></i></div>
-        <div class="menu-label">Estate Trip</div>
-        <i class="ti ti-chevron-right menu-chev"></i>
+      <div class="menu-grid">
+        <div class="menu-row" onclick="document.getElementById('app-top-header').style.display=''; switchTabByName('announce')">
+          <div class="menu-ic" style="background:var(--purple-bg);color:var(--purple-text);"><i class="ti ti-speakerphone"></i></div>
+          <div class="menu-label">Announcement</div>
+        </div>
+        <div class="menu-row" onclick="document.getElementById('app-top-header').style.display=''; switchTabByName('event'); loadStaffEvents()">
+          <div class="menu-ic" style="background:var(--red-bg);color:var(--red-text);"><i class="ti ti-calendar"></i></div>
+          <div class="menu-label">Event</div>
+        </div>
+        <div class="menu-row" onclick="document.getElementById('app-top-header').style.display=''; switchTabByName('duty')">
+          <div class="menu-ic" style="background:var(--amber-bg);color:var(--amber-text);"><i class="ti ti-users"></i></div>
+          <div class="menu-label">On Duty</div>
+        </div>
+        <div class="menu-row" onclick="document.getElementById('app-top-header').style.display=''; switchNav('estatetrip'); loadEstateTrips()">
+          <div class="menu-ic" style="background:var(--estate-bg);color:var(--estate-text);"><i class="ti ti-car"></i></div>
+          <div class="menu-label">Estate Trip</div>
+        </div>
       </div>
     </div><!-- /menu -->
 
