@@ -6473,6 +6473,17 @@ html, body {
     }).catch(function () {});
   }
 
+  // Fire-and-forget, like sendApprovalEmail -- never blocks or fails the
+  // Approve action. A no-op if that person never turned on Push
+  // Notifications from the pending screen (nothing to send to); the Edge
+  // Function itself handles that case silently.
+  function notifyApprovalPush(email) {
+    fetch(PUSH_SURL + '/functions/v1/notify-approved', {
+      method: 'POST', mode: 'no-cors',
+      body: JSON.stringify({ secret: PUSH_SEND_SECRET, email: email })
+    }).catch(function () {});
+  }
+
   async function approveStaff(email) {
     try {
       var updated = await sbFetch('PATCH', '/rest/v1/profiles?email=eq.' + encodeURIComponent(email), { role: 'staff' });
@@ -6481,6 +6492,7 @@ html, body {
         return;
       }
       sendApprovalEmail(email);
+      notifyApprovalPush(email);
       showApprovalFeedback(true, email + ' approved — they now have Staff access.');
       loadPendingApprovals();
       loadInviteLog();

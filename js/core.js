@@ -380,11 +380,43 @@ function showPendingApprovalScreen(u) {
             '<div style="width:40px;height:40px;border-radius:50%;background:var(--green-bg);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--green-text);flex-shrink:0;">' + escHtml(initials) + '</div>' +
             '<div><div style="font-size:13px;font-weight:700;color:var(--text-primary);">' + escHtml(u.name || '') + '</div><div style="font-size:11.5px;color:var(--text-secondary);margin-top:1px;">' + escHtml(u.email || '') + (u.opispro_location ? ' · ' + escHtml(u.opispro_location) : '') + '</div></div>' +
           '</div>' +
+          '<div id="pending-push-block"></div>' +
           '<button onclick="logout()" style="width:100%;background:transparent;color:var(--text-secondary);border:1px solid var(--border);border-radius:10px;padding:10px;font-size:12.5px;font-weight:600;font-family:inherit;cursor:pointer;">Sign Out</button>' +
         '</div>' +
       '</div>' +
     '</div>';
+  renderPendingPushOptIn();
   initPendingApprovalPoll(u.email);
+}
+
+// Someone stuck here has no way to know the moment an Admin approves them
+// unless this tab/PWA is still open (the poll below handles that) -- a push
+// notification covers them even if it's closed. Unlike the usual push
+// opt-in on Home, this can't check getPushSubscriptionStatus() first (that
+// needs the service worker to be fully ready, which may still be mid-flight
+// this early), so it just goes off Notification.permission directly and
+// lets enablePushNotifications()'s own POST be the idempotent part.
+function renderPendingPushOptIn() {
+  var el = document.getElementById('pending-push-block');
+  if (!el) return;
+  if (typeof pushSupported !== 'function' || !pushSupported() || Notification.permission !== 'default') return;
+  el.innerHTML =
+    '<div style="background:var(--blue-bg);border-radius:14px;border:1px solid #B7D4EE;padding:14px;margin-bottom:12px;text-align:left;">' +
+      '<div style="font-size:12.5px;font-weight:700;color:var(--blue-text);margin-bottom:3px;">🔔 Get notified the moment you\'re in</div>' +
+      '<div style="font-size:11.5px;color:var(--text-secondary);line-height:1.5;margin-bottom:10px;">Turn on notifications so you know the second an Admin approves you, even if you\'ve closed the app.</div>' +
+      '<div style="display:flex;gap:8px;">' +
+        '<button onclick="pendingPushDismiss()" style="flex:1;background:none;border:none;color:var(--text-secondary);font-size:12px;font-weight:600;font-family:inherit;padding:8px;cursor:pointer;">Not now</button>' +
+        '<button onclick="pendingPushEnableTap()" style="flex:1;background:var(--blue-text);color:#fff;border:none;border-radius:9px;font-size:12px;font-weight:700;font-family:inherit;padding:8px;cursor:pointer;">Enable</button>' +
+      '</div>' +
+    '</div>';
+}
+function pendingPushDismiss() {
+  var el = document.getElementById('pending-push-block');
+  if (el) el.innerHTML = '';
+}
+async function pendingPushEnableTap() {
+  if (typeof enablePushNotifications === 'function') await enablePushNotifications();
+  pendingPushDismiss();
 }
 
 // Without this, a brand-new sign-in's localStorage role:'pending' never
