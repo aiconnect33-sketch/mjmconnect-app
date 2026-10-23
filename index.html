@@ -230,13 +230,21 @@
   .home-summary-count { font-size: 19px; font-weight: 700; color: var(--navy-text); flex-shrink: 0; margin-left: auto; }
   .home-summary-chev { color: var(--icon-inactive); font-size: 20px; flex-shrink: 0; }
 
-  /* ── MENU ── */
-  .menu-header {
-    display: flex; justify-content: space-between; align-items: center;
-    background: var(--green-dark);
-    margin: -12px -12px 0; padding: 20px 20px 18px;
+  /* ── PAGE SUB-HEADER (back button + title, every screen but Home) ── */
+  .page-subheader {
+    display: none; align-items: center; gap: 10px;
+    background: var(--green-dark); flex-shrink: 0;
+    padding: 12px 16px;
   }
-  .menu-header h1 { font-size: 29px; font-weight: 700; color: #fff; }
+  .page-subheader-back {
+    width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0;
+    background: rgba(255,255,255,0.15); border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 17px;
+  }
+  .page-subheader-title { font-size: 16px; font-weight: 700; color: #fff; }
+
+  /* ── MENU ── */
   .menu-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 20px 16px 4px; }
   .menu-row { display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; }
   .menu-ic {
@@ -446,9 +454,7 @@
   .nav-bar-wrap {
     background: var(--nav-gradient); flex-shrink: 0;
     position: sticky; bottom: 0; z-index: 100;
-    transition: transform 0.25s ease;
   }
-  .nav-bar-wrap.nav-hidden { transform: translateY(100%); }
   .nav-bar {
     background: var(--nav-gradient); border-top: none;
     border-radius: 28px 28px 0 0;
@@ -842,6 +848,12 @@
     <button class="tab-btn" onclick="switchTab(this,'leave')">Leave</button>
     <button class="tab-btn" onclick="switchTab(this,'event');loadStaffEvents()">Event</button>
     <button class="tab-btn" onclick="switchTab(this,'duty')">Duty</button>
+  </div>
+
+  <!-- PAGE SUB-HEADER (back + title; every screen but Home) -->
+  <div class="page-subheader" id="page-subheader">
+    <button class="page-subheader-back" onclick="goBackScreen()"><i class="ti ti-arrow-left"></i></button>
+    <div class="page-subheader-title" id="page-subheader-title"></div>
   </div>
 
   <!-- SCREEN BODY -->
@@ -1416,23 +1428,20 @@
 
     <!-- ── MENU ── -->
     <div class="screen-section" id="screen-menu">
-      <div class="menu-header">
-        <h1>Menu</h1>
-      </div>
       <div class="menu-grid">
-        <div class="menu-row" onclick="document.getElementById('app-top-header').style.display=''; switchTabByName('announce')">
+        <div class="menu-row" onclick="switchTabByName('announce')">
           <div class="menu-ic" style="background:var(--purple-bg);color:var(--purple-text);"><i class="ti ti-speakerphone"></i></div>
           <div class="menu-label">Announcement</div>
         </div>
-        <div class="menu-row" onclick="document.getElementById('app-top-header').style.display=''; switchTabByName('event'); loadStaffEvents()">
+        <div class="menu-row" onclick="switchTabByName('event'); loadStaffEvents()">
           <div class="menu-ic" style="background:var(--red-bg);color:var(--red-text);"><i class="ti ti-calendar"></i></div>
           <div class="menu-label">Event</div>
         </div>
-        <div class="menu-row" onclick="document.getElementById('app-top-header').style.display=''; switchTabByName('duty')">
+        <div class="menu-row" onclick="switchTabByName('duty')">
           <div class="menu-ic" style="background:var(--amber-bg);color:var(--amber-text);"><i class="ti ti-users"></i></div>
           <div class="menu-label">On Duty</div>
         </div>
-        <div class="menu-row" onclick="document.getElementById('app-top-header').style.display=''; switchNav('estatetrip'); loadEstateTrips()">
+        <div class="menu-row" onclick="switchNav('estatetrip'); loadEstateTrips()">
           <div class="menu-ic" style="background:var(--estate-bg);color:var(--estate-text);"><i class="ti ti-car"></i></div>
           <div class="menu-label">Estate Trip</div>
         </div>
@@ -1444,13 +1453,13 @@
   <!-- BOTTOM NAV -->
   <div class="nav-bar-wrap">
   <div class="nav-bar">
-    <div class="nav-item active" id="nav-home" onclick="document.getElementById('app-top-header').style.display=''; switchTabByName('home')">
+    <div class="nav-item active" id="nav-home" onclick="switchTabByName('home')">
       <i class="ti ti-home"></i><span>Home</span>
     </div>
     <div class="nav-item" id="nav-settings" onclick="window.location.href='profile.html'">
       <i class="ti ti-settings"></i><span>Setting</span>
     </div>
-    <div class="nav-item" id="nav-menu" onclick="document.getElementById('app-top-header').style.display='none'; switchTabByName('menu')">
+    <div class="nav-item" id="nav-menu" onclick="switchTabByName('menu')">
       <i class="ti ti-menu-2"></i><span>More</span>
     </div>
   </div>
