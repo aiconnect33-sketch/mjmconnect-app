@@ -407,6 +407,50 @@ async function refreshAppData() {
   if (typeof initStaffCalendar === 'function') initStaffCalendar();
 }
 
+// ── Auto-update check ──
+// This is a long-lived single-page app -- switching tabs never reloads
+// index.html, so a deploy only ever reaches someone already using the app
+// by chance (closing and reopening it, or navigating away and back via
+// Setting/logout). HEAD-polling the page's own URL with cache:no-store and
+// comparing ETag/Last-Modified catches a new deploy without waiting on
+// that, and without the cost of re-fetching the full ~300KB page body just
+// to check. Checks on load (to capture the baseline), whenever the tab/PWA
+// becomes visible again, and every 5 minutes while it stays open.
+function initVersionCheck() {
+  var selfUrl = location.pathname.split('/').pop() || 'index.html';
+  var knownTag = null;
+  var checking = false;
+
+  function checkForUpdate() {
+    if (checking) return;
+    checking = true;
+    fetch(selfUrl, { method: 'HEAD', cache: 'no-store' }).then(function (res) {
+      var tag = res.headers.get('etag') || res.headers.get('last-modified');
+      if (!tag) return;
+      if (knownTag === null) { knownTag = tag; return; }
+      if (tag !== knownTag) showUpdateBanner();
+    }).catch(function () {}).finally(function () { checking = false; });
+  }
+
+  function showUpdateBanner() {
+    if (document.getElementById('update-banner')) return;
+    var el = document.createElement('div');
+    el.id = 'update-banner';
+    el.style.cssText = 'position:fixed;left:12px;right:12px;bottom:92px;z-index:9998;'
+      + 'background:#0F6E5C;color:#fff;border-radius:14px;padding:12px 14px;'
+      + 'display:flex;align-items:center;gap:10px;box-shadow:0 4px 16px rgba(0,0,0,0.25);font-family:inherit;';
+    el.innerHTML = '<div style="flex:1;font-size:12.5px;font-weight:600;">A new version of the app is available.</div>'
+      + '<button onclick="location.reload()" style="background:#fff;color:#0F6E5C;border:none;border-radius:9px;padding:8px 14px;font-size:12.5px;font-weight:700;font-family:inherit;cursor:pointer;">Refresh</button>';
+    document.body.appendChild(el);
+  }
+
+  checkForUpdate();
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible') checkForUpdate();
+  });
+  setInterval(checkForUpdate, 5 * 60 * 1000);
+}
+
 // ── DOMContentLoaded bootstrap ──
 window.addEventListener('DOMContentLoaded', function() {
   var rawEarly = localStorage.getItem('mjm_user');
@@ -417,6 +461,7 @@ window.addEventListener('DOMContentLoaded', function() {
     } catch (e) {}
   }
   initPullToRefresh();
+  initVersionCheck();
   // Set top avatar initials
   var raw = localStorage.getItem('mjm_user');
   if (raw) {
