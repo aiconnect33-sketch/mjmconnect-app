@@ -98,6 +98,46 @@ function tick() {
 }
 tick(); setInterval(tick, 10000);
 
+// ── Page sub-header (back button + title) ──
+// Shown on every screen except Home, which has its own hero and is the
+// bottom nav's own "home" destination. Back always returns to whichever
+// screen was active immediately before the current one, tracked here as a
+// simple stack -- not hardcoded to Home, since the bottom nav's Home button
+// already covers that case.
+var SCREEN_TITLES = {
+  announce: 'Announcements', leave: 'Leave', event: 'Event', duty: 'Duty',
+  estatetrip: 'Estate Trip', timeoff: 'Time Off', book: 'Book',
+  faulty: 'Faulty Report', menu: 'Menu'
+};
+var currentScreenName = 'home';
+var screenHistory = [];
+var suppressHistoryPush = false;
+
+function updatePageSubheader(name) {
+  var bar = document.getElementById('page-subheader');
+  if (!bar) return;
+  var title = SCREEN_TITLES[name];
+  if (!title) { bar.style.display = 'none'; return; }
+  bar.style.display = 'flex';
+  document.getElementById('page-subheader-title').textContent = title;
+}
+
+function recordScreenChange(name) {
+  if (!suppressHistoryPush && name !== currentScreenName) {
+    screenHistory.push(currentScreenName);
+    if (screenHistory.length > 20) screenHistory.shift();
+  }
+  currentScreenName = name;
+  updatePageSubheader(name);
+}
+
+function goBackScreen() {
+  var prev = screenHistory.pop() || 'home';
+  suppressHistoryPush = true;
+  switchNav(prev);
+  suppressHistoryPush = false;
+}
+
 // ── Tab / Nav switching ──
 // Every switch also remembers the tab in sessionStorage (see rememberTab
 // below) so a refresh can restore it instead of always landing on Home.
@@ -110,6 +150,7 @@ function switchTab(btn, name) {
   var navEl = document.getElementById('nav-' + name);
   if (navEl) navEl.classList.add('active');
   else document.getElementById('nav-home').classList.add('active');
+  recordScreenChange(name);
   rememberTab(name);
 }
 
@@ -123,25 +164,8 @@ function switchNav(name) {
   var tabs = document.querySelectorAll('.tab-btn');
   tabs.forEach(function(t){ t.classList.remove('active'); });
   if (tabMap[name] !== undefined) tabs[tabMap[name]].classList.add('active');
+  recordScreenChange(name);
   rememberTab(name);
-}
-
-// Hide the bottom nav while scrolling down, reveal it again on scroll up
-// (or once back near the top), so it doesn't permanently eat screen space
-// on long lists. .screen-body (flex:1; overflow-y:auto) is the actual
-// scrolling element -- the page itself never scrolls -- so this listens
-// there instead of on window.
-function initScrollHideNav() {
-  var nav = document.querySelector('.nav-bar-wrap');
-  var body = document.querySelector('.screen-body');
-  if (!nav || !body) return;
-  var lastTop = 0;
-  body.addEventListener('scroll', function() {
-    var top = body.scrollTop;
-    if (top <= 10 || top < lastTop) nav.classList.remove('nav-hidden');
-    else if (top > lastTop) nav.classList.add('nav-hidden');
-    lastTop = top;
-  }, { passive: true });
 }
 
 // iOS gives standalone (Add to Home Screen) web apps no native
@@ -269,6 +293,7 @@ function switchTabByName(name) {
   document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
   var navEl = document.getElementById('nav-' + name);
   if (navEl) navEl.classList.add('active');
+  recordScreenChange(name);
   rememberTab(name);
 }
 
@@ -388,7 +413,6 @@ window.addEventListener('DOMContentLoaded', function() {
       if (uEarly && uEarly.role === 'pending') { showPendingApprovalScreen(uEarly); return; }
     } catch (e) {}
   }
-  initScrollHideNav();
   initPullToRefresh();
   // Set top avatar initials
   var raw = localStorage.getItem('mjm_user');
