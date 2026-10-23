@@ -111,16 +111,6 @@
     height: 100vh;
     height: 100dvh;
   }
-  /* .screen-body's own native elastic overscroll (-webkit-overflow-scrolling:
-     touch, below) can momentarily stretch it past its own box on iOS --
-     pulling/releasing faster than our pull-to-refresh JS can arm and
-     preventDefault() it -- which reveals whatever's behind it for an
-     instant. That's normally .phone's plain white background; while Home
-     is open it should be the same dark gradient as Home's hero instead, so
-     that reveal blends in rather than flashing white. */
-  .phone:has(#screen-home.active) {
-    background: var(--home-gradient);
-  }
   .status-bar {
     background: var(--green-dark); color: #fff;
     font-size: 11px; font-weight: 500;
@@ -174,17 +164,18 @@
     display: none;
   }
   .tab-btn.active { color: var(--green-dark); border-bottom-color: var(--green-dark); font-weight: 600; }
-  /* Home content can be shorter than the viewport, so colour the whole
-     scrollable area whenever it's active rather than relying only on
-     .home-hero's own bleed below -- keeps the green flush with the bottom
-     nav even when there's little data to show, and (more importantly)
-     means .screen-body's native elastic overscroll on iOS reveals matching
-     green instead of this light background if it stretches past its own
-     box before our pull-to-refresh JS can intervene. */
-  .screen-body:has(#screen-home.active) { background: var(--home-gradient); }
+  /* Plantation banner photo, same brand-colour scrim as the Faulty/Time Off
+     report tiles' green family -- a left-to-right fade keeps the greeting
+     text readable while showing more of the image (foreground palms, road)
+     toward the right. */
   .home-hero {
-    background: var(--home-gradient);
-    margin: -12px -12px -24px; padding: 20px 20px 20px;
+    background:
+      linear-gradient(90deg, rgba(0,79,66,0.72) 0%, rgba(0,79,66,0.48) 35%, rgba(0,79,66,0.15) 65%, rgba(0,79,66,0.05) 100%),
+      url('images/hero-plantation.webp');
+    background-size: 100% 100%, cover;
+    background-position: 0 0, 65% center;
+    background-repeat: no-repeat, no-repeat;
+    margin: -12px -12px 16px; padding: 14px 20px 16px;
     position: relative;
   }
   /* Sparse rising dots behind the greeting banner -- purely decorative, so
@@ -223,7 +214,7 @@
     animation: wave-hand 2.8s ease-in-out infinite;
     animation-delay: 0.4s;
   }
-  .greet-sub { font-size: 17px; font-weight: 400; color: rgba(255,255,255,0.9); margin-bottom: 20px; }
+  .greet-sub { font-size: 17px; font-weight: 400; color: rgba(255,255,255,0.9); }
   .home-summary-card {
     background: var(--surface); border-radius: 19px; border: 0.5px solid var(--border);
     padding: 14px 16px; margin-bottom: 11px; min-height: 80px;
@@ -259,14 +250,14 @@
   }
   .menu-label { flex: 1; font-size: 17px; font-weight: 600; color: var(--text-primary); }
   .menu-chev { color: var(--icon-inactive); font-size: 20px; flex-shrink: 0; }
-  .qa-title { font-size: 17px; font-weight: 700; color: #fff; margin: 24px 0 14px; }
+  .qa-title { font-size: 17px; font-weight: 700; color: var(--text-primary); margin: 24px 0 14px; }
   .qa-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
   .qa-item { display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; }
   .qa-ic {
-    width: 60px; height: 60px; border-radius: 18px;
-    display: flex; align-items: center; justify-content: center; font-size: 26px;
+    width: 65px; height: 65px; border-radius: 19px;
+    display: flex; align-items: center; justify-content: center; font-size: 28px;
   }
-  .qa-label { font-size: 11px; font-weight: 600; color: #fff; text-align: center; line-height: 1.3; }
+  .qa-label { font-size: 11px; font-weight: 600; color: var(--text-primary); text-align: center; line-height: 1.3; }
   .screen-body {
     background: var(--bg); flex: 1; overflow-y: auto;
     padding: 12px; padding-bottom: 24px; -webkit-overflow-scrolling: touch;
@@ -368,6 +359,15 @@
     border: none;
   }
   .cal-nav-btn i { font-size: 18px; }
+  /* Home's embedded calendar card runs a touch more compact than the full
+     Booking/room calendars that share these classes elsewhere. */
+  #screen-home .cal-header { padding: 11px 18px; }
+  #screen-home .cal-nav-btn { width: 24px; height: 24px; }
+  #home-leave-today .card, #home-leave-today .home-summary-card,
+  #home-estatetrip-today .card, #home-estatetrip-today .home-summary-card,
+  #home-timeoff-today .card, #home-timeoff-today .home-summary-card {
+    border: 1px solid #DCE6E0;
+  }
   .cal-month-label { font-size: 19px; font-weight: 700; color: #fff; }
   .cal-body { padding: 8px 14px 18px; }
   .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; }
@@ -867,9 +867,13 @@
     </div>
     <div class="home-hero-content">
 
-      <div class="greet-hi">Hi,</div>
+      <div class="greet-hi" id="greet-date-text">Hi,</div>
       <div class="greet-name"><span id="greet-name-text">there</span> <span class="wave-emoji">👋</span></div>
       <div class="greet-sub">Here's what's happening today.</div>
+    </div><!-- /home-hero-content -->
+    </div><!-- /home-hero -->
+
+    <div style="padding:0 12px;margin-top:-14px;position:relative;z-index:2;">
 
       <!-- Push notifications pre-prompt (js/push.js) -->
       <div id="push-prompt-banner" style="display:none;"></div>
@@ -937,8 +941,8 @@
         </div>
       </div>
 
-    </div><!-- /home-hero-content -->
-    </div><!-- /home-hero -->
+    </div><!-- /home-content -->
+
     </div><!-- /home -->
 
     <!-- ── ANNOUNCEMENTS ── -->
