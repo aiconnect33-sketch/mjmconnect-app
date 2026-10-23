@@ -307,14 +307,45 @@ function rememberTab(name) {
   try { sessionStorage.setItem(LAST_TAB_KEY, name); } catch (e) {}
 }
 
+// ── Back to Home after being away for a while ──
+// Mobile browsers/PWAs often keep the page alive in the background rather
+// than reloading it, so switching away and back on its own doesn't reset
+// anything -- without this, coming back after a long gap just shows
+// whatever screen was open when you left, however long ago that was.
+// Tracks when the page was last hidden; if it's been visible again after
+// more than HOME_RESET_AFTER_MS, jumps back to Home -- both live (the page
+// stayed open the whole time) and on a fresh load (the OS actually killed
+// and relaunched it, so restoreLastTab() below checks the same timestamp).
+var BACKGROUNDED_AT_KEY = 'mjm_backgrounded_at';
+var HOME_RESET_AFTER_MS = 2 * 60 * 1000;
+
+function initHomeResetOnReturn() {
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'hidden') {
+      try { sessionStorage.setItem(BACKGROUNDED_AT_KEY, String(Date.now())); } catch (e) {}
+      return;
+    }
+    var ts;
+    try { ts = parseInt(sessionStorage.getItem(BACKGROUNDED_AT_KEY), 10); } catch (e) { ts = NaN; }
+    if (ts && (Date.now() - ts) > HOME_RESET_AFTER_MS && currentScreenName !== 'home') {
+      switchTabByName('home');
+    }
+  });
+}
+
 // Called once on load, after the tab-nav/screen markup and every tab-*.js
 // file are in place. Restores whichever tab (and, for Book, which pill and
 // room) the staff member was last on, so a refresh updates the data in
-// place instead of resetting to Home.
+// place instead of resetting to Home -- unless it's been more than
+// HOME_RESET_AFTER_MS since the app was last backgrounded (see
+// initHomeResetOnReturn above), in which case it stays on Home instead.
 function restoreLastTab() {
   var name;
   try { name = sessionStorage.getItem(LAST_TAB_KEY); } catch (e) { name = null; }
   if (!name || name === 'home' || !document.getElementById('screen-' + name)) return;
+  var bgTs;
+  try { bgTs = parseInt(sessionStorage.getItem(BACKGROUNDED_AT_KEY), 10); } catch (e) { bgTs = NaN; }
+  if (bgTs && (Date.now() - bgTs) > HOME_RESET_AFTER_MS) return;
   switchNav(name);
   if (name === 'book' && typeof initBookTab === 'function') {
     initBookTab();
@@ -530,6 +561,7 @@ window.addEventListener('DOMContentLoaded', function() {
   }
   initPullToRefresh();
   initVersionCheck();
+  initHomeResetOnReturn();
   // Set top avatar initials
   var raw = localStorage.getItem('mjm_user');
   if (raw) {
