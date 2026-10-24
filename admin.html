@@ -1426,6 +1426,31 @@ html, body {
           <div class="char-count" id="body-count">0 / 500</div>
         </div>
 
+        <div class="form-group">
+          <label class="form-label">Show on Home Screen</label>
+          <div class="duration-row" id="ann-when-row">
+            <div class="duration-pill active" onclick="setAnnWhen('now')">Post Now</div>
+            <div class="duration-pill" onclick="setAnnWhen('schedule')">Schedule</div>
+          </div>
+          <div id="ann-schedule-fields" style="display:none;gap:8px;margin-top:8px;">
+            <input class="form-input no-icon" type="date" id="ann-publish-date" style="flex:1;">
+            <input class="form-input no-icon" type="time" id="ann-publish-time" style="flex:1;">
+          </div>
+          <div class="field-error" id="ann-schedule-error">
+            <i class="ti ti-alert-circle"></i> Pick a date and time to schedule for.
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Keep on Home Screen For</label>
+          <div class="duration-row" id="ann-duration-row">
+            <div class="duration-pill" onclick="setAnnDuration(1)">1 Day</div>
+            <div class="duration-pill active" onclick="setAnnDuration(2)">2 Days</div>
+            <div class="duration-pill" onclick="setAnnDuration(3)">3 Days</div>
+            <div class="duration-pill" onclick="setAnnDuration(5)">5 Days</div>
+          </div>
+        </div>
+
         <div style="margin-top:12px;">
           <button class="btn-primary" onclick="publishAnnouncement()">
             <span id="pub-label">Publish Announcement</span>
@@ -2697,6 +2722,29 @@ html, body {
     editingAnnId = null;
     updateCharCount(); updateBodyCount();
     clearFormErrors();
+    setAnnWhen('now');
+    document.getElementById('ann-publish-date').value = '';
+    document.getElementById('ann-publish-time').value = '';
+    setAnnDuration(2);
+  }
+
+  // ── "Show on Home Screen" (post now vs. schedule) + "Keep on Home
+  // Screen For" (how many days after it's published) ──
+  var annWhen = 'now'; // 'now' | 'schedule'
+  var annDurationDays = 2;
+  function setAnnWhen(w) {
+    annWhen = w;
+    document.querySelectorAll('#ann-when-row .duration-pill').forEach(function (p, i) {
+      p.classList.toggle('active', (i === 0) === (w === 'now'));
+    });
+    document.getElementById('ann-schedule-fields').style.display = w === 'schedule' ? 'flex' : 'none';
+    document.getElementById('ann-schedule-error').classList.remove('visible');
+  }
+  function setAnnDuration(d) {
+    annDurationDays = d;
+    document.querySelectorAll('#ann-duration-row .duration-pill').forEach(function (p) {
+      p.classList.toggle('active', parseInt(p.textContent, 10) === d);
+    });
   }
 
   // ── PUBLISH ANNOUNCEMENT ──
@@ -2720,6 +2768,17 @@ html, body {
       document.getElementById('title-error').classList.add('visible');
       valid = false;
     }
+    var publishAtIso = null;
+    if (annWhen === 'schedule') {
+      var dateVal = document.getElementById('ann-publish-date').value;
+      var timeVal = document.getElementById('ann-publish-time').value;
+      if (!dateVal || !timeVal) {
+        document.getElementById('ann-schedule-error').classList.add('visible');
+        valid = false;
+      } else {
+        publishAtIso = new Date(dateVal + 'T' + timeVal + ':00').toISOString();
+      }
+    }
     if (!valid) return;
 
     setLoading('pub', true);
@@ -2727,7 +2786,9 @@ html, body {
     try {
       if (editingAnnId) {
         // PATCH existing record — preserves original created_at so banner timing is unchanged
-        await sbFetch('PATCH', '/rest/v1/announcements?id=eq.' + editingAnnId, { title: title, body: body, posted_by: user.name || 'HR' }, { 'Prefer': '' });
+        var updated = await sbFetch('PATCH', '/rest/v1/announcements?id=eq.' + editingAnnId,
+          { title: title, body: body, posted_by: user.name || 'HR', publish_at: publishAtIso, home_duration_days: annDurationDays });
+        if (!updated || updated.length === 0) throw new Error('Announcement update did not persist');
         var diffs = [];
         if (editingAnnOriginal) {
           if (editingAnnOriginal.title !== title) diffs.push({ label: 'Title', from: editingAnnOriginal.title, to: title });
@@ -2737,8 +2798,12 @@ html, body {
         editingAnnId = null;
         editingAnnOriginal = null;
       } else {
-        await publishToDb(title, body, notifyOn, user.name || 'HR', user.email || '');
-        if (notifyOn && typeof notifyAnnouncementPush === 'function') notifyAnnouncementPush(title, body);
+        await publishToDb(title, body, notifyOn, user.name || 'HR', user.email || '', publishAtIso, annDurationDays);
+        // Scheduled posts aren't visible yet, so there's nothing to notify
+        // about until publish_at actually arrives -- there's no server-side
+        // job in this app that fires a push later on its own, so a
+        // scheduled announcement simply doesn't push at all right now.
+        if (notifyOn && annWhen === 'now' && typeof notifyAnnouncementPush === 'function') notifyAnnouncementPush(title, body);
       }
       setLoading('pub', false);
       hidePostForm();
@@ -3243,6 +3308,16 @@ html, body {
     document.getElementById('ann-body').value  = body;
     updateCharCount(); updateBodyCount();
     showPostForm();
+    var publishAt = item.getAttribute('data-publish-at') || '';
+    if (publishAt) {
+      var d = new Date(publishAt);
+      setAnnWhen('schedule');
+      document.getElementById('ann-publish-date').value = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+      document.getElementById('ann-publish-time').value = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+    } else {
+      setAnnWhen('now');
+    }
+    setAnnDuration(parseInt(item.getAttribute('data-home-duration-days'), 10) || 2);
   }
 
   // ── HELPERS ──
@@ -5537,7 +5612,11 @@ html, body {
       var list = document.getElementById('ann-list');
       if (!list) return;
       var cut5 = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
-      var tabItems = data.filter(function(a){ return new Date(a.created_at) >= cut5; });
+      // Anchored off publish_at (falls back to created_at for anything
+      // posted before scheduling existed, or posted with "Post Now") --
+      // this list intentionally still shows a scheduled post that hasn't
+      // gone live yet, so admins can see and edit what's queued up.
+      var tabItems = data.filter(function(a){ return (a.publish_at ? new Date(a.publish_at) : new Date(a.created_at)) >= cut5; });
       var countEl = document.getElementById('ann-count');
       if (countEl) countEl.textContent = '(' + tabItems.length + ')';
       if (!tabItems.length) {
@@ -5547,8 +5626,15 @@ html, body {
           var d = new Date(ann.created_at).toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'});
           var t = new Date(ann.created_at).toLocaleTimeString('en-MY',{hour:'numeric',minute:'2-digit',hour12:true});
           var dt = d + ' · ' + t;
-          return '<div class="ann-item" data-id="' + ann.id + '" data-posted-by="' + escHtml(ann.posted_by || 'HR') + '">'
-            + '<div class="ann-meta"><span class="ann-time">' + dt + '</span></div>'
+          var isFuture = ann.publish_at && new Date(ann.publish_at).getTime() > Date.now();
+          var scheduledBadge = isFuture
+            ? '<span style="font-size:10px;font-weight:600;padding:2px 6px;border-radius:10px;background:#FAEEDA;color:#854F0B;margin-left:6px;">Scheduled for '
+              + new Date(ann.publish_at).toLocaleDateString('en-MY',{day:'numeric',month:'short'}) + ' · '
+              + new Date(ann.publish_at).toLocaleTimeString('en-MY',{hour:'numeric',minute:'2-digit',hour12:true}) + '</span>'
+            : '';
+          return '<div class="ann-item" data-id="' + ann.id + '" data-posted-by="' + escHtml(ann.posted_by || 'HR')
+            + '" data-publish-at="' + escHtml(ann.publish_at || '') + '" data-home-duration-days="' + (ann.home_duration_days || 2) + '">'
+            + '<div class="ann-meta"><span class="ann-time">' + dt + '</span>' + scheduledBadge + '</div>'
             + '<div class="ann-title">' + escHtml(ann.title) + '</div>'
             + '<div class="ann-body">' + escHtml(ann.body) + '</div>'
             + '<div class="ann-actions"><div class="ann-author"><i class="ti ti-user"></i> ' + escHtml(ann.posted_by || 'HR') + '</div>'
@@ -5562,8 +5648,8 @@ html, body {
   }
 
   // ── PUBLISH ANNOUNCEMENT TO SUPABASE ──
-  async function publishToDb(title, body, notifyEmail, postedBy, postedByEmail) {
-    var res = await sbFetch('POST', '/rest/v1/announcements', { title: title, body: body, badge: 'general', notify_email: notifyEmail, posted_by: postedBy, posted_by_email: postedByEmail });
+  async function publishToDb(title, body, notifyEmail, postedBy, postedByEmail, publishAt, durationDays) {
+    var res = await sbFetch('POST', '/rest/v1/announcements', { title: title, body: body, badge: 'general', notify_email: notifyEmail, posted_by: postedBy, posted_by_email: postedByEmail, publish_at: publishAt, home_duration_days: durationDays });
     return res;
   }
 
@@ -6743,9 +6829,16 @@ html, body {
   function updateAnnouncementBanner(data) {
     var banner = document.getElementById('admin-urgent-banner');
     if (!banner) return;
-    var cut2 = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
+    var now = Date.now();
     var recent = [];
-    if (data) { data.forEach(function(a){ if (new Date(a.created_at) >= cut2) recent.push(a); }); }
+    if (data) {
+      data.forEach(function(a) {
+        var pub = a.publish_at ? new Date(a.publish_at) : new Date(a.created_at);
+        if (pub.getTime() > now) return;
+        var days = (typeof a.home_duration_days === 'number') ? a.home_duration_days : 2;
+        if (now < pub.getTime() + days * 24 * 60 * 60 * 1000) recent.push(a);
+      });
+    }
     if (recent.length) {
       banner.innerHTML = recent.map(function(a){
         var d = new Date(a.created_at).toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'});
