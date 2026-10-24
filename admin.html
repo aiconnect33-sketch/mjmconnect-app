@@ -1432,22 +1432,19 @@ html, body {
             <div class="duration-pill active" onclick="setAnnWhen('now')">Post Now</div>
             <div class="duration-pill" onclick="setAnnWhen('schedule')">Schedule</div>
           </div>
-          <div id="ann-schedule-fields" style="display:none;gap:8px;margin-top:8px;">
-            <input class="form-input no-icon" type="date" id="ann-publish-date" style="flex:1;">
-            <input class="form-input no-icon" type="time" id="ann-publish-time" style="flex:1;">
+          <div id="ann-schedule-fields" style="display:none;margin-top:8px;">
+            <input class="form-input no-icon" type="date" id="ann-publish-date" style="width:100%;">
           </div>
           <div class="field-error" id="ann-schedule-error">
-            <i class="ti ti-alert-circle"></i> Pick a date and time to schedule for.
+            <i class="ti ti-alert-circle"></i> Pick a date to schedule for.
           </div>
         </div>
 
         <div class="form-group">
-          <label class="form-label">Keep on Home Screen For</label>
-          <div class="duration-row" id="ann-duration-row">
-            <div class="duration-pill" onclick="setAnnDuration(1)">1 Day</div>
-            <div class="duration-pill active" onclick="setAnnDuration(2)">2 Days</div>
-            <div class="duration-pill" onclick="setAnnDuration(3)">3 Days</div>
-            <div class="duration-pill" onclick="setAnnDuration(5)">5 Days</div>
+          <label class="form-label">Active Until</label>
+          <input class="form-input no-icon" type="date" id="ann-active-until" style="width:100%;">
+          <div class="field-error" id="ann-until-error">
+            <i class="ti ti-alert-circle"></i> Pick a date on or after the start date.
           </div>
         </div>
 
@@ -2724,27 +2721,24 @@ html, body {
     clearFormErrors();
     setAnnWhen('now');
     document.getElementById('ann-publish-date').value = '';
-    document.getElementById('ann-publish-time').value = '';
-    setAnnDuration(2);
+    document.getElementById('ann-active-until').value = addDaysToDateStr(localDateStr(), 2);
   }
 
-  // ── "Show on Home Screen" (post now vs. schedule) + "Keep on Home
-  // Screen For" (how many days after it's published) ──
+  // ── "Show on Home Screen" (post now vs. schedule a future date) +
+  // "Active Until" (the exact last date it still shows) ──
   var annWhen = 'now'; // 'now' | 'schedule'
-  var annDurationDays = 2;
   function setAnnWhen(w) {
     annWhen = w;
     document.querySelectorAll('#ann-when-row .duration-pill').forEach(function (p, i) {
       p.classList.toggle('active', (i === 0) === (w === 'now'));
     });
-    document.getElementById('ann-schedule-fields').style.display = w === 'schedule' ? 'flex' : 'none';
+    document.getElementById('ann-schedule-fields').style.display = w === 'schedule' ? 'block' : 'none';
     document.getElementById('ann-schedule-error').classList.remove('visible');
   }
-  function setAnnDuration(d) {
-    annDurationDays = d;
-    document.querySelectorAll('#ann-duration-row .duration-pill').forEach(function (p) {
-      p.classList.toggle('active', parseInt(p.textContent, 10) === d);
-    });
+  function addDaysToDateStr(dateStr, days) {
+    var d = new Date(dateStr + 'T00:00:00');
+    d.setDate(d.getDate() + days);
+    return localDateStr(d);
   }
 
   // ── PUBLISH ANNOUNCEMENT ──
@@ -2768,16 +2762,19 @@ html, body {
       document.getElementById('title-error').classList.add('visible');
       valid = false;
     }
-    var publishAtIso = null;
+    var publishDate = null;
     if (annWhen === 'schedule') {
-      var dateVal = document.getElementById('ann-publish-date').value;
-      var timeVal = document.getElementById('ann-publish-time').value;
-      if (!dateVal || !timeVal) {
+      publishDate = document.getElementById('ann-publish-date').value;
+      if (!publishDate) {
         document.getElementById('ann-schedule-error').classList.add('visible');
         valid = false;
-      } else {
-        publishAtIso = new Date(dateVal + 'T' + timeVal + ':00').toISOString();
       }
+    }
+    var startDate = publishDate || localDateStr();
+    var activeUntil = document.getElementById('ann-active-until').value;
+    if (!activeUntil || activeUntil < startDate) {
+      document.getElementById('ann-until-error').classList.add('visible');
+      valid = false;
     }
     if (!valid) return;
 
@@ -2787,7 +2784,7 @@ html, body {
       if (editingAnnId) {
         // PATCH existing record — preserves original created_at so banner timing is unchanged
         var updated = await sbFetch('PATCH', '/rest/v1/announcements?id=eq.' + editingAnnId,
-          { title: title, body: body, posted_by: user.name || 'HR', publish_at: publishAtIso, home_duration_days: annDurationDays });
+          { title: title, body: body, posted_by: user.name || 'HR', publish_date: publishDate, active_until_date: activeUntil });
         if (!updated || updated.length === 0) throw new Error('Announcement update did not persist');
         var diffs = [];
         if (editingAnnOriginal) {
@@ -2798,9 +2795,9 @@ html, body {
         editingAnnId = null;
         editingAnnOriginal = null;
       } else {
-        await publishToDb(title, body, notifyOn, user.name || 'HR', user.email || '', publishAtIso, annDurationDays);
+        await publishToDb(title, body, notifyOn, user.name || 'HR', user.email || '', publishDate, activeUntil);
         // Scheduled posts aren't visible yet, so there's nothing to notify
-        // about until publish_at actually arrives -- there's no server-side
+        // about until publish_date actually arrives -- there's no server-side
         // job in this app that fires a push later on its own, so a
         // scheduled announcement simply doesn't push at all right now.
         if (notifyOn && annWhen === 'now' && typeof notifyAnnouncementPush === 'function') notifyAnnouncementPush(title, body);
@@ -3308,16 +3305,17 @@ html, body {
     document.getElementById('ann-body').value  = body;
     updateCharCount(); updateBodyCount();
     showPostForm();
-    var publishAt = item.getAttribute('data-publish-at') || '';
-    if (publishAt) {
-      var d = new Date(publishAt);
+    var publishDate = item.getAttribute('data-publish-date') || '';
+    if (publishDate) {
       setAnnWhen('schedule');
-      document.getElementById('ann-publish-date').value = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-      document.getElementById('ann-publish-time').value = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+      document.getElementById('ann-publish-date').value = publishDate;
     } else {
       setAnnWhen('now');
+      document.getElementById('ann-publish-date').value = '';
     }
-    setAnnDuration(parseInt(item.getAttribute('data-home-duration-days'), 10) || 2);
+    var activeUntil = item.getAttribute('data-active-until-date') || '';
+    document.getElementById('ann-active-until').value = activeUntil
+      || addDaysToDateStr(publishDate || item.getAttribute('data-created-date') || localDateStr(), 2);
   }
 
   // ── HELPERS ──
@@ -5611,12 +5609,14 @@ html, body {
       if (!data) return;
       var list = document.getElementById('ann-list');
       if (!list) return;
-      var cut5 = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
-      // Anchored off publish_at (falls back to created_at for anything
-      // posted before scheduling existed, or posted with "Post Now") --
-      // this list intentionally still shows a scheduled post that hasn't
-      // gone live yet, so admins can see and edit what's queued up.
-      var tabItems = data.filter(function(a){ return (a.publish_at ? new Date(a.publish_at) : new Date(a.created_at)) >= cut5; });
+      // Anchored off publish_date (falls back to the created_at date for
+      // anything posted before scheduling existed, or posted with "Post
+      // Now") -- this list intentionally still shows a scheduled post that
+      // hasn't gone live yet, so admins can see and edit what's queued up.
+      var today = localDateStr();
+      var cut5 = addDaysToDateStr(today, -5);
+      function annPublishDate(a) { return a.publish_date || localDateStr(new Date(a.created_at)); }
+      var tabItems = data.filter(function(a){ return annPublishDate(a) >= cut5; });
       var countEl = document.getElementById('ann-count');
       if (countEl) countEl.textContent = '(' + tabItems.length + ')';
       if (!tabItems.length) {
@@ -5626,14 +5626,14 @@ html, body {
           var d = new Date(ann.created_at).toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'});
           var t = new Date(ann.created_at).toLocaleTimeString('en-MY',{hour:'numeric',minute:'2-digit',hour12:true});
           var dt = d + ' · ' + t;
-          var isFuture = ann.publish_at && new Date(ann.publish_at).getTime() > Date.now();
-          var scheduledBadge = isFuture
+          var pubDate = annPublishDate(ann);
+          var scheduledBadge = pubDate > today
             ? '<span style="font-size:10px;font-weight:600;padding:2px 6px;border-radius:10px;background:#FAEEDA;color:#854F0B;margin-left:6px;">Scheduled for '
-              + new Date(ann.publish_at).toLocaleDateString('en-MY',{day:'numeric',month:'short'}) + ' · '
-              + new Date(ann.publish_at).toLocaleTimeString('en-MY',{hour:'numeric',minute:'2-digit',hour12:true}) + '</span>'
+              + new Date(pubDate + 'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'}) + '</span>'
             : '';
           return '<div class="ann-item" data-id="' + ann.id + '" data-posted-by="' + escHtml(ann.posted_by || 'HR')
-            + '" data-publish-at="' + escHtml(ann.publish_at || '') + '" data-home-duration-days="' + (ann.home_duration_days || 2) + '">'
+            + '" data-publish-date="' + escHtml(ann.publish_date || '') + '" data-active-until-date="' + escHtml(ann.active_until_date || '')
+            + '" data-created-date="' + localDateStr(new Date(ann.created_at)) + '">'
             + '<div class="ann-meta"><span class="ann-time">' + dt + '</span>' + scheduledBadge + '</div>'
             + '<div class="ann-title">' + escHtml(ann.title) + '</div>'
             + '<div class="ann-body">' + escHtml(ann.body) + '</div>'
@@ -5648,8 +5648,8 @@ html, body {
   }
 
   // ── PUBLISH ANNOUNCEMENT TO SUPABASE ──
-  async function publishToDb(title, body, notifyEmail, postedBy, postedByEmail, publishAt, durationDays) {
-    var res = await sbFetch('POST', '/rest/v1/announcements', { title: title, body: body, badge: 'general', notify_email: notifyEmail, posted_by: postedBy, posted_by_email: postedByEmail, publish_at: publishAt, home_duration_days: durationDays });
+  async function publishToDb(title, body, notifyEmail, postedBy, postedByEmail, publishDate, activeUntilDate) {
+    var res = await sbFetch('POST', '/rest/v1/announcements', { title: title, body: body, badge: 'general', notify_email: notifyEmail, posted_by: postedBy, posted_by_email: postedByEmail, publish_date: publishDate, active_until_date: activeUntilDate });
     return res;
   }
 
@@ -6829,14 +6829,14 @@ html, body {
   function updateAnnouncementBanner(data) {
     var banner = document.getElementById('admin-urgent-banner');
     if (!banner) return;
-    var now = Date.now();
+    var today = localDateStr();
     var recent = [];
     if (data) {
       data.forEach(function(a) {
-        var pub = a.publish_at ? new Date(a.publish_at) : new Date(a.created_at);
-        if (pub.getTime() > now) return;
-        var days = (typeof a.home_duration_days === 'number') ? a.home_duration_days : 2;
-        if (now < pub.getTime() + days * 24 * 60 * 60 * 1000) recent.push(a);
+        var pub = a.publish_date || localDateStr(new Date(a.created_at));
+        if (pub > today) return;
+        var until = a.active_until_date || addDaysToDateStr(pub, 2);
+        if (today <= until) recent.push(a);
       });
     }
     if (recent.length) {

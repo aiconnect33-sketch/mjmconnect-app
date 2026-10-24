@@ -155,22 +155,27 @@ async function loadAnnouncements() {
   try {
     var data = await sbGet('announcements', 'limit=200');
     if (!data) return;
-    var now  = Date.now();
-    var cut5 = new Date(now - 5 * 24 * 60 * 60 * 1000);
-    // publish_at is null for every announcement posted before scheduling
-    // existed (and for anything posted with "Post Now") -- treat that the
-    // same as created_at, so old behavior is unchanged.
-    function annPublishedAt(a) { return a.publish_at ? new Date(a.publish_at) : new Date(a.created_at); }
-    function annIsLiveOnHome(a) {
-      var pub = annPublishedAt(a);
-      if (pub.getTime() > now) return false;
-      var days = (typeof a.home_duration_days === 'number') ? a.home_duration_days : 2;
-      return now < pub.getTime() + days * 24 * 60 * 60 * 1000;
+    var today = localDateStr();
+    function addDaysToDateStr(dateStr, days) {
+      var d = new Date(dateStr + 'T00:00:00');
+      d.setDate(d.getDate() + days);
+      return localDateStr(d);
     }
+    // publish_date is null for every announcement posted before scheduling
+    // existed (and for anything posted with "Post Now") -- treat that the
+    // same as its created_at date, so old behavior is unchanged.
+    function annPublishDate(a) { return a.publish_date || localDateStr(new Date(a.created_at)); }
+    function annIsLiveOnHome(a) {
+      var pub = annPublishDate(a);
+      if (pub > today) return false;
+      var until = a.active_until_date || addDaysToDateStr(pub, 2);
+      return today <= until;
+    }
+    var cut5 = addDaysToDateStr(today, -5);
     var bannerItems = data.filter(annIsLiveOnHome);
     var tabItems    = data.filter(function(a){
-      var pub = annPublishedAt(a);
-      return pub.getTime() <= now && pub >= cut5;
+      var pub = annPublishDate(a);
+      return pub <= today && pub >= cut5;
     });
 
     // Banner
