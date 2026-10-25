@@ -70,6 +70,20 @@ async function loadTimeOff() {
   var me = timeOffMe();
   var myEmailLow = (me.email || '').toLowerCase();
 
+  // Resolve each staff's CURRENT name by email, rather than trusting the
+  // name snapshotted onto each record at the time it was created -- a
+  // staff member who renames themselves would otherwise fragment into two
+  // separate people wherever records are grouped/labeled by name (the
+  // Home "Currently Out" card below, Staff Overview, and everyone else's
+  // view of "All Records"). Their own "My Records" is unaffected either
+  // way, since that's already filtered by email, not name.
+  try {
+    var nameMapRows = await fetch(SURL + '/rest/v1/profiles?select=email,full_name&limit=500',
+      { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } }).then(function (r) { return r.json(); });
+    timeoffNameMap = {};
+    (nameMapRows || []).forEach(function (p) { if (p.email && p.full_name) timeoffNameMap[p.email.toLowerCase()] = p.full_name; });
+  } catch (e) { timeoffNameMap = {}; }
+
   // ── HOME TAB: who's currently out, team-wide (same pattern as Leave/Estate Trip) ──
   var homeEl = document.getElementById('home-timeoff-today');
   if (homeEl) {
@@ -78,7 +92,7 @@ async function loadTimeOff() {
       var res = await fetch(url, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
       var data = await res.json();
       if (data && data.length) {
-        var names = data.map(function (r) { return r.staff_name; }).join(', ');
+        var names = data.map(function (r) { return timeoffDisplayName(r); }).join(', ');
         homeEl.innerHTML = '<div class="home-summary-card" onclick="switchNav(\'timeoff\');loadTimeOff()">'
           + '<div class="home-summary-ic" style="background:var(--blue-bg);color:var(--blue-text);"><i class="ti ti-clock"></i></div>'
           + '<div style="flex:1;min-width:0;"><div class="home-summary-title">Currently Out</div>'
@@ -275,6 +289,15 @@ function renderTimeOffStatus(openRecord, monthlyMinutes, dueReminders) {
   return html;
 }
 
+// email -> current full_name, refreshed by loadTimeOff() on every load.
+// Falls back to the record's own stored staff_name when an email has no
+// match (profile deleted, or staff_email missing on an old record).
+var timeoffNameMap = {};
+function timeoffDisplayName(r) {
+  var email = (r.staff_email || '').toLowerCase();
+  return (email && timeoffNameMap[email]) || r.staff_name;
+}
+
 // Per-staff monthly totals, shown only to whoever can manage all Time Off
 // records (HR Admin/Super Admin or a staff member granted the "Time Off"
 // edit permission) -- mirrors the Staff Overview list in admin.html.
@@ -282,11 +305,15 @@ function renderTimeOffOverview(records) {
   var avColors = ['av-green', 'av-amber', 'av-coral', 'av-blue', 'av-purple', 'av-red'];
   var byStaff = {};
   records.forEach(function (r) {
-    if (!byStaff[r.staff_name]) byStaff[r.staff_name] = { minutes: 0, count: 0 };
-    byStaff[r.staff_name].count++;
-    if (r.entry_type !== 'voided' && r.duration_minutes) byStaff[r.staff_name].minutes += r.duration_minutes;
+    // Grouped by email (falling back to name only if email is ever
+    // missing), so a staff member who renamed themselves mid-month still
+    // shows as one row, not two.
+    var key = (r.staff_email || '').toLowerCase() || r.staff_name;
+    if (!byStaff[key]) byStaff[key] = { name: timeoffDisplayName(r), minutes: 0, count: 0 };
+    byStaff[key].count++;
+    if (r.entry_type !== 'voided' && r.duration_minutes) byStaff[key].minutes += r.duration_minutes;
   });
-  var staffList = Object.keys(byStaff).map(function (name) { return { name: name, minutes: byStaff[name].minutes, count: byStaff[name].count }; });
+  var staffList = Object.keys(byStaff).map(function (key) { return { name: byStaff[key].name, minutes: byStaff[key].minutes, count: byStaff[key].count }; });
   if (!staffList.length) return '';
   staffList.sort(function (a, b) { return b.minutes - a.minutes; });
 
@@ -346,7 +373,7 @@ function renderTimeOffRow(r, myEmailLow, canManageAll, sectionKey) {
     : '<span class="badge badge-blue">' + formatDuration(r.duration_minutes || 0) + '</span>';
   var entryNote = r.entry_type === 'edited' ? ' <span style="color:var(--amber-text);font-weight:700;">(edited)</span>'
     : r.entry_type === 'backfilled' ? ' <span style="color:var(--red-text);font-weight:700;">(backfilled)</span>' : '';
-  var reasonLabel = isMine ? escHtml(r.reason) : (escHtml(r.staff_name) + ' — ' + escHtml(r.reason));
+  var reasonLabel = isMine ? escHtml(r.reason) : (escHtml(timeoffDisplayName(r)) + ' — ' + escHtml(r.reason));
   var key = sectionKey + '-' + r.id;
 
   // Correcting Time In/Out is admin/permission-only -- unlike the Cancel
@@ -390,7 +417,7 @@ function renderTimeOffRow(r, myEmailLow, canManageAll, sectionKey) {
 
 function renderTimeOffVoidedRow(r, myEmailLow) {
   var isMine = r.staff_email && r.staff_email.toLowerCase() === myEmailLow;
-  var reasonLabel = isMine ? escHtml(r.reason) : (escHtml(r.staff_name) + ' — ' + escHtml(r.reason));
+  var reasonLabel = isMine ? escHtml(r.reason) : (escHtml(timeoffDisplayName(r)) + ' — ' + escHtml(r.reason));
   var out = new Date(r.time_out);
   var timeLabel = formatClock(out) + (r.time_in ? ' → ' + formatClock(new Date(r.time_in)) : ' → still out');
   return '<div class="to-history-row" style="opacity:0.6;">'
@@ -428,7 +455,9 @@ function renderTimeOffAllSection() {
   var all = timeoffState.allRecords;
   var nonVoided = all.filter(function (r) { return r.entry_type !== 'voided'; });
   var voided = all.filter(function (r) { return r.entry_type === 'voided'; });
-  var staffSet = {}; all.forEach(function (r) { staffSet[r.staff_name] = 1; });
+  // Keyed by email -- a distinct-staff count, so a mid-month rename never
+  // inflates it the way grouping by staff_name would.
+  var staffSet = {}; all.forEach(function (r) { staffSet[(r.staff_email || '').toLowerCase() || r.staff_name] = 1; });
   var staffTotal = Object.keys(staffSet).length;
   var summary = all.length ? (all.length + (all.length === 1 ? ' entry' : ' entries') + ' this month · ' + staffTotal + (staffTotal === 1 ? ' staff' : ' staff')) : 'No entries this month';
   var html = '<div class="to-meta">' + escHtml(summary) + '</div>';
