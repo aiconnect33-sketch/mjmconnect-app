@@ -1748,6 +1748,47 @@ html, body {
       <div id="timeoff-overview">
       </div>
 
+      <div class="sec-hdr" style="margin-top:16px;">
+        <div class="sec-title">Event Day Off Credits</div>
+      </div>
+      <button class="btn-ghost" style="border:1.5px dashed #D79A1F;background:#FFF8E8;color:#8A5A0A;margin-bottom:10px;" onclick="showEventDayOffForm()">
+        <i class="ti ti-trophy"></i> Grant Event Day Off
+      </button>
+
+      <div class="inline-form" id="edo-form" style="display:none;">
+        <div class="inline-form-title">Grant Event Day Off<button class="close-btn" onclick="hideEventDayOffForm()">&times;</button></div>
+        <div class="form-group">
+          <label class="form-label">Event / Reason</label>
+          <input class="form-input no-icon" id="edo-reason" placeholder="e.g. Family Day 2026 — Tug of War Champions">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Must Be Used By <span style="font-weight:400;text-transform:none;">(optional)</span></label>
+          <input class="form-input no-icon" type="date" id="edo-expires">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Team Members</label>
+          <div id="edo-staff-tags" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px;min-height:0;"></div>
+          <div class="input-wrap" style="position:relative;">
+            <i class="ti ti-search input-icon"></i>
+            <input class="form-input" type="text" id="edo-staff-search" placeholder="Type name to search…" oninput="filterEdoStaff()" autocomplete="off">
+          </div>
+          <div id="edo-staff-dropdown" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);max-height:150px;overflow-y:auto;margin-top:2px;"></div>
+          <div class="field-error" id="edo-staff-error">
+            <i class="ti ti-alert-circle"></i> Select at least one staff member.
+          </div>
+        </div>
+        <div style="font-size:10.5px;color:#8A5A0A;background:#FFF8E8;border:1px solid #F0DBA3;border-radius:var(--radius-md);padding:9px 11px;margin-bottom:12px;line-height:1.4;">
+          A full-day credit, free of the usual rules: doesn't count towards each staff's monthly 4-hour Time Off limit, and doesn't touch their Annual Leave balance. They'll each pick their own date to use it.
+        </div>
+        <button class="btn-primary" style="background:#D79A1F;" onclick="grantEventDayOff()">
+          <span id="edo-save-label">Grant Credit</span>
+          <div class="spinner" id="edo-spinner"></div>
+        </button>
+        <button class="btn-ghost" onclick="hideEventDayOffForm()">Cancel</button>
+      </div>
+
+      <div id="edo-list"></div>
+
       <!-- Pill toggle (same style as the staff app) in place of the two
            separately-collapsible "My Records"/"All Records" rows. -->
       <div class="to-pill-wrap">
@@ -2559,7 +2600,7 @@ html, body {
     if (name === 'invite')   { loadPendingApprovals(); loadInviteLog(); }
     if (name === 'event')    loadDbEvents();
     if (name === 'estatetrip') loadDbEstateTrips();
-    if (name === 'timeoff')  { loadDbTimeOff(); loadAdminTimeOffSelf(); }
+    if (name === 'timeoff')  { loadDbTimeOff(); loadAdminTimeOffSelf(); loadEventDayOffCredits(); }
     recordScreenChange(name);
     rememberTab(name);
   }
@@ -2580,7 +2621,7 @@ html, body {
     if (name === 'invite')   { loadPendingApprovals(); loadInviteLog(); }
     if (name === 'event')    loadDbEvents();
     if (name === 'estatetrip') loadDbEstateTrips();
-    if (name === 'timeoff')  { loadDbTimeOff(); loadAdminTimeOffSelf(); }
+    if (name === 'timeoff')  { loadDbTimeOff(); loadAdminTimeOffSelf(); loadEventDayOffCredits(); }
     if (name === 'book')     initBookTab();
     if (name === 'faulty')   initFaultyTab();
     if (name === 'faultyreport') loadFaultyReport();
@@ -2601,7 +2642,7 @@ html, body {
     if (name === 'invite')   { loadPendingApprovals(); loadInviteLog(); }
     if (name === 'event')    loadDbEvents();
     if (name === 'estatetrip') loadDbEstateTrips();
-    if (name === 'timeoff')  { loadDbTimeOff(); loadAdminTimeOffSelf(); }
+    if (name === 'timeoff')  { loadDbTimeOff(); loadAdminTimeOffSelf(); loadEventDayOffCredits(); }
     if (name === 'book')     initBookTab();
     if (name === 'faulty')   initFaultyTab();
     recordScreenChange(name);
@@ -3364,6 +3405,7 @@ html, body {
       'leave-save':['leave-save-label','leave-spinner'],
       'duty-save': ['duty-save-label', 'duty-spinner'],
       'estatetrip-save': ['estatetrip-save-label', 'estatetrip-spinner'],
+      'edo-save':  ['edo-save-label',   'edo-spinner'],
     };
     if (!map[which]) return;
     var [labelId, spinnerId] = map[which];
@@ -5978,6 +6020,135 @@ html, body {
 
       if (listEl) listEl.innerHTML = renderTimeOffAllRecordsSection(data, today);
     } catch (e) { /* Supabase not reachable */ }
+  }
+
+  // ── EVENT DAY OFF CREDITS — admin grants one (no date attached); staff
+  // redeems it later on a date of their own choosing, in the staff app.
+  // Lives in its own table, so it never touches time_off_records -- exempt
+  // from the monthly cap and Annual Leave by construction, not by a check. ──
+  var edoStaffAll = [];
+  var edoStaffSelected = [];
+
+  function showEventDayOffForm() {
+    document.getElementById('edo-reason').value = '';
+    document.getElementById('edo-expires').value = '';
+    document.getElementById('edo-staff-tags').innerHTML = '';
+    document.getElementById('edo-staff-search').value = '';
+    document.getElementById('edo-staff-dropdown').style.display = 'none';
+    edoStaffSelected = [];
+    clearFormErrors();
+    document.getElementById('edo-reason').classList.remove('error');
+    document.getElementById('edo-form').style.display = 'block';
+    loadEdoStaffDropdown();
+    document.getElementById('edo-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  function hideEventDayOffForm() {
+    document.getElementById('edo-form').style.display = 'none';
+  }
+
+  async function loadEdoStaffDropdown() {
+    edoStaffAll = [];
+    try {
+      var data = await sbFetch('GET', '/rest/v1/profiles?role=neq.pending&order=full_name.asc&select=id,full_name,email&limit=200');
+      if (data && data.length) edoStaffAll = data.map(function (s) { return { name: s.full_name, email: s.email }; });
+    } catch (e) {}
+  }
+
+  function filterEdoStaff() {
+    var q  = document.getElementById('edo-staff-search').value.trim().toLowerCase();
+    var dd = document.getElementById('edo-staff-dropdown');
+    if (!q) { dd.style.display = 'none'; return; }
+    var selectedEmails = edoStaffSelected.map(function (s) { return s.email; });
+    var matches = edoStaffAll.filter(function (s) {
+      return s.name.toLowerCase().indexOf(q) !== -1 && selectedEmails.indexOf(s.email) === -1;
+    });
+    if (!matches.length) { dd.style.display = 'none'; return; }
+    dd.innerHTML = matches.map(function (s) {
+      return '<div onclick="selectEdoStaff(\'' + escJsAttr(s.email) + '\')" style="padding:9px 12px;font-size:13px;color:var(--text);cursor:pointer;border-bottom:0.5px solid var(--border);" onmouseover="this.style.background=\'var(--green-bg)\'" onmouseout="this.style.background=\'\'">' + escHtml(s.name) + '</div>';
+    }).join('');
+    dd.style.display = 'block';
+  }
+
+  function selectEdoStaff(email) {
+    var s = edoStaffAll.find(function (x) { return x.email === email; });
+    if (!s || edoStaffSelected.some(function (x) { return x.email === email; })) return;
+    edoStaffSelected.push(s);
+    var tags = document.getElementById('edo-staff-tags');
+    var tag  = document.createElement('div');
+    tag.style.cssText = 'display:flex;align-items:center;gap:5px;background:var(--green-bg);border:0.5px solid var(--green-dark);border-radius:20px;padding:3px 10px;font-size:12px;color:var(--green-text);';
+    tag.innerHTML = escHtml(s.name) + '<span onclick="removeEdoStaff(\'' + escJsAttr(email) + '\',this)" style="cursor:pointer;font-size:15px;line-height:1;color:var(--green-dark);">&times;</span>';
+    tags.appendChild(tag);
+    document.getElementById('edo-staff-search').value = '';
+    document.getElementById('edo-staff-dropdown').style.display = 'none';
+    document.getElementById('edo-staff-error').classList.remove('visible');
+  }
+
+  function removeEdoStaff(email, el) {
+    edoStaffSelected = edoStaffSelected.filter(function (s) { return s.email !== email; });
+    el.closest('div').remove();
+  }
+
+  var grantEventDayOffInFlight = false;
+  async function grantEventDayOff() {
+    if (grantEventDayOffInFlight) return;
+    grantEventDayOffInFlight = true;
+    try { await grantEventDayOffImpl(); } finally { grantEventDayOffInFlight = false; }
+  }
+  async function grantEventDayOffImpl() {
+    clearFormErrors();
+    var reason  = document.getElementById('edo-reason').value.trim();
+    var expires = document.getElementById('edo-expires').value || null;
+    var valid = true;
+    if (!reason) { document.getElementById('edo-reason').classList.add('error'); valid = false; }
+    if (!edoStaffSelected.length) { document.getElementById('edo-staff-error').classList.add('visible'); valid = false; }
+    if (!valid) return;
+
+    setLoading('edo-save', true);
+    var user = JSON.parse(localStorage.getItem('mjm_user') || '{}');
+    try {
+      var rows = edoStaffSelected.map(function (s) {
+        return { staff_name: s.name, staff_email: s.email, reason: reason, expires_at: expires, granted_by: user.name || 'HR', granted_by_email: user.email || '' };
+      });
+      var created = await sbFetch('POST', '/rest/v1/event_day_off_credits', rows);
+      if (!created || created.length !== rows.length) throw new Error('Not all credits were saved');
+      setLoading('edo-save', false);
+      hideEventDayOffForm();
+      loadEventDayOffCredits();
+    } catch (e) {
+      setLoading('edo-save', false);
+      alert('Could not grant Event Day Off. Please try again.');
+    }
+  }
+
+  async function loadEventDayOffCredits() {
+    var el = document.getElementById('edo-list');
+    if (!el) return;
+    try {
+      var data = await sbFetch('GET', '/rest/v1/event_day_off_credits?order=created_at.desc&limit=200');
+      if (!data || !data.length) { el.innerHTML = ''; return; }
+      el.innerHTML = '<div class="card">' + data.map(function (c) {
+        var ini = c.staff_name.split(' ').filter(Boolean).slice(0, 2).map(function (p) { return p[0].toUpperCase(); }).join('');
+        var redeemed = !!c.redeemed_date;
+        var statusBadge = redeemed
+          ? '<span class="badge" style="background:#FAEEDA;color:#854F0B;">Redeemed · ' + new Date(c.redeemed_date + 'T00:00:00').toLocaleDateString('en-MY', { day: 'numeric', month: 'short' }) + '</span>'
+          : '<span class="badge" style="background:var(--bg);color:var(--text3);border:1px solid var(--border);">Awaiting Date</span>';
+        return '<div class="person-row">'
+          + '<div class="av av-g">' + ini + '</div>'
+          + '<div style="flex:1;"><div class="p-name">🏆 ' + escHtml(c.staff_name) + '</div>'
+          + '<div class="p-sub">' + escHtml(c.reason) + '</div></div>'
+          + '<div style="text-align:right;">' + statusBadge
+          + '<div class="btn-icon danger" style="margin-top:4px;" onclick="revokeEventDayOff(' + c.id + ')" title="Revoke"><i class="ti ti-trash"></i></div>'
+          + '</div></div>';
+      }).join('') + '</div>';
+    } catch (e) { el.innerHTML = ''; }
+  }
+
+  async function revokeEventDayOff(id) {
+    if (!confirm('Revoke this Event Day Off credit? If it has already been redeemed, the staff member loses the day off.')) return;
+    try {
+      await sbFetch('DELETE', '/rest/v1/event_day_off_credits?id=eq.' + id);
+      loadEventDayOffCredits();
+    } catch (e) { alert('Could not revoke this credit. Please try again.'); }
   }
 
   // ── TIME OFF — SELF-SERVICE FOR ADMIN (mirrors js/tab-timeoff.js in the staff app) ──
