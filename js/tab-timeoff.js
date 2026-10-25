@@ -141,6 +141,83 @@ async function loadTimeOff() {
     if (overviewEl) overviewEl.innerHTML = '';
     if (allEl) allEl.innerHTML = '';
   }
+
+  // Event Day Off credits -- a separate table from time_off_records, so a
+  // failure here is kept independent of the rest of the tab above.
+  var creditsEl = document.getElementById('timeoff-credits');
+  if (creditsEl) {
+    try {
+      var creditRows = await fetch(SURL + '/rest/v1/event_day_off_credits?staff_email=eq.' + encodeURIComponent(me.email) + '&order=created_at.desc&limit=20',
+        { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } }).then(function (r) { return r.json(); });
+      timeoffCreditsState.mine = creditRows || [];
+      creditsEl.innerHTML = renderTimeOffCredits();
+    } catch (e) { creditsEl.innerHTML = ''; }
+  }
+}
+
+// ── EVENT DAY OFF CREDITS — admin grants one (no date attached); staff
+// redeems it on a date of their own choosing. Exempt from the monthly cap
+// above and from Annual Leave by construction: it lives in its own table,
+// never time_off_records, so neither is ever touched by this feature. ──
+var timeoffCreditsState = { mine: [] };
+
+function renderTimeOffCredits() {
+  var rows = timeoffCreditsState.mine;
+  if (!rows.length) return '';
+  var today = timeoffState.today || localDateStr();
+  var html = '<div class="to-credit-note">🏆 Event Day Off credits don\'t count towards the limit above.</div>';
+  rows.forEach(function (c) {
+    var redeemed = !!c.redeemed_date;
+    var canEdit = !redeemed || c.redeemed_date >= today;
+    html += '<div class="to-reward-card">'
+      + '<div class="to-reward-top"><div class="to-reward-icon">🏆</div>'
+      + '<div><div class="to-reward-title">' + (redeemed ? 'Event Reward — Full Day Off' : 'Event Day Off Credit') + '</div>'
+      + '<div class="to-reward-sub">' + escHtml(c.reason) + '</div></div></div>';
+    if (redeemed) {
+      var when = new Date(c.redeemed_date + 'T00:00:00').toLocaleDateString('en-MY', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+      html += '<div class="to-reward-footer"><span>' + when + ' · Granted by ' + escHtml(c.granted_by || 'HR') + '</span>'
+        + '<span class="to-reward-badge">Full Day</span></div>';
+    } else {
+      var expiryNote = c.expires_at ? ('use by ' + new Date(c.expires_at + 'T00:00:00').toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' })) : 'no expiry';
+      html += '<div class="to-reward-footer" style="border-top:none;margin-top:0;padding-top:0;"><span>Granted by ' + escHtml(c.granted_by || 'HR') + ' · ' + expiryNote + '</span></div>';
+    }
+    if (canEdit) {
+      html += '<div id="to-credit-action-' + c.id + '">'
+        + (redeemed
+          ? '<div class="to-credit-change" onclick="showCreditRedeemForm(' + c.id + ')">Change date</div>'
+          : '<button class="to-credit-btn" onclick="showCreditRedeemForm(' + c.id + ')">📅 Pick a Date</button>')
+        + '</div>';
+    }
+    html += '</div>';
+  });
+  return html;
+}
+
+function showCreditRedeemForm(id) {
+  var c = timeoffCreditsState.mine.find(function (x) { return x.id === id; });
+  var container = document.getElementById('to-credit-action-' + id);
+  if (!c || !container) return;
+  container.innerHTML = '<div class="to-credit-expand">'
+    + '<label class="to-credit-label">Which day will you take off?</label>'
+    + '<input class="to-credit-input" type="date" id="to-credit-date-' + id + '" value="' + (c.redeemed_date || localDateStr()) + '">'
+    + '<button class="to-credit-confirm" onclick="confirmCreditRedeem(' + id + ')">Confirm Day Off</button>'
+    + '</div>';
+}
+
+async function confirmCreditRedeem(id) {
+  var input = document.getElementById('to-credit-date-' + id);
+  var date = input ? input.value : '';
+  if (!date) { alert('Please choose a date.'); return; }
+  try {
+    var res = await fetch(SURL + '/rest/v1/event_day_off_credits?id=eq.' + id, {
+      method: 'PATCH',
+      headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+      body: JSON.stringify({ redeemed_date: date, redeemed_at: new Date().toISOString() })
+    });
+    var updated = await res.json();
+    if (!updated || !updated.length) throw new Error('Credit update did not persist');
+    loadTimeOff();
+  } catch (e) { alert('Could not save your chosen date. Please try again.'); }
 }
 
 function renderTimeOffStatus(openRecord, monthlyMinutes, dueReminders) {
