@@ -4006,6 +4006,26 @@ html, body {
   // that, and without re-fetching the full page body just to check. Checks
   // on load (baseline), whenever the tab/PWA becomes visible again, and
   // every 5 minutes while it stays open.
+  // True if any visible text/date/time field or textarea on screen has
+  // unsaved content -- search/filter boxes (id containing "search") don't
+  // count, since leftover search text isn't work anyone would lose.
+  function hasUnsavedInput() {
+    // Checked against the resolved .type PROPERTY, not an [type="..."]
+    // attribute selector -- a plain <input> with no type attribute is still
+    // a text input (the browser defaults el.type to 'text'), and an
+    // attribute selector would silently miss every one of those.
+    var textTypes = { text: 1, email: 1, tel: 1, number: 1, date: 1, time: 1 };
+    var fields = document.querySelectorAll('input, textarea');
+    for (var i = 0; i < fields.length; i++) {
+      var el = fields[i];
+      if (el.tagName === 'INPUT' && !textTypes[el.type]) continue;
+      if (el.offsetParent === null) continue;
+      if (el.id && el.id.indexOf('search') !== -1) continue;
+      if (el.value && el.value.trim()) return true;
+    }
+    return false;
+  }
+
   function initVersionCheck() {
     var selfUrl = location.pathname.split('/').pop() || 'admin.html';
     var knownTag = null;
@@ -4018,7 +4038,11 @@ html, body {
         var tag = res.headers.get('etag') || res.headers.get('last-modified');
         if (!tag) return;
         if (knownTag === null) { knownTag = tag; return; }
-        if (tag !== knownTag) showUpdateBanner();
+        if (tag === knownTag) return;
+        // Safe to apply quietly unless it would blow away something
+        // someone's mid-typing -- only then fall back to the banner.
+        if (hasUnsavedInput()) showUpdateBanner();
+        else location.reload();
       }).catch(function () {}).finally(function () { checking = false; });
     }
 
