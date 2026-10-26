@@ -653,6 +653,12 @@ html, body {
 .fr-table td { font-size: 12px; color: var(--text); padding: 10px 12px; border-top: 1px solid #C3D2CB; vertical-align: top; }
 .fr-table-wrap { background: var(--surface); border: 1px solid #C3D2CB; border-radius: var(--r-lg); overflow: hidden; overflow-x: auto; }
 
+/* Report-mode toggle on the Time Off Report page -- Time Off / Event Day Off */
+.rpt-toggle-wrap { display: inline-flex; background: var(--bg); border-radius: 12px; border: 1px solid #C3D2CB; padding: 4px; gap: 4px; margin-bottom: 18px; }
+.rpt-toggle { font-size: 12.5px; font-weight: 700; padding: 8px 16px; border-radius: 9px; color: var(--text2); cursor: pointer; }
+.rpt-toggle.active { background: var(--surface); color: var(--green); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+.view-staff-link { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 700; color: var(--green); cursor: pointer; }
+
 /* ── CALENDAR CARD (Booking availability) ── */
 .cal-card {
   background: var(--surface); border-radius: 24px;
@@ -2284,12 +2290,22 @@ html, body {
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap;">
         <div>
           <div class="sec-title" style="margin-bottom:4px;">Time Off Report</div>
-          <div style="font-size:11.5px;color:var(--text3);">Every Time Off trip, pulled live — no need to check the Google Sheet.</div>
+          <div style="font-size:11.5px;color:var(--text3);">Every Time Off trip and Event Day Off credit, pulled live — no need to check the Google Sheet.</div>
         </div>
-        <button class="book-btn-primary" style="width:auto;margin-bottom:0;padding:9px 16px;" onclick="downloadTimeOffReportCsv()">
+        <button class="book-btn-primary" style="width:auto;margin-bottom:0;padding:9px 16px;" id="tor-download-btn" onclick="downloadTimeOffReportCsv()">
           <i class="ti ti-download"></i> Download CSV
         </button>
       </div>
+
+      <!-- Report-mode toggle: "Time Off" is the original report, unchanged;
+           "Event Day Off" is new -- how much has been granted vs. actually
+           used, grouped per event rather than per staff. -->
+      <div class="rpt-toggle-wrap">
+        <div class="rpt-toggle active" id="tor-mode-timeoff" onclick="setTimeOffReportMode('timeoff')">Time Off</div>
+        <div class="rpt-toggle" id="tor-mode-edo" onclick="setTimeOffReportMode('edo')">Event Day Off</div>
+      </div>
+
+      <div id="tor-view-timeoff">
 
       <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
         <div class="fr-tile">
@@ -2343,6 +2359,58 @@ html, body {
           </tbody>
         </table>
       </div>
+
+      </div><!-- /tor-view-timeoff -->
+
+      <div id="tor-view-edo" style="display:none;">
+
+      <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+        <div class="fr-tile">
+          <div class="fr-tile-num" id="tor-edo-stat-events">—</div>
+          <div class="fr-tile-label">Events granted (all time)</div>
+        </div>
+        <div class="fr-tile">
+          <div class="fr-tile-num" style="color:var(--blue-text);" id="tor-edo-stat-granted">—</div>
+          <div class="fr-tile-label">Day-off credits given out</div>
+        </div>
+        <div class="fr-tile">
+          <div class="fr-tile-num" style="color:var(--green-text);" id="tor-edo-stat-redeemed">—</div>
+          <div class="fr-tile-label">Redeemed (used)</div>
+        </div>
+        <div class="fr-tile" style="border-color:#E6B4B4;">
+          <div class="fr-tile-num" style="color:var(--red-text);" id="tor-edo-stat-expired">—</div>
+          <div class="fr-tile-label">Expired, unused</div>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:140px;">
+          <input class="fr-search" id="tor-edo-search-input" placeholder="Search event name…" oninput="renderEventDayOffReportTable()">
+        </div>
+      </div>
+
+      <div class="fr-table-wrap">
+        <table class="fr-table">
+          <thead>
+            <tr>
+              <th>Event / Reason</th>
+              <th>Granted</th>
+              <th>Must Be Used By</th>
+              <th>Staff Granted</th>
+              <th>Redeemed</th>
+              <th>Expired</th>
+              <th>Awaiting</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tor-edo-table-body">
+            <tr><td colspan="8" style="text-align:center;color:var(--text3);padding:20px;">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:10px;">"Awaiting" = still valid, staff just hasn't picked a date yet.</div>
+
+      </div><!-- /tor-view-edo -->
 
     </div><!-- /timeoffreport -->
 
@@ -2634,7 +2702,7 @@ html, body {
     if (name === 'book')     initBookTab();
     if (name === 'faulty')   initFaultyTab();
     if (name === 'faultyreport') loadFaultyReport();
-    if (name === 'timeoffreport') loadTimeOffReport();
+    if (name === 'timeoffreport') { loadTimeOffReport(); loadEventDayOffReport(); }
     recordScreenChange(name);
     rememberTab(name);
   }
@@ -5484,6 +5552,7 @@ html, body {
   // keeps for the Time Off tab itself), so it can replace the Google Sheet.
   var torReportData = [];
   var torReportFilter = 'all'; // 'all' | 'out' | 'completed' | 'voided'
+  var torReportMode = 'timeoff'; // 'timeoff' | 'edo'
 
   async function loadTimeOffReport() {
     var tbody = document.getElementById('tor-table-body');
@@ -5602,6 +5671,167 @@ html, body {
     var a = document.createElement('a');
     a.href = url;
     a.download = 'time-off-' + localDateStr() + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // ── TIME OFF REPORT — EVENT DAY OFF TAB (admin-only) ──
+  // How much Event Day Off has actually been given out, grouped per event
+  // (not per staff -- a single grant to 11 people is one event, not 11
+  // rows). Independent of the Time Off tab's loadEventDayOffCredits() above:
+  // this one renders table rows for the report page instead of cards, and
+  // the two can't share a name-map fetch since they load concurrently.
+  var torEdoGroups = [];
+  var torEdoRaw = [];
+  var torEdoToday = '';
+
+  function setTimeOffReportMode(mode) {
+    torReportMode = mode;
+    document.getElementById('tor-mode-timeoff').classList.toggle('active', mode === 'timeoff');
+    document.getElementById('tor-mode-edo').classList.toggle('active', mode === 'edo');
+    document.getElementById('tor-view-timeoff').style.display = mode === 'timeoff' ? '' : 'none';
+    document.getElementById('tor-view-edo').style.display = mode === 'edo' ? '' : 'none';
+    var btn = document.getElementById('tor-download-btn');
+    if (btn) btn.onclick = mode === 'edo' ? downloadEventDayOffReportCsv : downloadTimeOffReportCsv;
+  }
+
+  async function loadEventDayOffReport() {
+    var tbody = document.getElementById('tor-edo-table-body');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:20px;">Loading…</td></tr>';
+    try {
+      var nameMapRows = await sbFetch('GET', '/rest/v1/profiles?select=email,full_name&limit=500').catch(function () { return []; });
+      var nameMap = {};
+      (nameMapRows || []).forEach(function (p) { if (p.email && p.full_name) nameMap[p.email.toLowerCase()] = p.full_name; });
+
+      var data = await sbFetch('GET', '/rest/v1/event_day_off_credits?order=created_at.desc&limit=1000') || [];
+      torEdoToday = localDateStr();
+      torEdoRaw = data.map(function (c) {
+        var email = (c.staff_email || '').toLowerCase();
+        return Object.assign({}, c, { resolvedName: (email && nameMap[email]) || c.staff_name, status: torEdoStatus(c) });
+      });
+
+      var groups = [], byKey = {};
+      torEdoRaw.forEach(function (c) {
+        var key = c.reason + '|' + (c.created_at || '').slice(0, 10);
+        if (!byKey[key]) {
+          byKey[key] = { reason: c.reason, grantedAt: c.created_at, expiresAt: c.expires_at, grantedBy: c.granted_by, items: [] };
+          groups.push(byKey[key]);
+        }
+        byKey[key].items.push(c);
+      });
+      groups.sort(function (a, b) { return new Date(b.grantedAt) - new Date(a.grantedAt); });
+      torEdoGroups = groups;
+
+      document.getElementById('tor-edo-stat-events').textContent = groups.length;
+      document.getElementById('tor-edo-stat-granted').textContent = torEdoRaw.length;
+      document.getElementById('tor-edo-stat-redeemed').textContent = torEdoRaw.filter(function (c) { return c.status === 'redeemed'; }).length;
+      document.getElementById('tor-edo-stat-expired').textContent = torEdoRaw.filter(function (c) { return c.status === 'expired'; }).length;
+
+      renderEventDayOffReportTable();
+    } catch (e) {
+      torEdoGroups = [];
+      torEdoRaw = [];
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:20px;">Could not load report.</td></tr>';
+    }
+  }
+
+  // Never redeemed and the "Must Be Used By" date has passed -- blocked
+  // from redemption on the staff side once this happens.
+  function torEdoStatus(c) {
+    if (c.redeemed_date) return 'redeemed';
+    if (c.expires_at && c.expires_at < torEdoToday) return 'expired';
+    return 'awaiting';
+  }
+
+  function torEdoStaffLine(c) {
+    var ini = c.resolvedName.split(' ').filter(Boolean).slice(0, 2).map(function (p) { return p[0].toUpperCase(); }).join('');
+    var badge = c.status === 'redeemed'
+      ? '<span class="badge" style="background:#FAEEDA;color:#854F0B;">Redeemed · ' + new Date(c.redeemed_date + 'T00:00:00').toLocaleDateString('en-MY', { day: 'numeric', month: 'short' }) + '</span>'
+      : c.status === 'expired'
+      ? '<span class="badge" style="background:#E2E8E5;color:var(--text3);">Expired</span>'
+      : '<span class="badge" style="background:var(--bg);color:var(--text3);border:1px solid var(--border);">Awaiting Date</span>';
+    return '<div class="edo-staff-line"><div class="edo-av-sm">' + ini + '</div>'
+      + '<div class="edo-staff-line-name">' + escHtml(c.resolvedName) + '</div>' + badge
+      + '</div>';
+  }
+
+  function torEdoVisibleGroups() {
+    var q = (document.getElementById('tor-edo-search-input').value || '').trim().toLowerCase();
+    if (!q) return torEdoGroups;
+    return torEdoGroups.filter(function (g) {
+      if (g.reason.toLowerCase().indexOf(q) !== -1) return true;
+      return g.items.some(function (c) { return c.resolvedName.toLowerCase().indexOf(q) !== -1; });
+    });
+  }
+
+  function renderEventDayOffReportTable() {
+    var tbody = document.getElementById('tor-edo-table-body');
+    if (!tbody) return;
+    var groups = torEdoVisibleGroups();
+    if (!groups.length) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:20px;">No Event Day Off credits match.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = groups.map(function (g, gi) {
+      var counts = { awaiting: 0, redeemed: 0, expired: 0 };
+      g.items.forEach(function (c) { counts[c.status]++; });
+      var grantedLabel = new Date(g.grantedAt).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' });
+      var expiryLabel = g.expiresAt ? new Date(g.expiresAt + 'T00:00:00').toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' }) : '<span style="color:var(--text3);">No expiry</span>';
+      var expiredCell = counts.expired ? '<span class="badge" style="background:#FCEBEB;color:var(--red-text);">' + counts.expired + '</span>' : '<span class="badge" style="background:#E2E8E5;color:var(--text3);">0</span>';
+      var detailRow = '<tr id="tor-edo-detail-' + gi + '" style="display:none;"><td colspan="8" style="background:var(--bg);padding:10px 14px;">'
+        + g.items.slice().sort(function (a, b) { return a.resolvedName.localeCompare(b.resolvedName); }).map(torEdoStaffLine).join('')
+        + '</td></tr>';
+      return '<tr>'
+        + '<td style="font-weight:600;">🏆 ' + escHtml(g.reason) + '</td>'
+        + '<td>' + grantedLabel + '</td>'
+        + '<td>' + expiryLabel + '</td>'
+        + '<td>' + g.items.length + '</td>'
+        + '<td>' + counts.redeemed + '</td>'
+        + '<td>' + expiredCell + '</td>'
+        + '<td>' + counts.awaiting + '</td>'
+        + '<td><span class="view-staff-link" onclick="toggleEdoReportGroup(' + gi + ')" id="tor-edo-toggle-' + gi + '">View staff <span style="font-size:9px;">▾</span></span></td>'
+        + '</tr>'
+        + detailRow;
+    }).join('');
+  }
+
+  function toggleEdoReportGroup(gi) {
+    var row = document.getElementById('tor-edo-detail-' + gi);
+    var link = document.getElementById('tor-edo-toggle-' + gi);
+    if (!row || !link) return;
+    var isHidden = row.style.display === 'none';
+    row.style.display = isHidden ? 'table-row' : 'none';
+    link.innerHTML = isHidden ? 'Hide staff <span style="font-size:9px;">▴</span>' : 'View staff <span style="font-size:9px;">▾</span>';
+  }
+
+  // Per-credit granularity (one row per staff member), not per event, so
+  // HR gets a full audit trail -- who got what, and what happened to it.
+  function downloadEventDayOffReportCsv() {
+    var q = (document.getElementById('tor-edo-search-input').value || '').trim().toLowerCase();
+    var rows = !q ? torEdoRaw : torEdoRaw.filter(function (c) {
+      return c.reason.toLowerCase().indexOf(q) !== -1 || c.resolvedName.toLowerCase().indexOf(q) !== -1;
+    });
+    var headers = ['Event / Reason', 'Staff Name', 'Granted Date', 'Must Be Used By', 'Status', 'Redeemed Date'];
+    function csvEscape(v) {
+      v = String(v == null ? '' : v);
+      if (/[",\n]/.test(v)) v = '"' + v.replace(/"/g, '""') + '"';
+      return v;
+    }
+    var lines = [headers.join(',')];
+    rows.forEach(function (c) {
+      lines.push([
+        c.reason, c.resolvedName, (c.created_at || '').slice(0, 10), c.expires_at || '',
+        c.status, c.redeemed_date || ''
+      ].map(csvEscape).join(','));
+    });
+    var blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'event-day-off-' + localDateStr() + '.csv';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
