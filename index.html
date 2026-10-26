@@ -244,14 +244,6 @@
   }
   .page-subheader-title { font-size: 16px; font-weight: 700; color: #fff; }
 
-  /* ── MENU ── */
-  .menu-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 20px 16px 4px; }
-  .menu-row { display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; }
-  .menu-ic {
-    width: 65px; height: 65px; border-radius: 19px;
-    display: flex; align-items: center; justify-content: center; font-size: 28px;
-  }
-  .menu-label { font-size: 12px; font-weight: 600; color: var(--text-primary); text-align: center; line-height: 1.3; }
   .qa-title { font-size: 17px; font-weight: 700; color: var(--text-primary); margin: 24px 0 14px; }
   .qa-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
   .qa-item { display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; }
@@ -970,6 +962,23 @@
           <div class="qa-ic" style="background:var(--coral-bg);color:var(--coral-text);"><i class="ti ti-clipboard-x"></i></div>
           <div class="qa-label">Faulty Complain</div>
         </div>
+        <!-- Moved here from the retired More page -->
+        <div class="qa-item" onclick="switchTabByName('announce')">
+          <div class="qa-ic" style="background:var(--purple-bg);color:var(--purple-text);"><i class="ti ti-speakerphone"></i></div>
+          <div class="qa-label">Announcement</div>
+        </div>
+        <div class="qa-item" onclick="switchTabByName('event'); loadStaffEvents()">
+          <div class="qa-ic" style="background:var(--red-bg);color:var(--red-text);"><i class="ti ti-calendar"></i></div>
+          <div class="qa-label">Event</div>
+        </div>
+        <div class="qa-item" onclick="switchTabByName('duty')">
+          <div class="qa-ic" style="background:var(--amber-bg);color:var(--amber-text);"><i class="ti ti-users"></i></div>
+          <div class="qa-label">On Duty</div>
+        </div>
+        <div class="qa-item" onclick="switchNav('estatetrip'); loadEstateTrips()">
+          <div class="qa-ic" style="background:var(--estate-bg);color:var(--estate-text);"><i class="ti ti-car"></i></div>
+          <div class="qa-label">Estate Trip</div>
+        </div>
       </div>
 
     </div><!-- /home-content -->
@@ -1472,28 +1481,6 @@
 
     </div><!-- /faulty -->
 
-    <!-- ── MENU ── -->
-    <div class="screen-section" id="screen-menu">
-      <div class="menu-grid">
-        <div class="menu-row" onclick="switchTabByName('announce')">
-          <div class="menu-ic" style="background:var(--purple-bg);color:var(--purple-text);"><i class="ti ti-speakerphone"></i></div>
-          <div class="menu-label">Announcement</div>
-        </div>
-        <div class="menu-row" onclick="switchTabByName('event'); loadStaffEvents()">
-          <div class="menu-ic" style="background:var(--red-bg);color:var(--red-text);"><i class="ti ti-calendar"></i></div>
-          <div class="menu-label">Event</div>
-        </div>
-        <div class="menu-row" onclick="switchTabByName('duty')">
-          <div class="menu-ic" style="background:var(--amber-bg);color:var(--amber-text);"><i class="ti ti-users"></i></div>
-          <div class="menu-label">On Duty</div>
-        </div>
-        <div class="menu-row" onclick="switchNav('estatetrip'); loadEstateTrips()">
-          <div class="menu-ic" style="background:var(--estate-bg);color:var(--estate-text);"><i class="ti ti-car"></i></div>
-          <div class="menu-label">Estate Trip</div>
-        </div>
-      </div>
-    </div><!-- /menu -->
-
   </div><!-- /screen-body -->
 
   <!-- BOTTOM NAV -->
@@ -1505,18 +1492,14 @@
     <div class="nav-item" id="nav-settings" onclick="window.location.href='profile.html'">
       <i class="ti ti-settings"></i><span>Setting</span>
     </div>
-    <div class="nav-item" id="nav-menu" onclick="switchTabByName('menu')">
-      <i class="ti ti-menu-2"></i><span>More</span>
-    </div>
   </div>
   </div>
-  <!-- Announcement/Event (previous bottom-nav icons) are now reached via
-       the Menu screen's rows, calling the exact same switchTabByName()
-       used here. Setting reuses the existing profile.html link (same
-       destination the top avatar and old "Profile Settings" menu row
-       already used). Booking, Estate Trip and Time Off (previously bottom-nav icons) are
-       now reached via the Menu screen's rows, which call the exact same
-       switchNav()/window.open() calls that used to live here. -->
+  <!-- Announcement, Event, On Duty, and Estate Trip (previously the "More"
+       tab's own rows) are now reached via the Home screen's Quick Access
+       grid instead -- the More page held only those 4 rows, so it's
+       retired along with this bottom-nav icon rather than left empty.
+       Setting reuses the existing profile.html link (same destination the
+       top avatar and old "Profile Settings" menu row already used). -->
 
 </div><!-- /phone -->
 </div><!-- /phone-wrap -->
