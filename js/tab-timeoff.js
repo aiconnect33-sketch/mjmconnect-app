@@ -236,9 +236,17 @@ function showCreditRedeemForm(id) {
   var container = document.getElementById('to-credit-action-' + id);
   if (!c || !container) return;
   if (timeoffCreditExpired(c)) return; // defense in depth -- the button isn't rendered once expired
+  var today = timeoffState.today || localDateStr();
+  // "Must Be Used By" is the latest day OFF allowed, not a deadline to act
+  // by -- the day they pick has to fall on or before it, so the date input
+  // itself refuses anything past that (and anything already in the past).
+  var rangeNote = c.expires_at
+    ? ('Pick any date from today up to ' + new Date(c.expires_at + 'T00:00:00').toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' }) + '.')
+    : 'Pick any date from today onward.';
   container.innerHTML = '<div class="to-credit-expand">'
     + '<label class="to-credit-label">Which day will you take off?</label>'
-    + '<input class="to-credit-input" type="date" id="to-credit-date-' + id + '" value="' + (c.redeemed_date || localDateStr()) + '">'
+    + '<input class="to-credit-input" type="date" id="to-credit-date-' + id + '" min="' + today + '"' + (c.expires_at ? ' max="' + c.expires_at + '"' : '') + ' value="' + (c.redeemed_date && c.redeemed_date >= today ? c.redeemed_date : today) + '">'
+    + '<div style="font-size:10.5px;color:var(--text-light);margin:-4px 0 10px;">' + rangeNote + '</div>'
     + '<button class="to-credit-confirm" onclick="confirmCreditRedeem(' + id + ')">Confirm Day Off</button>'
     + '</div>';
 }
@@ -249,6 +257,12 @@ async function confirmCreditRedeem(id) {
   var input = document.getElementById('to-credit-date-' + id);
   var date = input ? input.value : '';
   if (!date) { alert('Please choose a date.'); return; }
+  var today = timeoffState.today || localDateStr();
+  if (date < today) { alert('Please pick today or a future date.'); return; }
+  if (c && c.expires_at && date > c.expires_at) {
+    alert('This credit must be used by ' + new Date(c.expires_at + 'T00:00:00').toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' }) + '. Please pick a date on or before then.');
+    return;
+  }
   try {
     var res = await fetch(SURL + '/rest/v1/event_day_off_credits?id=eq.' + id, {
       method: 'PATCH',
