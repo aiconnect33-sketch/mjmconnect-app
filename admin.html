@@ -417,7 +417,24 @@ html, body {
 .to-correct-row input { width: 100%; box-sizing: border-box; border: 1px solid var(--blue-text); border-radius: 8px; padding: 8px 10px; font-size: 13px; font-family: inherit; }
 .to-edit-icon { flex-shrink: 0; cursor: pointer; color: var(--text3); font-size: 14px; padding: 4px 6px; margin: -4px -6px; }
 .to-pill-wrap { display: flex; background: var(--surface); border-radius: var(--r-lg); border: 0.5px solid var(--border); padding: 4px; gap: 4px; margin: 16px 0 10px; }
-.to-pill { flex: 1; padding: 7px; border-radius: var(--r-md); border: none; font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+.to-pill { flex: 1; min-width: 0; padding: 7px 4px; border-radius: var(--r-md); border: none; font-family: inherit; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Event Day Off -- grouped-by-event cards (one card per grant, not per
+   staff), so a card with 11+ people doesn't repeat the event name 11
+   times, and HR can see at a glance how many have redeemed. */
+.edo-event-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 14px; margin-bottom: 10px; }
+.edo-event-title { font-size: 12.5px; font-weight: 800; color: var(--text); }
+.edo-event-sub { font-size: 10.5px; color: var(--text3); margin-top: 2px; }
+.edo-event-stats { display: flex; gap: 6px; margin: 11px 0 4px; flex-wrap: wrap; }
+.edo-stat { font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 20px; }
+.edo-stat.awaiting { background: var(--bg); color: var(--text3); border: 1px solid var(--border); }
+.edo-stat.redeemed { background: #FAEEDA; color: #854F0B; }
+.edo-stat.expired { background: #E2E8E5; color: var(--text3); }
+.edo-event-staff { border-top: 1px solid var(--border); margin-top: 10px; padding-top: 6px; }
+.edo-staff-line { display: flex; align-items: center; gap: 8px; padding: 6px 0; }
+.edo-av-sm { width: 24px; height: 24px; border-radius: 50%; background: var(--green-bg); color: var(--green-text); display: flex; align-items: center; justify-content: center; font-size: 9.5px; font-weight: 700; flex-shrink: 0; }
+.edo-staff-line-name { flex: 1; font-size: 12px; font-weight: 600; color: var(--text); }
+.edo-event-toggle { text-align: center; font-size: 11.5px; font-weight: 600; color: var(--green); padding: 8px 0 0; cursor: pointer; }
 .to-meta { font-size: 11px; color: var(--text2); margin: 2px 0 10px; }
 .to-day-label { font-size: 10px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.04em; margin: 10px 0 6px; }
 .to-cancel-toggle { width: 100%; margin-top: 2px; background: none; border: 1px dashed var(--border); color: var(--text2); font-size: 11px; font-weight: 600; border-radius: var(--r-md); padding: 8px; font-family: inherit; cursor: pointer; }
@@ -1787,10 +1804,10 @@ html, body {
         <button class="btn-ghost" onclick="hideEventDayOffForm()">Cancel</button>
       </div>
 
-      <div id="edo-list"></div>
-
       <!-- Pill toggle (same style as the staff app) in place of the two
-           separately-collapsible "My Records"/"All Records" rows. -->
+           separately-collapsible "My Records"/"All Records" rows. A third
+           pill controls only which records are shown here -- granting
+           itself stays above, unaffected by which one is selected. -->
       <div class="to-pill-wrap">
         <button id="admin-timeoff-pill-mine" class="to-pill" onclick="switchAdminTimeOffPill('mine')"
           style="background:var(--green);color:#fff;">
@@ -1800,12 +1817,17 @@ html, body {
           style="background:transparent;color:var(--text2);">
           <i class="ti ti-users"></i> All Records
         </button>
+        <button id="admin-timeoff-pill-edo" class="to-pill" onclick="switchAdminTimeOffPill('edo')"
+          style="background:transparent;color:var(--text2);">
+          <i class="ti ti-trophy"></i> Event Day Off
+        </button>
       </div>
 
       <div id="admin-timeoff-my-records">
       </div>
       <div id="timeoff-list" style="display:none;">
       </div>
+      <div id="edo-list" style="display:none;"></div>
 
     </div><!-- /timeoff -->
 
@@ -6154,23 +6176,86 @@ html, body {
       (nameMapRows || []).forEach(function (p) { if (p.email && p.full_name) edoNameMap[p.email.toLowerCase()] = p.full_name; });
 
       var data = await sbFetch('GET', '/rest/v1/event_day_off_credits?order=created_at.desc&limit=200');
-      if (!data || !data.length) { el.innerHTML = ''; return; }
-      el.innerHTML = '<div class="card">' + data.map(function (c) {
-        var displayName = ((c.staff_email || '').toLowerCase() && edoNameMap[(c.staff_email || '').toLowerCase()]) || c.staff_name;
-        var ini = displayName.split(' ').filter(Boolean).slice(0, 2).map(function (p) { return p[0].toUpperCase(); }).join('');
-        var redeemed = !!c.redeemed_date;
-        var statusBadge = redeemed
+      if (!data || !data.length) { el.innerHTML = '<div class="card"><div style="font-size:12px;color:var(--text3);text-align:center;padding:14px 0;">No Event Day Off credits yet.</div></div>'; return; }
+
+      var today = localDateStr();
+      function edoName(c) {
+        var email = (c.staff_email || '').toLowerCase();
+        return (email && edoNameMap[email]) || c.staff_name;
+      }
+      // Never redeemed and the "Must Be Used By" date has passed -- blocked
+      // from redemption on the staff side once this happens.
+      function edoStatus(c) {
+        if (c.redeemed_date) return 'redeemed';
+        if (c.expires_at && c.expires_at < today) return 'expired';
+        return 'awaiting';
+      }
+      function edoStaffLine(c) {
+        var name = edoName(c);
+        var ini = name.split(' ').filter(Boolean).slice(0, 2).map(function (p) { return p[0].toUpperCase(); }).join('');
+        var status = edoStatus(c);
+        var badge = status === 'redeemed'
           ? '<span class="badge" style="background:#FAEEDA;color:#854F0B;">Redeemed · ' + new Date(c.redeemed_date + 'T00:00:00').toLocaleDateString('en-MY', { day: 'numeric', month: 'short' }) + '</span>'
+          : status === 'expired'
+          ? '<span class="badge" style="background:#E2E8E5;color:var(--text3);">Expired</span>'
           : '<span class="badge" style="background:var(--bg);color:var(--text3);border:1px solid var(--border);">Awaiting Date</span>';
-        return '<div class="person-row">'
-          + '<div class="av av-g">' + ini + '</div>'
-          + '<div style="flex:1;"><div class="p-name">🏆 ' + escHtml(displayName) + '</div>'
-          + '<div class="p-sub">' + escHtml(c.reason) + '</div></div>'
-          + '<div style="text-align:right;">' + statusBadge
-          + '<div class="btn-icon danger" style="margin-top:4px;" onclick="revokeEventDayOff(' + c.id + ')" title="Revoke"><i class="ti ti-trash"></i></div>'
-          + '</div></div>';
-      }).join('') + '</div>';
+        return '<div class="edo-staff-line"><div class="edo-av-sm">' + ini + '</div>'
+          + '<div class="edo-staff-line-name">' + escHtml(name) + '</div>' + badge
+          + '<div class="btn-icon danger" style="width:22px;height:22px;font-size:11px;flex-shrink:0;margin-left:6px;" onclick="revokeEventDayOff(' + c.id + ')" title="Revoke"><i class="ti ti-trash"></i></div>'
+          + '</div>';
+      }
+
+      // One card per EVENT (grouped by reason + the moment it was granted),
+      // not one row per staff -- otherwise a single event granted to 11
+      // people would repeat its own name 11 times. A single grant POSTs
+      // every selected staff's row in one request, so they always share
+      // one created_at (same database transaction) -- reliable to group on.
+      var groups = [], byKey = {};
+      data.forEach(function (c) {
+        var key = c.reason + '|' + (c.created_at || '').slice(0, 10);
+        if (!byKey[key]) {
+          byKey[key] = { reason: c.reason, grantedAt: c.created_at, expiresAt: c.expires_at, grantedBy: c.granted_by, items: [] };
+          groups.push(byKey[key]);
+        }
+        byKey[key].items.push(c);
+      });
+      groups.sort(function (a, b) { return new Date(b.grantedAt) - new Date(a.grantedAt); });
+
+      el.innerHTML = groups.map(function (g, gi) {
+        var counts = { awaiting: 0, redeemed: 0, expired: 0 };
+        g.items.forEach(function (c) { counts[edoStatus(c)]++; });
+        var stats = (counts.awaiting ? '<span class="edo-stat awaiting">' + counts.awaiting + ' Awaiting</span>' : '')
+          + (counts.redeemed ? '<span class="edo-stat redeemed">' + counts.redeemed + ' Redeemed</span>' : '')
+          + (counts.expired ? '<span class="edo-stat expired">' + counts.expired + ' Expired</span>' : '');
+        var grantedLabel = new Date(g.grantedAt).toLocaleDateString('en-MY', { day: 'numeric', month: 'short' });
+        var expiryLabel = g.expiresAt ? ('expires ' + new Date(g.expiresAt + 'T00:00:00').toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' })) : 'no expiry';
+        var sorted = g.items.slice().sort(function (a, b) { return edoName(a).localeCompare(edoName(b)); });
+        var visible = sorted.slice(0, 5), rest = sorted.slice(5);
+        var moreBlock = rest.length
+          ? '<div id="edo-more-' + gi + '" style="display:none;">' + rest.map(edoStaffLine).join('') + '</div>'
+          : '';
+        var toggle = rest.length
+          ? '<div class="edo-event-toggle" id="edo-toggle-' + gi + '" onclick="toggleEdoMore(' + gi + ')">Show ' + rest.length + ' more staff ▾</div>'
+          : '';
+        return '<div class="edo-event-card">'
+          + '<div class="edo-event-title">🏆 ' + escHtml(g.reason) + '</div>'
+          + '<div class="edo-event-sub">Granted ' + grantedLabel + ' by ' + escHtml(g.grantedBy || 'HR') + ' · ' + g.items.length + (g.items.length === 1 ? ' staff' : ' staff') + ' · ' + expiryLabel + '</div>'
+          + '<div class="edo-event-stats">' + stats + '</div>'
+          + '<div class="edo-event-staff">' + visible.map(edoStaffLine).join('') + moreBlock + '</div>'
+          + toggle
+          + '</div>';
+      }).join('');
     } catch (e) { el.innerHTML = ''; }
+  }
+
+  function toggleEdoMore(gi) {
+    var more = document.getElementById('edo-more-' + gi);
+    var toggle = document.getElementById('edo-toggle-' + gi);
+    if (!more || !toggle) return;
+    var isHidden = more.style.display === 'none';
+    more.style.display = isHidden ? 'block' : 'none';
+    var count = more.querySelectorAll('.edo-staff-line').length;
+    toggle.textContent = isHidden ? 'Show less ▴' : 'Show ' + count + ' more staff ▾';
   }
 
   async function revokeEventDayOff(id) {
@@ -6345,18 +6430,19 @@ html, body {
     var el = document.getElementById('admin-timeoff-my-records');
     if (el) el.innerHTML = renderAdminTimeOffRecords(timeoffMineDataCache, localDateStr());
   }
-  // Mirrors switchBookPill/switchTimeOffPill -- both panels are already
-  // rendered in full, so switching is just a display + pill-style toggle.
+  // Mirrors switchBookPill/switchTimeOffPill -- all three panels are
+  // already rendered in full, so switching is just a display + pill-style
+  // toggle.
   function switchAdminTimeOffPill(which) {
-    var isMine = which === 'mine';
-    document.getElementById('admin-timeoff-my-records').style.display = isMine ? 'block' : 'none';
-    document.getElementById('timeoff-list').style.display             = isMine ? 'none'  : 'block';
-    var pMine = document.getElementById('admin-timeoff-pill-mine');
-    var pAll  = document.getElementById('admin-timeoff-pill-all');
-    pMine.style.background = isMine ? 'var(--green)' : 'transparent';
-    pMine.style.color      = isMine ? '#fff' : 'var(--text2)';
-    pAll.style.background  = isMine ? 'transparent' : 'var(--green)';
-    pAll.style.color       = isMine ? 'var(--text2)' : '#fff';
+    document.getElementById('admin-timeoff-my-records').style.display = which === 'mine' ? 'block' : 'none';
+    document.getElementById('timeoff-list').style.display             = which === 'all'  ? 'block' : 'none';
+    document.getElementById('edo-list').style.display                 = which === 'edo'  ? 'block' : 'none';
+    [['mine', 'admin-timeoff-pill-mine'], ['all', 'admin-timeoff-pill-all'], ['edo', 'admin-timeoff-pill-edo']].forEach(function (pair) {
+      var el = document.getElementById(pair[1]);
+      var active = which === pair[0];
+      el.style.background = active ? 'var(--green)' : 'transparent';
+      el.style.color       = active ? '#fff' : 'var(--text2)';
+    });
   }
 
   function adminToggleTimeOffCorrection(key) {

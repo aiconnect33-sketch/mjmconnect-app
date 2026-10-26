@@ -157,15 +157,22 @@ async function loadTimeOff() {
   }
 
   // Event Day Off credits -- a separate table from time_off_records, so a
-  // failure here is kept independent of the rest of the tab above.
-  var creditsEl = document.getElementById('timeoff-credits');
-  if (creditsEl) {
+  // failure here is kept independent of the rest of the tab above. The note
+  // (always visible, if there's anything to say) and the cards (only shown
+  // under the "Event Day Off" pill) are rendered separately.
+  var noteEl = document.getElementById('timeoff-credit-note');
+  var edoEl  = document.getElementById('timeoff-edo');
+  if (noteEl || edoEl) {
     try {
       var creditRows = await fetch(SURL + '/rest/v1/event_day_off_credits?staff_email=eq.' + encodeURIComponent(me.email) + '&order=created_at.desc&limit=20',
         { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } }).then(function (r) { return r.json(); });
       timeoffCreditsState.mine = creditRows || [];
-      creditsEl.innerHTML = renderTimeOffCredits();
-    } catch (e) { creditsEl.innerHTML = ''; }
+      if (noteEl) noteEl.innerHTML = renderTimeOffCreditNote();
+      if (edoEl) edoEl.innerHTML = renderTimeOffCredits();
+    } catch (e) {
+      if (noteEl) noteEl.innerHTML = '';
+      if (edoEl) edoEl.innerHTML = '';
+    }
   }
 }
 
@@ -175,15 +182,27 @@ async function loadTimeOff() {
 // never time_off_records, so neither is ever touched by this feature. ──
 var timeoffCreditsState = { mine: [] };
 
+function renderTimeOffCreditNote() {
+  return timeoffCreditsState.mine.length ? '<div class="to-credit-note">🏆 Event Day Off credits don\'t count towards the limit above.</div>' : '';
+}
+
+// Never redeemed, and "Must Be Used By" has passed -- redemption is blocked
+// from here on, regardless of whether the card above was ever opened.
+function timeoffCreditExpired(c) {
+  var today = timeoffState.today || localDateStr();
+  return !c.redeemed_date && !!c.expires_at && c.expires_at < today;
+}
+
 function renderTimeOffCredits() {
   var rows = timeoffCreditsState.mine;
-  if (!rows.length) return '';
+  if (!rows.length) return '<div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">No Event Day Off credits yet.</div>';
   var today = timeoffState.today || localDateStr();
-  var html = '<div class="to-credit-note">🏆 Event Day Off credits don\'t count towards the limit above.</div>';
+  var html = '';
   rows.forEach(function (c) {
     var redeemed = !!c.redeemed_date;
-    var canEdit = !redeemed || c.redeemed_date >= today;
-    html += '<div class="to-reward-card">'
+    var expired = timeoffCreditExpired(c);
+    var canEdit = redeemed ? (c.redeemed_date >= today) : !expired;
+    html += '<div class="to-reward-card' + (expired ? ' expired' : '') + '">'
       + '<div class="to-reward-top"><div class="to-reward-icon">🏆</div>'
       + '<div><div class="to-reward-title">' + (redeemed ? 'Event Reward — Full Day Off' : 'Event Day Off Credit') + '</div>'
       + '<div class="to-reward-sub">' + escHtml(c.reason) + '</div></div></div>';
@@ -191,6 +210,11 @@ function renderTimeOffCredits() {
       var when = new Date(c.redeemed_date + 'T00:00:00').toLocaleDateString('en-MY', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
       html += '<div class="to-reward-footer"><span>' + when + ' · Granted by ' + escHtml(c.granted_by || 'HR') + '</span>'
         + '<span class="to-reward-badge">Full Day</span></div>';
+    } else if (expired) {
+      var wasDue = new Date(c.expires_at + 'T00:00:00').toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' });
+      html += '<div class="to-reward-footer"><span>Granted by ' + escHtml(c.granted_by || 'HR') + ' · was due by ' + wasDue + '</span>'
+        + '<span class="to-reward-badge expired">Expired</span></div>'
+        + '<div class="to-expired-note">This credit expired before it was used and can no longer be redeemed. Contact HR if this looks wrong.</div>';
     } else {
       var expiryNote = c.expires_at ? ('use by ' + new Date(c.expires_at + 'T00:00:00').toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' })) : 'no expiry';
       html += '<div class="to-reward-footer" style="border-top:none;margin-top:0;padding-top:0;"><span>Granted by ' + escHtml(c.granted_by || 'HR') + ' · ' + expiryNote + '</span></div>';
@@ -211,6 +235,7 @@ function showCreditRedeemForm(id) {
   var c = timeoffCreditsState.mine.find(function (x) { return x.id === id; });
   var container = document.getElementById('to-credit-action-' + id);
   if (!c || !container) return;
+  if (timeoffCreditExpired(c)) return; // defense in depth -- the button isn't rendered once expired
   container.innerHTML = '<div class="to-credit-expand">'
     + '<label class="to-credit-label">Which day will you take off?</label>'
     + '<input class="to-credit-input" type="date" id="to-credit-date-' + id + '" value="' + (c.redeemed_date || localDateStr()) + '">'
@@ -219,6 +244,8 @@ function showCreditRedeemForm(id) {
 }
 
 async function confirmCreditRedeem(id) {
+  var c = timeoffCreditsState.mine.find(function (x) { return x.id === id; });
+  if (c && timeoffCreditExpired(c)) { alert('This credit has expired and can no longer be redeemed.'); return; }
   var input = document.getElementById('to-credit-date-' + id);
   var date = input ? input.value : '';
   if (!date) { alert('Please choose a date.'); return; }
@@ -483,15 +510,15 @@ function rerenderTimeOffSections() {
 // Mirrors switchBookPill in js/tab-book.js -- both panels are already
 // rendered in full, so switching is just a display + pill-style toggle.
 function switchTimeOffPill(which) {
-  var isMine = which === 'mine';
-  document.getElementById('timeoff-mine').style.display = isMine ? 'block' : 'none';
-  document.getElementById('timeoff-all').style.display  = isMine ? 'none'  : 'block';
-  var pMine = document.getElementById('timeoff-pill-mine');
-  var pAll  = document.getElementById('timeoff-pill-all');
-  pMine.style.background = isMine ? 'var(--green-dark)' : 'transparent';
-  pMine.style.color      = isMine ? '#fff' : 'var(--text-secondary)';
-  pAll.style.background  = isMine ? 'transparent' : 'var(--green-dark)';
-  pAll.style.color       = isMine ? 'var(--text-secondary)' : '#fff';
+  document.getElementById('timeoff-mine').style.display = which === 'mine' ? 'block' : 'none';
+  document.getElementById('timeoff-all').style.display  = which === 'all'  ? 'block' : 'none';
+  document.getElementById('timeoff-edo').style.display  = which === 'edo'  ? 'block' : 'none';
+  [['mine', 'timeoff-pill-mine'], ['all', 'timeoff-pill-all'], ['edo', 'timeoff-pill-edo']].forEach(function (pair) {
+    var el = document.getElementById(pair[1]);
+    var active = which === pair[0];
+    el.style.background = active ? 'var(--green-dark)' : 'transparent';
+    el.style.color       = active ? '#fff' : 'var(--text-secondary)';
+  });
 }
 function toggleTimeOffCancelled(which) {
   if (which === 'mine') timeoffState.mineCancelledOpen = !timeoffState.mineCancelledOpen;
