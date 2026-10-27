@@ -7549,7 +7549,7 @@ html, body {
         var d = fmtDateLong(ev.event_date);
         var t = ev.event_time ? ' · ' + fmtEventTime(ev.event_time) : '';
         return '<div class="ann-item card-event" data-event-id="' + ev.id + '">'
-          + '<div class="ann-meta"><span class="badge b-purple">Event</span><span class="ann-time">' + d + t + '</span></div>'
+          + '<div class="ann-meta"><span class="badge b-purple">Event</span><span class="ann-time" style="color:var(--text);font-weight:700;">' + d + t + '</span></div>'
           + '<div class="ann-title">' + escHtml(ev.title) + '</div>'
           + (ev.description ? '<div class="ann-body">' + escHtml(ev.description) + '</div>' : '')
           + '<div class="ann-actions"><div class="ann-author"><i class="ti ti-user"></i> ' + escHtml(ev.created_by || 'HR') + '</div>'
