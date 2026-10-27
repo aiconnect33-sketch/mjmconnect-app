@@ -12,32 +12,47 @@ function initStaffCalendar() {
 }
 
 async function loadStaffCalendar() {
+  // Show the new month immediately (label + empty grid) instead of leaving
+  // the old month on screen for however long the 3 fetches below take --
+  // they used to run one after another, so clicking next/prev visibly hung
+  // for the sum of all three round trips.
+  var reqYear = staffCalYear, reqMonth = staffCalMonth;
+  function isCurrent() { return reqYear === staffCalYear && reqMonth === staffCalMonth; }
   staffCalLeave = {}; staffCalLeaveDetail = {}; staffCalEvents = {}; staffCalEstate = {};
-  if (window.location.protocol === 'file:') { renderStaffCalendar(); return; }
+  renderStaffCalendar();
+  if (window.location.protocol === 'file:') return;
+
+  var leave = {}, leaveDetail = {}, events = {}, estate = {};
   try {
     // Leave for the currently-viewed month, straight from OPISPRO (see
     // docs/opispro-leaves-setup.md) -- same source js/tab-leave.js uses.
-    var monthStart = staffCalYear + '-' + String(staffCalMonth+1).padStart(2,'0') + '-01';
-    var daysInThisMonth = new Date(staffCalYear, staffCalMonth + 1, 0).getDate();
-    var leaveMonth = await fetchOpisproLeaves(monthStart, daysInThisMonth);
+    var monthStart = reqYear + '-' + String(reqMonth+1).padStart(2,'0') + '-01';
+    var daysInThisMonth = new Date(reqYear, reqMonth + 1, 0).getDate();
+    var results = await Promise.all([
+      fetchOpisproLeaves(monthStart, daysInThisMonth),
+      sbGet('events', 'select=event_date&limit=200'),
+      sbGet('estate_trips', 'select=trip_date&limit=200')
+    ]);
+    if (!isCurrent()) return; // user already navigated to a different month
+    var leaveMonth = results[0], evData = results[1], estateData = results[2];
     if (leaveMonth && leaveMonth.users) {
       leaveMonth.users.forEach(function(u) {
         u.leaves.forEach(function(lv) {
-          staffCalLeave[lv.date] = true;
-          if (!staffCalLeaveDetail[lv.date]) staffCalLeaveDetail[lv.date] = [];
-          staffCalLeaveDetail[lv.date].push({ name: u.name, leave_type: lv.leave_type, day_type: lv.day_type });
+          leave[lv.date] = true;
+          if (!leaveDetail[lv.date]) leaveDetail[lv.date] = [];
+          leaveDetail[lv.date].push({ name: u.name, leave_type: lv.leave_type, day_type: lv.day_type });
         });
       });
     }
-    var evData = await sbGet('events', 'select=event_date&limit=200');
     if (evData && evData.length) {
-      evData.forEach(function(e){ staffCalEvents[e.event_date] = true; });
+      evData.forEach(function(e){ events[e.event_date] = true; });
     }
-    var estateData = await sbGet('estate_trips', 'select=trip_date&limit=200');
     if (estateData && estateData.length) {
-      estateData.forEach(function(t){ staffCalEstate[t.trip_date] = true; });
+      estateData.forEach(function(t){ estate[t.trip_date] = true; });
     }
   } catch(e) {}
+  if (!isCurrent()) return;
+  staffCalLeave = leave; staffCalLeaveDetail = leaveDetail; staffCalEvents = events; staffCalEstate = estate;
   renderStaffCalendar();
 }
 

@@ -7319,36 +7319,51 @@ html, body {
   function calNext() { calMonth++; if (calMonth > 11) { calMonth = 0; calYear++; } loadAdminCalendar(); }
 
   async function loadAdminCalendar() {
+    // Show the new month immediately (label + empty grid) instead of
+    // leaving the old month on screen for however long the 3 fetches
+    // below take -- they used to run one after another, so clicking
+    // next/prev visibly hung for the sum of all three round trips.
+    var reqYear = calYear, reqMonth = calMonth;
+    function isCurrent() { return reqYear === calYear && reqMonth === calMonth; }
+    adminCalLeaveDetail = {};
+    renderAdminCalendar({}, {}, {});
+
     var leaveDates = {};
     var eventDates = {};
     var estateDates = {};
-    adminCalLeaveDetail = {};
+    var leaveDetail = {};
     try {
       if (window.location.protocol !== 'file:') {
         // Leave for the currently-viewed month, straight from OPISPRO (see
         // docs/opispro-leaves-setup.md) -- same source js/tab-leave.js uses.
-        var monthStart = calYear + '-' + String(calMonth+1).padStart(2,'0') + '-01';
-        var daysInThisMonth = new Date(calYear, calMonth + 1, 0).getDate();
-        var leaveMonth = await fetchOpisproLeaves(monthStart, daysInThisMonth);
+        var monthStart = reqYear + '-' + String(reqMonth+1).padStart(2,'0') + '-01';
+        var daysInThisMonth = new Date(reqYear, reqMonth + 1, 0).getDate();
+        var results = await Promise.all([
+          fetchOpisproLeaves(monthStart, daysInThisMonth),
+          sbFetch('GET', '/rest/v1/events?select=event_date&limit=200'),
+          sbFetch('GET', '/rest/v1/estate_trips?select=trip_date&limit=200')
+        ]);
+        if (!isCurrent()) return; // user already navigated to a different month
+        var leaveMonth = results[0], evData = results[1], estData = results[2];
         if (leaveMonth && leaveMonth.users) {
           leaveMonth.users.forEach(function(u) {
             u.leaves.forEach(function(lv) {
               leaveDates[lv.date] = true;
-              if (!adminCalLeaveDetail[lv.date]) adminCalLeaveDetail[lv.date] = [];
-              adminCalLeaveDetail[lv.date].push({ name: u.name, leave_type: lv.leave_type, day_type: lv.day_type });
+              if (!leaveDetail[lv.date]) leaveDetail[lv.date] = [];
+              leaveDetail[lv.date].push({ name: u.name, leave_type: lv.leave_type, day_type: lv.day_type });
             });
           });
         }
-        var evData = await sbFetch('GET', '/rest/v1/events?select=event_date&limit=200');
         if (evData && evData.length) {
           evData.forEach(function(e){ eventDates[e.event_date] = true; });
         }
-        var estData = await sbFetch('GET', '/rest/v1/estate_trips?select=trip_date&limit=200');
         if (estData && estData.length) {
           estData.forEach(function(t){ estateDates[t.trip_date] = true; });
         }
       }
     } catch(e) {}
+    if (!isCurrent()) return;
+    adminCalLeaveDetail = leaveDetail;
     renderAdminCalendar(leaveDates, eventDates, estateDates);
   }
 
