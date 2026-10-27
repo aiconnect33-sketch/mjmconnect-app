@@ -59,7 +59,7 @@ That's it — no schema changes, no new secrets.
    (within the next 30 days), and the "Today on Leave" card right below
    the calendar should list real names pulled from OPISPRO.
 2. Open the Leave tab — it should show **Currently on Leave** and
-   **Upcoming Leave (next 14 days)**, read-only, no "Add Leave" button
+   **Upcoming Leave (next 3 weeks)**, read-only, no "Add Leave" button
    anywhere.
 3. Tap a day with a leave dot on the calendar — the day-detail sheet
    should list who's on leave that day.
