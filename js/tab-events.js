@@ -39,7 +39,7 @@ async function loadStaffEvents() {
       return '<div class="card" style="margin-bottom:10px;border-left:3px solid #534AB7;border-radius:0 var(--radius-lg) var(--radius-lg) 0;" data-event-id="' + escHtml(ev.id) + '" data-event-date="' + escHtml(ev.event_date) + '" data-event-time="' + escHtml(ev.event_time || '') + '" data-created-by-email="' + escHtml(ev.created_by_email || '') + '" data-created-by="' + escHtml(ev.created_by || 'Staff') + '">'
         + '<div class="card-meta">'
         + '<span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;background:#EEEDFE;color:#534AB7;">Event</span>'
-        + '<span class="card-time">' + d + (t ? ' · ' + t : '') + '</span>'
+        + '<span class="card-time" style="color:var(--navy-text);font-weight:700;">' + d + (t ? ' · ' + t : '') + '</span>'
         + '</div>'
         + '<div class="card-title">' + escHtml(ev.title) + '</div>'
         + (ev.description ? '<div class="card-body">' + escHtml(ev.description) + '</div>' : '')
