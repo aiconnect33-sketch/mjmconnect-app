@@ -1394,13 +1394,22 @@
           </div>
         </div>
 
-        <!-- Bookings on the tapped date -->
-        <div class="section-row"><div class="section-title" id="v-day-detail-title">Bookings on Selected Date</div></div>
-        <div id="v-day-detail"><div class="book-empty">Tap a date above to see its bookings.</div></div>
+        <!-- Pill toggle (same style as Time Off's My/All Records) in place
+             of the two always-stacked "Bookings on Selected Date" / "My
+             Bookings This Month" sections. -->
+        <div class="to-pill-wrap">
+          <button id="v-pill-date" class="to-pill" onclick="switchBookRecordsPill('v','date')"
+            style="background:var(--green-dark);color:#fff;">
+            <i class="ti ti-calendar-event"></i> Selected Date
+          </button>
+          <button id="v-pill-mine" class="to-pill" onclick="switchBookRecordsPill('v','mine')"
+            style="background:transparent;color:var(--text-secondary);">
+            <i class="ti ti-clipboard-list"></i> My Bookings
+          </button>
+        </div>
 
-        <!-- My vehicle bookings this month -->
-        <div class="section-row"><div class="section-title">My Bookings This Month</div></div>
-        <div id="v-my-bookings"><div class="book-empty">Loading...</div></div>
+        <div id="v-day-detail"><div class="book-empty">Tap a date above to see its bookings.</div></div>
+        <div id="v-my-bookings" style="display:none;"><div class="book-empty">Loading...</div></div>
 
       </div><!-- /vehicle panel -->
 
@@ -1483,13 +1492,22 @@
           </div>
         </div>
 
-        <!-- Bookings on the tapped date -->
-        <div class="section-row"><div class="section-title" id="r-day-detail-title">Bookings on Selected Date</div></div>
-        <div id="r-day-detail"><div class="book-empty">Tap a date above to see its bookings.</div></div>
+        <!-- Pill toggle (same style as Time Off's My/All Records) in place
+             of the two always-stacked "Bookings on Selected Date" / "My
+             Bookings This Month" sections. -->
+        <div class="to-pill-wrap">
+          <button id="r-pill-date" class="to-pill" onclick="switchBookRecordsPill('r','date')"
+            style="background:var(--green-dark);color:#fff;">
+            <i class="ti ti-calendar-event"></i> Selected Date
+          </button>
+          <button id="r-pill-mine" class="to-pill" onclick="switchBookRecordsPill('r','mine')"
+            style="background:transparent;color:var(--text-secondary);">
+            <i class="ti ti-clipboard-list"></i> My Bookings
+          </button>
+        </div>
 
-        <!-- My room bookings this month -->
-        <div class="section-row"><div class="section-title">My Bookings This Month</div></div>
-        <div id="r-my-bookings"><div class="book-empty">Loading...</div></div>
+        <div id="r-day-detail"><div class="book-empty">Tap a date above to see its bookings.</div></div>
+        <div id="r-my-bookings" style="display:none;"><div class="book-empty">Loading...</div></div>
 
       </div><!-- /room panel -->
 
