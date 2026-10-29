@@ -142,6 +142,23 @@ function switchBookPill(type) {
   try { sessionStorage.setItem('mjm_last_book_pill', type); } catch (e) {}
 }
 
+// Second-level pill inside each panel: "Selected Date" (the tapped
+// calendar day's bookings) vs "My Bookings" (this user's own bookings in
+// whichever month the calendar above is currently showing) -- same idea
+// as Time Off's My/All Records pill, just 2 options instead of 3.
+// prefix: 'v' (vehicle) or 'r' (room).
+function switchBookRecordsPill(prefix, which) {
+  var isDate = which === 'date';
+  document.getElementById(prefix + '-day-detail').style.display  = isDate ? 'block' : 'none';
+  document.getElementById(prefix + '-my-bookings').style.display = isDate ? 'none'  : 'block';
+  var pDate = document.getElementById(prefix + '-pill-date');
+  var pMine = document.getElementById(prefix + '-pill-mine');
+  pDate.style.background = isDate ? 'var(--green-dark)' : 'transparent';
+  pDate.style.color      = isDate ? '#fff' : 'var(--text-secondary)';
+  pMine.style.background = isDate ? 'transparent' : 'var(--green-dark)';
+  pMine.style.color      = isDate ? 'var(--text-secondary)' : '#fff';
+}
+
 // ════════════════════════════
 //  VEHICLE
 // ════════════════════════════
@@ -755,9 +772,11 @@ async function showDayDetail(type, dateStr) {
   if (type === 'vehicle') { vDetailDate = dateStr; renderVehicleCalendar(vBookedDatesCache); }
   else                    { rDetailDate = dateStr; renderRoomCalendar(rBookedDatesCache); }
 
-  var title = document.getElementById(type === 'vehicle' ? 'v-day-detail-title' : 'r-day-detail-title');
-  var body  = document.getElementById(type === 'vehicle' ? 'v-day-detail' : 'r-day-detail');
-  if (title) title.textContent = 'Bookings on ' + fmtDate(dateStr);
+  // Tapping a date always means "show me that date's bookings" -- jump
+  // back to the Selected Date pill even if My Bookings was showing.
+  switchBookRecordsPill(type === 'vehicle' ? 'v' : 'r', 'date');
+
+  var body = document.getElementById(type === 'vehicle' ? 'v-day-detail' : 'r-day-detail');
   if (body) body.innerHTML = '<div class="book-empty">Loading...</div>';
   try {
     var raw2 = localStorage.getItem('mjm_user');

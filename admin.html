@@ -2022,13 +2022,22 @@ html, body {
           </div>
         </div>
 
-        <!-- Bookings on the tapped date -->
-        <div class="sec-title" id="v-day-detail-title" style="margin-bottom:8px;">Bookings on Selected Date</div>
-        <div id="v-day-detail" style="margin-bottom:14px;"><div class="book-empty">Tap a date above to see its bookings.</div></div>
+        <!-- Pill toggle (same style as the staff app, and Time Off's My/All
+             Records above) in place of the two always-stacked "Bookings on
+             Selected Date" / "My Bookings This Month" sections. -->
+        <div class="to-pill-wrap">
+          <button id="v-pill-date" class="to-pill" onclick="switchBookRecordsPill('v','date')"
+            style="background:var(--green);color:#fff;">
+            <i class="ti ti-calendar-event"></i> Selected Date
+          </button>
+          <button id="v-pill-mine" class="to-pill" onclick="switchBookRecordsPill('v','mine')"
+            style="background:transparent;color:var(--text2);">
+            <i class="ti ti-clipboard-list"></i> My Bookings
+          </button>
+        </div>
 
-        <!-- My vehicle bookings this month -->
-        <div class="sec-title" style="margin-bottom:8px;">My Bookings This Month</div>
-        <div id="v-my-bookings"><div class="book-empty">Loading...</div></div>
+        <div id="v-day-detail" style="margin-bottom:14px;"><div class="book-empty">Tap a date above to see its bookings.</div></div>
+        <div id="v-my-bookings" style="display:none;"><div class="book-empty">Loading...</div></div>
 
       </div><!-- /vehicle panel -->
 
@@ -2111,13 +2120,22 @@ html, body {
           </div>
         </div>
 
-        <!-- Bookings on the tapped date -->
-        <div class="sec-title" id="r-day-detail-title" style="margin-bottom:8px;">Bookings on Selected Date</div>
-        <div id="r-day-detail" style="margin-bottom:14px;"><div class="book-empty">Tap a date above to see its bookings.</div></div>
+        <!-- Pill toggle (same style as the staff app, and Time Off's My/All
+             Records above) in place of the two always-stacked "Bookings on
+             Selected Date" / "My Bookings This Month" sections. -->
+        <div class="to-pill-wrap">
+          <button id="r-pill-date" class="to-pill" onclick="switchBookRecordsPill('r','date')"
+            style="background:var(--green);color:#fff;">
+            <i class="ti ti-calendar-event"></i> Selected Date
+          </button>
+          <button id="r-pill-mine" class="to-pill" onclick="switchBookRecordsPill('r','mine')"
+            style="background:transparent;color:var(--text2);">
+            <i class="ti ti-clipboard-list"></i> My Bookings
+          </button>
+        </div>
 
-        <!-- My room bookings this month -->
-        <div class="sec-title" style="margin-bottom:8px;">My Bookings This Month</div>
-        <div id="r-my-bookings"><div class="book-empty">Loading...</div></div>
+        <div id="r-day-detail" style="margin-bottom:14px;"><div class="book-empty">Tap a date above to see its bookings.</div></div>
+        <div id="r-my-bookings" style="display:none;"><div class="book-empty">Loading...</div></div>
 
       </div><!-- /room panel -->
 
@@ -4328,6 +4346,23 @@ html, body {
     try { sessionStorage.setItem('mjm_admin_last_book_pill', type); } catch (e) {}
   }
 
+  // Second-level pill inside each panel: "Selected Date" (the tapped
+  // calendar day's bookings) vs "My Bookings" (this user's own bookings in
+  // whichever month the calendar above is currently showing) -- same idea
+  // as Time Off's My/All Records pill, just 2 options instead of 3.
+  // prefix: 'v' (vehicle) or 'r' (room).
+  function switchBookRecordsPill(prefix, which) {
+    var isDate = which === 'date';
+    document.getElementById(prefix + '-day-detail').style.display  = isDate ? 'block' : 'none';
+    document.getElementById(prefix + '-my-bookings').style.display = isDate ? 'none'  : 'block';
+    var pDate = document.getElementById(prefix + '-pill-date');
+    var pMine = document.getElementById(prefix + '-pill-mine');
+    pDate.style.background = isDate ? 'var(--green)' : 'transparent';
+    pDate.style.color      = isDate ? '#fff' : 'var(--text2)';
+    pMine.style.background = isDate ? 'transparent' : 'var(--green)';
+    pMine.style.color      = isDate ? 'var(--text2)' : '#fff';
+  }
+
   // ════════════════════════════
   //  VEHICLE
   // ════════════════════════════
@@ -4937,9 +4972,11 @@ html, body {
     if (type === 'vehicle') { vDetailDate = dateStr; renderVehicleCalendar(vBookedDatesCache); }
     else                    { rDetailDate = dateStr; renderRoomCalendar(rBookedDatesCache); }
 
-    var title = document.getElementById(type === 'vehicle' ? 'v-day-detail-title' : 'r-day-detail-title');
-    var body  = document.getElementById(type === 'vehicle' ? 'v-day-detail' : 'r-day-detail');
-    if (title) title.textContent = 'Bookings on ' + fmtDate(dateStr);
+    // Tapping a date always means "show me that date's bookings" -- jump
+    // back to the Selected Date pill even if My Bookings was showing.
+    switchBookRecordsPill(type === 'vehicle' ? 'v' : 'r', 'date');
+
+    var body = document.getElementById(type === 'vehicle' ? 'v-day-detail' : 'r-day-detail');
     if (body) body.innerHTML = '<div class="book-empty">Loading...</div>';
     try {
       var raw2 = localStorage.getItem('mjm_user');
