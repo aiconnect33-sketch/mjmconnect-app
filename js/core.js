@@ -153,6 +153,7 @@ function switchTab(btn, name) {
   var navEl = document.getElementById('nav-' + name);
   if (navEl) navEl.classList.add('active');
   else document.getElementById('nav-home').classList.add('active');
+  syncDskNav(name);
   recordScreenChange(name);
   rememberTab(name);
 }
@@ -167,8 +168,20 @@ function switchNav(name) {
   var tabs = document.querySelectorAll('.tab-btn');
   tabs.forEach(function(t){ t.classList.remove('active'); });
   if (tabMap[name] !== undefined) tabs[tabMap[name]].classList.add('active');
+  syncDskNav(name);
   recordScreenChange(name);
   rememberTab(name);
+}
+
+// Desktop sidebar's own active-item highlight -- separate from the mobile
+// bottom-nav/tab-bar toggles above since the sidebar has entries (Time
+// Off, Booking, Faulty Complain, Duty Roster, Estate Trip) that aren't
+// among the bottom nav's 2 icons or the tab bar's 5 buttons, so it can't
+// just piggyback on either. Mirrors admin.html's own syncDskNav().
+function syncDskNav(name) {
+  document.querySelectorAll('.dsk-item').forEach(function(n){ n.classList.remove('active'); });
+  var dEl = document.getElementById('dsknav-' + name);
+  if (dEl) dEl.classList.add('active');
 }
 
 // iOS gives standalone (Add to Home Screen) web apps no native
@@ -296,6 +309,7 @@ function switchTabByName(name) {
   document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
   var navEl = document.getElementById('nav-' + name);
   if (navEl) navEl.classList.add('active');
+  syncDskNav(name);
   recordScreenChange(name);
   rememberTab(name);
 }
@@ -598,6 +612,10 @@ window.addEventListener('DOMContentLoaded', function() {
     if (el2) el2.textContent = initials || 'ST';
     var greetEl = document.getElementById('greet-name-text');
     if (greetEl && (u.name || u.email)) greetEl.textContent = u.name || u.email;
+    var dskAv = document.getElementById('dsk-av-initials');
+    if (dskAv) dskAv.textContent = initials || 'ST';
+    var dskNameEl = document.getElementById('dsk-foot-name');
+    if (dskNameEl && (u.name || u.email)) dskNameEl.textContent = u.name || u.email;
   }
   var dateEl = document.getElementById('greet-date-text');
   if (dateEl) dateEl.textContent = new Date().toLocaleDateString('en-MY', { weekday: 'long', day: 'numeric', month: 'short' });
