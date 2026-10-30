@@ -1,6 +1,5 @@
 // ── tab-book.js — Book tab (Vehicle + Room: Event Hall A/B, Conference Room) ──
 
-var bookTabInited = false;
 var vCalYear, vCalMonth, rCalYear, rCalMonth;
 
 // Which date's bookings are currently shown inline below each calendar, and
@@ -111,8 +110,13 @@ function selectPickerDate(prefix, dateStr) {
 
 
 function initBookTab() {
-  if (bookTabInited) return;
-  bookTabInited = true;
+  // vCalYear/rCalYear only seed once (undefined the first time only), so
+  // this doesn't reset the calendar back to the current month if the user
+  // had already paged it forward/back and then navigated away and back.
+  // Everything else below is a fresh fetch-and-render every call -- it
+  // used to sit behind a one-time-only guard, so navigating away and back
+  // (or opening the tab a second time) kept showing whatever was loaded
+  // on the very first visit, even after a booking changed elsewhere.
   var now = new Date();
   if (vCalYear === undefined) { vCalYear = now.getFullYear(); vCalMonth = now.getMonth(); }
   if (rCalYear === undefined) { rCalYear = now.getFullYear(); rCalMonth = now.getMonth(); }
