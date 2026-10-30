@@ -4214,7 +4214,6 @@ html, body {
   //  conflict with each other.
   // ══════════════════════════════════════════════════════════════
 
-  var bookTabInited = false;
   var vCalYear, vCalMonth, rCalYear, rCalMonth;
 
   // Which date's bookings are currently shown inline below each calendar, and
@@ -4317,8 +4316,13 @@ html, body {
   }
 
   function initBookTab() {
-    if (bookTabInited) return;
-    bookTabInited = true;
+    // vCalYear/rCalYear only seed once (undefined the first time only), so
+    // this doesn't reset the calendar back to the current month if the
+    // user had already paged it forward/back and then navigated away and
+    // back. Everything else below is a fresh fetch-and-render every call
+    // -- it used to sit behind a one-time-only guard, so navigating away
+    // and back kept showing whatever was loaded on the very first visit,
+    // even after a booking changed elsewhere.
     var now = new Date();
     if (vCalYear === undefined) { vCalYear = now.getFullYear(); vCalMonth = now.getMonth(); }
     if (rCalYear === undefined) { rCalYear = now.getFullYear(); rCalMonth = now.getMonth(); }
@@ -5093,13 +5097,20 @@ html, body {
   var fcState = { loc: null, item: null, itemOther: '', urgency: null, photoFile: null, photoObjectUrl: null };
 
   function initFaultyTab() {
-    if (faultyTabInited) return;
-    faultyTabInited = true;
-    var raw = localStorage.getItem('mjm_user');
-    var u = raw ? JSON.parse(raw) : {};
-    var nameEl = document.getElementById('fc-staff-name');
-    if (nameEl) nameEl.textContent = u.name || u.email || 'Unknown';
+    // One-time setup only -- the staff-name label doesn't change within a
+    // session, so no need to redo it on every visit.
+    if (!faultyTabInited) {
+      faultyTabInited = true;
+      var raw = localStorage.getItem('mjm_user');
+      var u = raw ? JSON.parse(raw) : {};
+      var nameEl = document.getElementById('fc-staff-name');
+      if (nameEl) nameEl.textContent = u.name || u.email || 'Unknown';
+    }
 
+    // Data, on the other hand, must be fresh every visit -- this used to
+    // sit behind the same one-time guard above, so navigating away and
+    // back kept showing whatever was loaded on the very first visit, even
+    // after someone else lodged a new complaint.
     loadFcOptions();
     loadAllComplaints();
   }

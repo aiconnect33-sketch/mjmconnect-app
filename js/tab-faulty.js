@@ -23,19 +23,26 @@ var faultyTabInited = false;
 var fcState = { loc: null, item: null, itemOther: '', urgency: null, photoFile: null, photoObjectUrl: null };
 
 function initFaultyTab() {
-  if (faultyTabInited) return;
-  faultyTabInited = true;
-  var raw = localStorage.getItem('mjm_user');
-  var u = raw ? JSON.parse(raw) : {};
-  var nameEl = document.getElementById('fc-staff-name');
-  if (nameEl) nameEl.textContent = u.name || u.email || 'Unknown';
+  // One-time setup only -- the staff-name label and edit-permission toggle
+  // don't change within a session, so no need to redo them on every visit.
+  if (!faultyTabInited) {
+    faultyTabInited = true;
+    var raw = localStorage.getItem('mjm_user');
+    var u = raw ? JSON.parse(raw) : {};
+    var nameEl = document.getElementById('fc-staff-name');
+    if (nameEl) nameEl.textContent = u.name || u.email || 'Unknown';
 
-  var canEditOptions = typeof hasEditPermission === 'function' && hasEditPermission('faulty');
-  var locToggle = document.getElementById('fc-loc-edit-toggle');
-  var itemToggle = document.getElementById('fc-item-edit-toggle');
-  if (locToggle) locToggle.style.display = canEditOptions ? 'flex' : 'none';
-  if (itemToggle) itemToggle.style.display = canEditOptions ? 'flex' : 'none';
+    var canEditOptions = typeof hasEditPermission === 'function' && hasEditPermission('faulty');
+    var locToggle = document.getElementById('fc-loc-edit-toggle');
+    var itemToggle = document.getElementById('fc-item-edit-toggle');
+    if (locToggle) locToggle.style.display = canEditOptions ? 'flex' : 'none';
+    if (itemToggle) itemToggle.style.display = canEditOptions ? 'flex' : 'none';
+  }
 
+  // Data, on the other hand, must be fresh every visit -- this used to sit
+  // behind the same one-time guard above, so navigating away and back (or
+  // opening the tab a second time) kept showing whatever was loaded on the
+  // very first visit, even after someone else lodged a new complaint.
   loadFcOptions();
   loadTeamComplaints();
 }
