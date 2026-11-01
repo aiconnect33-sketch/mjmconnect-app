@@ -180,6 +180,20 @@ async function loadAnnouncements() {
     // existed (and for anything posted with "Post Now") -- treat that the
     // same as its created_at date, so old behavior is unchanged.
     function annPublishDate(a) { return a.publish_date || localDateStr(new Date(a.created_at)); }
+    // Staff only ever see announcements that are already live (filtered
+    // below), but a post made via "Schedule" can still have been typed in
+    // days or weeks before it actually went live -- show the date it
+    // actually went live on, not the day it was typed in. A "Post Now"
+    // post has no publish_date at all, and its created_at IS the real
+    // publish moment, so that one keeps the exact date + time.
+    function annDisplayDateTime(a) {
+      if (a.publish_date) {
+        return new Date(a.publish_date + 'T00:00:00').toLocaleDateString('en-MY', { day:'numeric', month:'short', year:'numeric' });
+      }
+      var d = new Date(a.created_at).toLocaleDateString('en-MY', { day:'numeric', month:'short', year:'numeric' });
+      var t = new Date(a.created_at).toLocaleTimeString('en-MY', { hour:'numeric', minute:'2-digit', hour12:true });
+      return d + ' · ' + t;
+    }
     function annIsLiveOnHome(a) {
       var pub = annPublishDate(a);
       if (pub > today) return false;
@@ -198,14 +212,12 @@ async function loadAnnouncements() {
     if (bannerEl) {
       if (bannerItems.length) {
         bannerEl.innerHTML = bannerItems.map(function(a) {
-          var d = new Date(a.created_at).toLocaleDateString('en-MY', { day:'numeric', month:'short', year:'numeric' });
-          var t = new Date(a.created_at).toLocaleTimeString('en-MY', { hour:'numeric', minute:'2-digit', hour12:true });
           return '<div class="alert-banner" style="cursor:pointer;" onclick="switchNav(\'announce\')">'
             + '<div class="alert-icon-box"><i class="ti ti-speakerphone"></i></div>'
             + '<div class="alert-text" style="flex:1;">'
             + '<div>' + escHtml(a.title) + '</div>'
             + '<div>' + escHtml(a.body) + '</div>'
-            + '<div style="font-size:10px;opacity:0.7;margin-top:2px;">' + d + ' · ' + t + '</div>'
+            + '<div style="font-size:10px;opacity:0.7;margin-top:2px;">' + annDisplayDateTime(a) + '</div>'
             + '</div>'
             + '<i class="ti ti-chevron-right alert-chev"></i>'
             + '</div>';
@@ -233,8 +245,6 @@ async function loadAnnouncements() {
         return;
       }
       tabEl.innerHTML = tabItems.map(function(ann) {
-        var d = new Date(ann.created_at).toLocaleDateString('en-MY', { day:'numeric', month:'short', year:'numeric' });
-        var t = new Date(ann.created_at).toLocaleTimeString('en-MY', { hour:'numeric', minute:'2-digit', hour12:true });
         var isOwner = isAdminUser || (myEmailLow && ann.posted_by_email && ann.posted_by_email.toLowerCase() === myEmailLow);
         var canManage = canEdit && isOwner;
         var actions = canManage
@@ -244,7 +254,7 @@ async function loadAnnouncements() {
             + '</div>'
           : '';
         return '<div class="card card-info" style="margin-bottom:10px;" data-ann-id="' + escHtml(ann.id) + '" data-posted-by-email="' + escHtml(ann.posted_by_email || '') + '" data-posted-by="' + escHtml(ann.posted_by || 'Staff') + '">'
-          + '<div class="card-meta"><span class="card-time">' + d + ' · ' + t + '</span></div>'
+          + '<div class="card-meta"><span class="card-time">' + annDisplayDateTime(ann) + '</span></div>'
           + '<div class="card-title">' + escHtml(ann.title) + '</div>'
           + '<div class="card-body">'  + escHtml(ann.body)  + '</div>'
           + '<div style="font-size:11px;color:var(--text-light);margin-top:6px;"><i class="ti ti-user"></i> ' + escHtml(ann.posted_by || 'Staff') + '</div>'
