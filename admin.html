@@ -5976,21 +5976,34 @@ html, body {
         list.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:14px 0;">No announcements.</div>';
       } else {
         list.innerHTML = tabItems.map(function(ann) {
-          var d = new Date(ann.created_at).toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'});
-          var t = new Date(ann.created_at).toLocaleTimeString('en-MY',{hour:'numeric',minute:'2-digit',hour12:true});
-          var dt = d + ' · ' + t;
           var pubDate = annPublishDate(ann);
-          var scheduledBadge = pubDate > today
-            ? '<span style="font-size:10px;font-weight:600;padding:2px 6px;border-radius:10px;background:#FAEEDA;color:#854F0B;margin-left:6px;">Scheduled for '
-              + new Date(pubDate + 'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'}) + '</span>'
-            : '';
+          var isScheduled = pubDate > today;
+          // A scheduled post hasn't gone live yet, so leading with its
+          // created_at timestamp reads as though it was already posted
+          // then. Lead with the date it'll actually go live instead, and
+          // flag it as not-yet-live -- the created_at timestamp moves into
+          // the author line below ("Queued by X on <date>"), still visible
+          // but no longer looking like a publish time.
+          var dt, scheduledBadge;
+          if (isScheduled) {
+            dt = 'Scheduled for ' + new Date(pubDate + 'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'});
+            scheduledBadge = '<span style="font-size:10px;font-weight:600;padding:2px 6px;border-radius:10px;background:#FAEEDA;color:#854F0B;margin-left:6px;">Not live yet</span>';
+          } else {
+            dt = new Date(ann.created_at).toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'})
+              + ' · ' + new Date(ann.created_at).toLocaleTimeString('en-MY',{hour:'numeric',minute:'2-digit',hour12:true});
+            scheduledBadge = '';
+          }
+          var queuedLine = isScheduled
+            ? '<div class="ann-author"><i class="ti ti-user"></i> Queued by ' + escHtml(ann.posted_by || 'HR') + ' on '
+              + new Date(ann.created_at).toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'}) + '</div>'
+            : '<div class="ann-author"><i class="ti ti-user"></i> ' + escHtml(ann.posted_by || 'HR') + '</div>';
           return '<div class="ann-item" data-id="' + ann.id + '" data-posted-by="' + escHtml(ann.posted_by || 'HR')
             + '" data-publish-date="' + escHtml(ann.publish_date || '') + '" data-active-until-date="' + escHtml(ann.active_until_date || '')
             + '" data-created-date="' + localDateStr(new Date(ann.created_at)) + '">'
             + '<div class="ann-meta"><span class="ann-time">' + dt + '</span>' + scheduledBadge + '</div>'
             + '<div class="ann-title">' + escHtml(ann.title) + '</div>'
             + '<div class="ann-body">' + escHtml(ann.body) + '</div>'
-            + '<div class="ann-actions"><div class="ann-author"><i class="ti ti-user"></i> ' + escHtml(ann.posted_by || 'HR') + '</div>'
+            + '<div class="ann-actions">' + queuedLine
             + '<div class="btn-icon" onclick="editAnn(this)" title="Edit"><i class="ti ti-pencil"></i></div>'
             + '<div class="btn-icon danger" onclick="deleteAnnouncementDb(this)" title="Delete"><i class="ti ti-trash"></i></div>'
             + '</div></div>';
