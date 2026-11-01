@@ -5978,16 +5978,28 @@ html, body {
         list.innerHTML = tabItems.map(function(ann) {
           var pubDate = annPublishDate(ann);
           var isScheduled = pubDate > today;
+          // Was deliberately scheduled (has its own publish_date), as
+          // opposed to a plain "Post Now" post -- true for both a post
+          // still queued and one whose scheduled date has already arrived.
+          var wasScheduled = !!ann.publish_date;
           // A scheduled post hasn't gone live yet, so leading with its
           // created_at timestamp reads as though it was already posted
           // then. Lead with the date it'll actually go live instead, and
           // flag it as not-yet-live -- the created_at timestamp moves into
           // the author line below ("Queued by X on <date>"), still visible
-          // but no longer looking like a publish time.
+          // but no longer looking like a publish time. Once that date
+          // arrives, lead with the publish date it actually went live on
+          // (not the day it happened to be typed in, days or weeks
+          // earlier) -- there's no exact time to show for that, just the
+          // date, unlike a "Post Now" post whose created_at IS the real
+          // publish moment.
           var dt, scheduledBadge;
           if (isScheduled) {
             dt = 'Scheduled for ' + new Date(pubDate + 'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'});
             scheduledBadge = '<span style="font-size:10px;font-weight:600;padding:2px 6px;border-radius:10px;background:#FAEEDA;color:#854F0B;margin-left:6px;">Not live yet</span>';
+          } else if (wasScheduled) {
+            dt = new Date(pubDate + 'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'});
+            scheduledBadge = '';
           } else {
             dt = new Date(ann.created_at).toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'})
               + ' · ' + new Date(ann.created_at).toLocaleTimeString('en-MY',{hour:'numeric',minute:'2-digit',hour12:true});
@@ -7444,15 +7456,21 @@ html, body {
       });
     }
     if (recent.length) {
+      // A post made via "Schedule" can have been typed in days before it
+      // actually went live -- show the date it went live on, not the day
+      // it was typed in. "Post Now" has no publish_date, and its
+      // created_at IS the real publish moment, so that keeps exact time.
       banner.innerHTML = recent.map(function(a){
-        var d = new Date(a.created_at).toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'});
-        var t = new Date(a.created_at).toLocaleTimeString('en-MY',{hour:'numeric',minute:'2-digit',hour12:true});
+        var dt = a.publish_date
+          ? new Date(a.publish_date + 'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'})
+          : new Date(a.created_at).toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'})
+            + ' · ' + new Date(a.created_at).toLocaleTimeString('en-MY',{hour:'numeric',minute:'2-digit',hour12:true});
         return '<div class="home-alert-banner" style="cursor:pointer;" onclick="switchTabByName(\'announce\')">'
           + '<div class="home-alert-icon-box"><i class="ti ti-speakerphone"></i></div>'
           + '<div class="home-alert-text">'
           + '<div class="home-alert-title">' + escHtml(a.title) + '</div>'
           + '<div class="home-alert-body">' + escHtml(a.body) + '</div>'
-          + '<div style="font-size:10px;color:var(--text3);margin-top:3px;">' + d + ' · ' + t + '</div>'
+          + '<div style="font-size:10px;color:var(--text3);margin-top:3px;">' + dt + '</div>'
           + '</div>'
           + '<i class="ti ti-chevron-right home-alert-chev"></i>'
           + '</div>';
