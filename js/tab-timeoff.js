@@ -1,15 +1,26 @@
 // ── tab-timeoff.js — Time Off tab (time-out/time-in tracking) + Home currently-out ──
 //
-// Two caps: 150 min per single trip is informational only -- a trip's real
-// duration isn't known until Time In, so it can only be flagged after the
-// fact, never blocked at the start. 240 min total per calendar month IS
-// enforced at the start of a new Time Out / reminder conversion: blocked
-// outright once already used up, a confirm-to-proceed warning once past the
-// near-limit threshold (that new trip's own duration can still push the
-// total over -- see loadTimeOff() for the same accounting after it closes).
-// "Only one open record at a time" is enforced client-side the same way.
+// Two caps: 120 min per single trip (every trip is charged in whole hours,
+// any part of an hour rounding up) IS enforced -- once a still-open trip's
+// live elapsed time passes 120 min, Time In is blocked outright and the
+// banner swaps to a "Request Cancellation" action instead (see
+// renderTimeOffStatus/timeInNow below). A trip's real duration isn't known
+// until Time In, so this can only be checked once already out, never at the
+// moment of Time Out. 240 min total per calendar month IS enforced at the
+// start of a new Time Out / reminder conversion too: blocked outright once
+// already used up, a confirm-to-proceed warning once past the near-limit
+// threshold (that new trip's own duration can still push the total over --
+// see loadTimeOff() for the same accounting after it closes). Both caps are
+// compared against CHARGED minutes (chargedMinutes() below), not raw clock
+// duration. "Only one open record at a time" is enforced client-side the
+// same way.
+//
+// Going over the per-trip cap no longer self-voids immediately: the staff
+// requests a cancellation (requestCancelTimeOff), which HR Admin/a permitted
+// staff member approves (approveCancelTimeOff) before it actually moves to
+// Voided -- see the 'cancel_pending' entry_type throughout this file.
 
-var TIMEOFF_PER_TRIP_CAP_MIN = 150; // 2.5h
+var TIMEOFF_PER_TRIP_CAP_MIN = 120; // 2h -- hard block once a trip runs longer than this
 var TIMEOFF_MONTHLY_CAP_MIN  = 240; // 4h
 var TIMEOFF_NEAR_LIMIT_MIN   = 180; // 75% of the monthly cap, used for the amber "near limit" state
 
@@ -27,6 +38,36 @@ function formatDuration(mins) {
   return h + 'h ' + String(m).padStart(2, '0') + 'm';
 }
 
+// Every trip is charged in whole hours, rounding any part of an hour up --
+// 15 min and 40 min both charge "1h". A trip that hasn't closed yet (no
+// duration recorded) still charges a minimum 1h, matching what the live
+// "will be charged" pill on the Currently Out banner already shows before
+// Time In. Used everywhere quota is computed; formatDuration above is kept
+// for showing a record's own real clock-time duration alongside it.
+function chargedMinutes(durationMinutes) {
+  var m = Math.max(0, durationMinutes || 0);
+  return Math.max(60, Math.ceil(m / 60) * 60);
+}
+
+// chargedMinutes() is always a multiple of 60, so this is just "/60 + h" --
+// no need for formatDuration's h/m split.
+function formatChargedHours(mins) {
+  return Math.round(mins / 60) + 'h';
+}
+
+// How much a single record counts for towards the monthly total -- voided
+// and pending-cancellation records count for nothing, a closed record uses
+// its real duration, and a still-open one counts its LIVE elapsed charge
+// (recomputed on every call, same as the Currently Out banner's own pill)
+// so the meter keeps up with "will be charged if you Time In now" instead
+// of sitting at 0 until Time In.
+function timeoffRecordChargedMinutes(r) {
+  if (r.entry_type === 'voided' || r.entry_type === 'cancel_pending') return 0;
+  if (r.duration_minutes) return chargedMinutes(r.duration_minutes);
+  if (!r.time_in) return chargedMinutes((Date.now() - new Date(r.time_out).getTime()) / 60000);
+  return 0;
+}
+
 function timeOffMe() {
   var raw = localStorage.getItem('mjm_user');
   return raw ? JSON.parse(raw) : {};
@@ -41,10 +82,10 @@ var TIMEOFF_SHEET_SECRET = 'SeW2cUlObs6M2jCq-xxSrPlhB-MHCj6mqz';
 async function timeOffMonthlyMinutes(email, monthStart) {
   try {
     var url = SURL + '/rest/v1/time_off_records?staff_email=eq.' + encodeURIComponent(email)
-      + '&time_out=gte.' + monthStart + '&entry_type=neq.voided&select=duration_minutes';
+      + '&time_out=gte.' + monthStart + '&entry_type=neq.voided&entry_type=neq.cancel_pending&select=duration_minutes';
     var res = await fetch(url, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
     var rows = await res.json();
-    return (rows || []).reduce(function (sum, r) { return sum + (r.duration_minutes || 0); }, 0);
+    return (rows || []).reduce(function (sum, r) { return sum + (r.duration_minutes ? chargedMinutes(r.duration_minutes) : 0); }, 0);
   } catch (e) { return 0; }
 }
 
@@ -88,7 +129,7 @@ async function loadTimeOff() {
   var homeEl = document.getElementById('home-timeoff-today');
   if (homeEl) {
     try {
-      var url = SURL + '/rest/v1/time_off_records?time_in=is.null&entry_type=neq.voided&order=time_out.asc&limit=20';
+      var url = SURL + '/rest/v1/time_off_records?time_in=is.null&entry_type=neq.voided&entry_type=neq.cancel_pending&order=time_out.asc&limit=20';
       var res = await fetch(url, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
       var data = await res.json();
       if (data && data.length) {
@@ -134,18 +175,17 @@ async function loadTimeOff() {
     var dueReminders = await res3.json();
     if (!dueReminders) dueReminders = [];
 
-    var openRecord = myRecords.find(function (r) { return !r.time_in; });
-    var monthlyMinutes = myRecords.reduce(function (sum, r) {
-      if (r.entry_type === 'voided' || !r.duration_minutes) return sum;
-      return sum + r.duration_minutes;
-    }, 0);
+    // A record pending cancellation is no longer "open" for Time In purposes
+    // -- the staff is done acting on it; it just sits waiting for HR.
+    var openRecord = myRecords.find(function (r) { return !r.time_in && r.entry_type !== 'cancel_pending'; });
+    var monthlyMinutes = myRecords.reduce(function (sum, r) { return sum + timeoffRecordChargedMinutes(r); }, 0);
 
     timeoffState.today = today;
     timeoffState.myEmailLow = myEmailLow;
     timeoffState.allRecords = allRecords;
     timeoffState.canManageAll = typeof hasEditPermission === 'function' && hasEditPermission('timeoff');
 
-    if (statusEl) statusEl.innerHTML = renderTimeOffStatus(openRecord, monthlyMinutes, dueReminders);
+    if (statusEl) statusEl.innerHTML = timeoffApprovalToastHtml(myRecords) + renderTimeOffStatus(openRecord, monthlyMinutes, dueReminders);
     if (mineEl) mineEl.innerHTML = renderTimeOffMineSection();
     if (overviewEl) overviewEl.innerHTML = timeoffState.canManageAll ? renderTimeOffOverview(allRecords) : '';
     if (allEl) allEl.innerHTML = renderTimeOffAllSection();
@@ -275,12 +315,38 @@ async function confirmCreditRedeem(id) {
   } catch (e) { alert('Could not save your chosen date. Please try again.'); }
 }
 
+// Tells the staff member once their own cancellation request was approved --
+// shown the next time this tab loads, since there's no live push channel
+// for a single-recipient notification like this one (the only existing push
+// senders are a broadcast-to-everyone announcement push and a sign-up
+// one-off; neither fits). Tracked per-record in localStorage so it only
+// shows once per device, then stays gone -- consistent with how
+// mjm_push_prompt_dismissed in js/push.js is used for the same purpose.
+function timeoffApprovalToastHtml(myRecords) {
+  var html = '';
+  myRecords.forEach(function (r) {
+    if (r.entry_type !== 'voided' || !r.cancel_requested_at) return;
+    var ackKey = 'mjm_to_ack_' + r.id;
+    var acked = false;
+    try { acked = !!localStorage.getItem(ackKey); } catch (e) {}
+    if (acked) return;
+    var day = new Date(r.time_out).toLocaleDateString('en-MY', { day: 'numeric', month: 'short' });
+    html += '<div class="to-toast">'
+      + '<div class="to-toast-icon">✓</div>'
+      + '<div><div class="to-toast-title">Cancellation approved</div>'
+      + '<div class="to-toast-body">Your "' + escHtml(r.reason) + '" Time Off was cancelled. Please apply Annual Leave to cover ' + day + '.</div></div>'
+      + '</div>';
+    try { localStorage.setItem(ackKey, '1'); } catch (e) {}
+  });
+  return html;
+}
+
 function renderTimeOffStatus(openRecord, monthlyMinutes, dueReminders) {
   var pct = Math.min(100, Math.round((monthlyMinutes / TIMEOFF_MONTHLY_CAP_MIN) * 100));
   var mCls = monthlyMinutes > TIMEOFF_MONTHLY_CAP_MIN ? 'over' : (monthlyMinutes >= TIMEOFF_NEAR_LIMIT_MIN ? 'warn' : '');
   var meter = '<div class="to-meter-card">'
     + '<div class="to-meter-top"><span class="to-meter-label">This Month</span>'
-    + '<span class="to-meter-value ' + mCls + '">' + formatDuration(monthlyMinutes) + ' <span style="color:var(--text-light);font-weight:500;">/ 4h 00m</span></span></div>'
+    + '<span class="to-meter-value ' + mCls + '">' + formatChargedHours(monthlyMinutes) + ' <span style="color:var(--text-light);font-weight:500;">/ 4h</span></span></div>'
     + '<div class="to-meter-track"><div class="to-meter-fill ' + mCls + '" style="width:' + pct + '%;"></div></div>'
     + '</div>';
 
@@ -288,13 +354,31 @@ function renderTimeOffStatus(openRecord, monthlyMinutes, dueReminders) {
 
   if (openRecord) {
     var out = new Date(openRecord.time_out);
-    var elapsed = formatDuration((Date.now() - out.getTime()) / 60000);
-    html += '<div class="to-out-banner">'
-      + '<div class="to-status-line"><span class="to-pulse-dot"></span>YOU\'RE CURRENTLY OUT</div>'
-      + '<div class="to-reason-line">' + escHtml(openRecord.reason) + '</div>'
-      + '<div class="to-time-line">Out since ' + formatClock(out) + ' · ' + elapsed + ' so far</div>'
-      + '<button class="book-btn-primary" style="background:var(--green-dark);margin-bottom:0;" onclick="timeInNow(' + openRecord.id + ')">✓ I\'m Back — Time In</button>'
-      + '</div>';
+    var elapsedMin = (Date.now() - out.getTime()) / 60000;
+    var elapsedLabel = formatDuration(elapsedMin);
+    var overCap = elapsedMin > TIMEOFF_PER_TRIP_CAP_MIN;
+    if (overCap) {
+      html += '<div class="to-out-banner over">'
+        + '<div class="to-status-line">⚠ YOU\'VE PASSED THE 2H LIMIT</div>'
+        + '<div class="to-reason-line">' + escHtml(openRecord.reason) + '</div>'
+        + '<div class="to-time-line">Out since ' + formatClock(out) + ' · ' + elapsedLabel + ' so far</div>'
+        + '<button class="book-btn-primary" style="margin-bottom:0;" disabled>✓ I\'m Back — Time In</button>'
+        + '</div>'
+        + '<div class="to-warn red">'
+        + '<b>⚠ This trip has gone over the 2-hour Time Off limit.</b>'
+        + 'This needs to be covered by Annual Leave instead of Time Off. Request a cancellation below — once HR approves it, you\'ll be reminded to apply Annual Leave for today.'
+        + '<button style="width:100%;margin-top:10px;background:var(--red-text);color:#fff;border:none;border-radius:var(--radius-sm);padding:9px;font-size:11.5px;font-weight:700;" onclick="requestCancelTimeOff(' + openRecord.id + ')">↩ Request Cancellation</button>'
+        + '</div>';
+    } else {
+      var charged = chargedMinutes(elapsedMin);
+      html += '<div class="to-out-banner">'
+        + '<div class="to-status-line"><span class="to-pulse-dot"></span>YOU\'RE CURRENTLY OUT</div>'
+        + '<div class="to-reason-line">' + escHtml(openRecord.reason) + '</div>'
+        + '<div class="to-time-line">Out since ' + formatClock(out) + ' · ' + elapsedLabel + ' so far</div>'
+        + '<div class="to-charge-pill">⏱ ' + formatChargedHours(charged) + ' will be charged if you Time In now</div>'
+        + '<button class="book-btn-primary" style="background:var(--green-dark);margin-bottom:0;" onclick="timeInNow(' + openRecord.id + ')">✓ I\'m Back — Time In</button>'
+        + '</div>';
+    }
   } else {
     html += '<div class="card">'
       + '<div class="book-form-group"><label class="book-form-label">Reason</label>'
@@ -352,7 +436,7 @@ function renderTimeOffOverview(records) {
     var key = (r.staff_email || '').toLowerCase() || r.staff_name;
     if (!byStaff[key]) byStaff[key] = { name: timeoffDisplayName(r), minutes: 0, count: 0 };
     byStaff[key].count++;
-    if (r.entry_type !== 'voided' && r.duration_minutes) byStaff[key].minutes += r.duration_minutes;
+    byStaff[key].minutes += timeoffRecordChargedMinutes(r);
   });
   var staffList = Object.keys(byStaff).map(function (key) { return { name: byStaff[key].name, minutes: byStaff[key].minutes, count: byStaff[key].count }; });
   if (!staffList.length) return '';
@@ -369,7 +453,7 @@ function renderTimeOffOverview(records) {
       + '<div class="avatar ' + avCls + '">' + ini + '</div>'
       + '<div style="flex:1;"><div class="person-name">' + escHtml(s.name) + '</div>'
       + '<div class="person-sub">' + s.count + ' time-off' + (s.count === 1 ? '' : 's') + '</div></div>'
-      + '<div style="text-align:right;"><div style="font-weight:700;font-size:12.5px;color:var(--text-primary);">' + formatDuration(s.minutes) + '</div>'
+      + '<div style="text-align:right;"><div style="font-weight:700;font-size:12.5px;color:var(--text-primary);">' + formatChargedHours(s.minutes) + '</div>'
       + '<span class="badge ' + status.cls + '">' + status.label + '</span></div>'
       + '</div>';
   }).join('');
@@ -408,19 +492,28 @@ function renderTimeOffRow(r, myEmailLow, canManageAll, sectionKey) {
   var isMine = r.staff_email && r.staff_email.toLowerCase() === myEmailLow;
   var canManage = canManageAll || isMine;
   var out = new Date(r.time_out);
+  var isPending = r.entry_type === 'cancel_pending';
+  var stillOpen = !r.time_in;
   var timeLabel = formatClock(out) + (r.time_in ? ' → ' + formatClock(new Date(r.time_in)) : ' → still out');
-  var badge = r.duration_minutes > TIMEOFF_PER_TRIP_CAP_MIN
-    ? '<span class="badge badge-urgent">' + formatDuration(r.duration_minutes) + '</span>'
-    : '<span class="badge badge-blue">' + formatDuration(r.duration_minutes || 0) + '</span>';
+  var actualMin = r.time_in ? r.duration_minutes : (Date.now() - out.getTime()) / 60000;
+  var charged = chargedMinutes(actualMin);
+  var overCap = actualMin > TIMEOFF_PER_TRIP_CAP_MIN;
+  var badge = isPending
+    ? '<span class="badge badge-amber">Pending Cancellation</span>'
+    : (overCap
+      ? '<span class="badge badge-urgent">' + formatChargedHours(charged) + ' charged</span>'
+      : '<span class="badge badge-blue">' + formatChargedHours(charged) + ' charged</span>');
   var entryNote = r.entry_type === 'edited' ? ' <span style="color:var(--amber-text);font-weight:700;">(edited)</span>'
     : r.entry_type === 'backfilled' ? ' <span style="color:var(--red-text);font-weight:700;">(backfilled)</span>' : '';
   var reasonLabel = isMine ? escHtml(r.reason) : (escHtml(timeoffDisplayName(r)) + ' — ' + escHtml(r.reason));
+  if (isPending) reasonLabel = '<span style="text-decoration:line-through;">' + reasonLabel + '</span>';
   var key = sectionKey + '-' + r.id;
 
   // Correcting Time In/Out is admin/permission-only -- unlike the Cancel
   // button below, ownership alone must NOT unlock it, or every staff member
-  // could quietly rewrite their own already-taken Time Off.
-  var canCorrect = canManageAll && !!r.time_in;
+  // could quietly rewrite their own already-taken Time Off. Not offered on
+  // a pending-cancellation row -- it's about to be voided, not corrected.
+  var canCorrect = canManageAll && !!r.time_in && !isPending;
   var editIcon = canCorrect
     ? '<div class="to-edit-icon" onclick="toggleTimeOffCorrection(\'' + key + '\', ' + r.id + ')" title="Correct Time In"><i class="ti ti-pencil"></i></div>'
     : '';
@@ -430,7 +523,7 @@ function renderTimeOffRow(r, myEmailLow, canManageAll, sectionKey) {
     + '<div style="flex:1;min-width:0;display:flex;align-items:center;gap:6px;">'
     + '<div class="to-history-reason">' + reasonLabel + '</div>' + editIcon
     + '</div>' + badge + '</div>'
-    + '<div class="to-history-time">' + timeLabel + entryNote + '</div>';
+    + '<div class="to-history-time">' + timeLabel + (r.time_in ? ' · ' + formatDuration(r.duration_minutes || 0) + ' actual' : '') + entryNote + '</div>';
 
   if (canCorrect) {
     var outHH = String(out.getHours()).padStart(2, '0');
@@ -445,11 +538,21 @@ function renderTimeOffRow(r, myEmailLow, canManageAll, sectionKey) {
       + '</div>';
   }
 
-  if (canManage && r.duration_minutes > TIMEOFF_PER_TRIP_CAP_MIN) {
+  if (isPending) {
+    html += '<div class="to-warn amber">'
+      + (canManageAll
+        ? '<b>⏳ Staff requested cancellation.</b>Approve to move this trip to Annual Leave and let them know.'
+          + '<button style="width:100%;margin-top:10px;background:var(--green-dark);color:#fff;border:none;border-radius:var(--radius-sm);padding:9px;font-size:11.5px;font-weight:700;" onclick="approveCancelTimeOff(' + r.id + ')">✓ Approve Cancellation</button>'
+        : '<b>⏳ Waiting on HR approval.</b>Once approved, you\'ll be reminded to apply Annual Leave to cover this day.')
+      + '</div>';
+  } else if (canManage && overCap && !stillOpen) {
+    // A still-open over-cap record is flagged by the urgent badge above and
+    // already offers Request Cancellation from the Currently Out banner --
+    // no need to repeat the same box here too.
     html += '<div class="to-warn red">'
-      + '<b>⚠ This trip ran ' + formatDuration(r.duration_minutes) + ' — over the 2.5h single-application limit.</b>'
-      + 'The whole trip needs to go through Annual Leave instead of Time Off.'
-      + '<button style="width:100%;margin-top:10px;background:var(--red-text);color:#fff;border:none;border-radius:var(--radius-sm);padding:9px;font-size:11.5px;font-weight:700;" onclick="voidTimeOff(' + r.id + ')">↩ Cancel This Trip</button>'
+      + '<b>⚠ This trip ran ' + formatChargedHours(charged) + ' — over the 2h single-trip limit.</b>'
+      + 'This needs to go through Annual Leave instead of Time Off.'
+      + '<button style="width:100%;margin-top:10px;background:var(--red-text);color:#fff;border:none;border-radius:var(--radius-sm);padding:9px;font-size:11.5px;font-weight:700;" onclick="requestCancelTimeOff(' + r.id + ')">↩ Request Cancellation</button>'
       + '</div>';
   }
   html += '</div>';
@@ -473,8 +576,8 @@ function renderTimeOffMineSection() {
   var mine = timeoffState.allRecords.filter(function (r) { return r.staff_email && r.staff_email.toLowerCase() === myEmailLow; });
   var nonVoided = mine.filter(function (r) { return r.entry_type !== 'voided'; });
   var voided = mine.filter(function (r) { return r.entry_type === 'voided'; });
-  var totalMinutes = nonVoided.reduce(function (sum, r) { return sum + (r.duration_minutes || 0); }, 0);
-  var summary = mine.length ? (mine.length + (mine.length === 1 ? ' entry' : ' entries') + ' this month · ' + formatDuration(totalMinutes)) : 'No entries this month';
+  var totalMinutes = nonVoided.reduce(function (sum, r) { return sum + timeoffRecordChargedMinutes(r); }, 0);
+  var summary = mine.length ? (mine.length + (mine.length === 1 ? ' entry' : ' entries') + ' this month · ' + formatChargedHours(totalMinutes)) : 'No entries this month';
   var html = '<div class="to-meta">' + escHtml(summary) + '</div>';
   if (!mine.length) {
     html += '<div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">No Time Off logged this month.</div>';
@@ -638,18 +741,18 @@ async function startTimeOff(timeOutDate) {
   var reason = reasonEl ? reasonEl.value.trim() : '';
   if (!reason) { alert('Please describe the reason for this Time Off.'); return; }
   try {
-    var existing = await fetch(SURL + '/rest/v1/time_off_records?staff_email=eq.' + encodeURIComponent(me.email) + '&time_in=is.null&limit=1',
+    var existing = await fetch(SURL + '/rest/v1/time_off_records?staff_email=eq.' + encodeURIComponent(me.email) + '&time_in=is.null&entry_type=neq.cancel_pending&limit=1',
       { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } }).then(function (r) { return r.json(); });
     if (existing && existing.length) { alert('You already have an open Time Off. Time In on that one first.'); return; }
 
     var monthStart = localDateStr().slice(0, 8) + '01';
     var monthlyMinutes = await timeOffMonthlyMinutes(me.email, monthStart);
     if (monthlyMinutes >= TIMEOFF_MONTHLY_CAP_MIN) {
-      alert('Monthly limit reached\n\nYou\'ve used your full 4h 00m Time Off allowance this month. Please go through Annual Leave instead of Time Off.');
+      alert('Monthly limit reached\n\nYou\'ve used your full 4h Time Off allowance this month. Please go through Annual Leave instead of Time Off.');
       return;
     }
     if (monthlyMinutes >= TIMEOFF_NEAR_LIMIT_MIN) {
-      var remaining = formatDuration(TIMEOFF_MONTHLY_CAP_MIN - monthlyMinutes);
+      var remaining = formatChargedHours(TIMEOFF_MONTHLY_CAP_MIN - monthlyMinutes);
       if (!confirm('Low Time Off balance\n\nYou have ' + remaining + ' left this month. If this trip runs longer, it\'ll be flagged for HR to review.\n\nContinue?')) return;
     }
 
@@ -668,6 +771,16 @@ async function timeInNow(id) {
     if (!record) return;
     var timeIn = new Date();
     var duration = Math.round((timeIn.getTime() - new Date(record.time_out).getTime()) / 60000);
+    // Defense in depth -- the button driving this is normally swapped out
+    // for Request Cancellation once a render shows the trip is over the
+    // cap (see renderTimeOffStatus), but re-check here too in case this
+    // fires against a stale render (e.g. the cap was crossed the instant
+    // this was tapped).
+    if (duration > TIMEOFF_PER_TRIP_CAP_MIN) {
+      alert('This trip has run ' + formatDuration(duration) + ' — over the 2-hour Time Off limit.\n\nPlease apply Annual Leave for today instead. Use "Request Cancellation" to let HR cancel this Time Off record.');
+      loadTimeOff();
+      return;
+    }
     await sbWrite('PATCH', 'time_off_records', { time_in: timeIn.toISOString(), duration_minutes: duration }, 'id=eq.' + id);
     loadTimeOff();
     record.time_in = timeIn.toISOString(); record.duration_minutes = duration;
@@ -676,20 +789,43 @@ async function timeInNow(id) {
   } catch (e) { alert('Could not record Time In. Please try again.'); }
 }
 
-async function voidTimeOff(id) {
-  if (!canManageTimeOff(id)) { alert('You can only cancel your own Time Off records.'); return; }
-  if (!confirm('Cancel this trip and apply Annual Leave instead? The record stays on file marked Voided, and the full duration is returned to your monthly buffer. You\'ll need to apply for Annual Leave separately to cover the day.')) return;
+// Staff-initiated -- requests cancellation of an over-cap trip instead of
+// immediately self-voiding it (the old voidTimeOff behavior). Leaves
+// time_in/duration_minutes untouched either way (still null if the trip was
+// still open) -- approveCancelTimeOff below is what finally closes it out.
+async function requestCancelTimeOff(id) {
+  if (!canManageTimeOff(id)) { alert('You can only request cancellation for your own Time Off records.'); return; }
+  if (!confirm('Request to cancel this trip?\n\nHR will review and approve it. Once approved, you\'ll need to apply Annual Leave separately to cover this day.')) return;
+  try {
+    await sbWrite('PATCH', 'time_off_records', { entry_type: 'cancel_pending', cancel_requested_at: new Date().toISOString() }, 'id=eq.' + id);
+    loadTimeOff();
+  } catch (e) { alert('Could not request cancellation. Please try again.'); }
+}
+
+// HR Admin/permission-only -- approves a pending cancellation request,
+// finally moving the trip to Voided. If it was still open (never timed
+// back in), this is also what closes it out, timestamped to the moment of
+// approval -- matches cancel_requested_at being left alone by
+// requestCancelTimeOff above.
+async function approveCancelTimeOff(id) {
+  if (!canCorrectTimeOff()) { alert('You do not have permission to approve this.'); return; }
+  if (!confirm('Approve this cancellation? The trip will be marked Voided and moved to Annual Leave. The staff member will be shown a reminder to apply Annual Leave for this day.')) return;
   try {
     var rows = await fetch(SURL + '/rest/v1/time_off_records?id=eq.' + id, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } }).then(function (r) { return r.json(); });
     var record = rows && rows[0];
-    await sbWrite('PATCH', 'time_off_records', { entry_type: 'voided' }, 'id=eq.' + id);
-    loadTimeOff();
-    if (record) {
-      record.entry_type = 'voided';
-      var monthStart = localDateStr().slice(0, 8) + '01';
-      timeOffMonthlyMinutes(record.staff_email, monthStart).then(function (mins) { syncTimeOffToSheet('update', record, mins); });
+    if (!record) return;
+    var patch = { entry_type: 'voided' };
+    if (!record.time_in) {
+      var timeIn = new Date();
+      patch.time_in = timeIn.toISOString();
+      patch.duration_minutes = Math.round((timeIn.getTime() - new Date(record.time_out).getTime()) / 60000);
     }
-  } catch (e) { alert('Could not cancel this trip. Please try again.'); }
+    await sbWrite('PATCH', 'time_off_records', patch, 'id=eq.' + id);
+    loadTimeOff();
+    Object.assign(record, patch);
+    var monthStart = localDateStr().slice(0, 8) + '01';
+    timeOffMonthlyMinutes(record.staff_email, monthStart).then(function (mins) { syncTimeOffToSheet('update', record, mins); });
+  } catch (e) { alert('Could not approve this cancellation. Please try again.'); }
 }
 
 // ── PLAN AHEAD reminders (time_off_reminders) ──
@@ -701,18 +837,18 @@ async function voidTimeOff(id) {
 async function convertReminder(id) {
   var me = timeOffMe();
   try {
-    var existing = await fetch(SURL + '/rest/v1/time_off_records?staff_email=eq.' + encodeURIComponent(me.email) + '&time_in=is.null&limit=1',
+    var existing = await fetch(SURL + '/rest/v1/time_off_records?staff_email=eq.' + encodeURIComponent(me.email) + '&time_in=is.null&entry_type=neq.cancel_pending&limit=1',
       { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } }).then(function (r) { return r.json(); });
     if (existing && existing.length) { alert('You already have an open Time Off. Time In on that one first.'); return; }
 
     var monthStart = localDateStr().slice(0, 8) + '01';
     var monthlyMinutes = await timeOffMonthlyMinutes(me.email, monthStart);
     if (monthlyMinutes >= TIMEOFF_MONTHLY_CAP_MIN) {
-      alert('Monthly limit reached\n\nYou\'ve used your full 4h 00m Time Off allowance this month. Please go through Annual Leave instead of Time Off.');
+      alert('Monthly limit reached\n\nYou\'ve used your full 4h Time Off allowance this month. Please go through Annual Leave instead of Time Off.');
       return;
     }
     if (monthlyMinutes >= TIMEOFF_NEAR_LIMIT_MIN) {
-      var remaining = formatDuration(TIMEOFF_MONTHLY_CAP_MIN - monthlyMinutes);
+      var remaining = formatChargedHours(TIMEOFF_MONTHLY_CAP_MIN - monthlyMinutes);
       if (!confirm('Low Time Off balance\n\nYou have ' + remaining + ' left this month. If this trip runs longer, it\'ll be flagged for HR to review.\n\nContinue?')) return;
     }
 
