@@ -80,6 +80,7 @@ html, body {
      instead of sitting in its own reserved space below it. */
   height: 100vh;
   height: 100dvh;
+  height: calc(var(--vh, 1vh) * 100);
   background: var(--surface);
   display: flex;
   flex-direction: column;
@@ -1202,6 +1203,26 @@ html, body {
     if (user.role !== 'hradmin' && user.role !== 'superadmin') {
       window.location.replace('index.html');
     }
+  })();
+</script>
+<script>
+  // Mobile viewport height fix -- mirrors index.html's own. On some Android
+  // browsers/WebViews, 100vh (and even 100dvh) ends up taller than what's
+  // actually visible, so .phone's bottom edge -- and the sticky bottom nav
+  // sitting at it -- renders below the fold, overlapping the last bit of
+  // scrollable content instead of reserving its own space under it (seen
+  // as the Quick Access grid's bottom row, or the Sign Out button, stuck
+  // half hidden behind the green nav bar). Measuring window.innerHeight
+  // ourselves and feeding it back in as --vh is more reliable than any CSS
+  // viewport unit; .phone falls back to plain vh/dvh until this first
+  // runs, so it still works with JS off.
+  (function () {
+    function setVh() {
+      document.documentElement.style.setProperty('--vh', (window.innerHeight * 0.01) + 'px');
+    }
+    setVh();
+    window.addEventListener('resize', setVh);
+    window.addEventListener('orientationchange', setVh);
   })();
 </script>
 
