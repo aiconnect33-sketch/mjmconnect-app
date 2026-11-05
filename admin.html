@@ -80,11 +80,22 @@ html, body {
      instead of sitting in its own reserved space below it. */
   height: 100vh;
   height: 100dvh;
-  height: calc(var(--vh, 1vh) * 100);
   background: var(--surface);
   display: flex;
   flex-direction: column;
   position: relative;
+}
+/* The --vh JS fallback is ONLY for browsers that don't understand 100dvh
+   at all (older Android WebViews, mainly) -- dvh is the correct, natively-
+   dynamic fix and already tracks iOS Safari's address bar show/hide in
+   real time; window.innerHeight does NOT reliably do the same on iOS (it
+   can go stale across that transition), so forcing it in unconditionally
+   left a tall blank gap under the content with the bottom nav floating
+   above it once the Safari chrome collapsed on scroll. Scoping it to
+   @supports not (...) means dvh-capable browsers (effectively all of them
+   today) never see this rule at all. */
+@supports not (height: 100dvh) {
+  .phone { height: calc(var(--vh, 1vh) * 100); }
 }
 
 /* ── STATUS BAR ── */
