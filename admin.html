@@ -2366,37 +2366,32 @@ html, body {
 
       <div id="tor-view-timeoff">
 
-      <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
-        <div class="fr-tile">
-          <div class="fr-tile-num" id="tor-stat-total">—</div>
-          <div class="fr-tile-label" id="tor-stat-total-label">Total</div>
-        </div>
-        <div class="fr-tile">
-          <div class="fr-tile-num" style="color:var(--blue-text);" id="tor-stat-out">—</div>
-          <div class="fr-tile-label">Currently Out</div>
-        </div>
-        <div class="fr-tile" style="border-color:#E6B4B4;">
-          <div class="fr-tile-num" style="color:var(--red-text);" id="tor-stat-overlimit">—</div>
-          <div class="fr-tile-label">Over 2.5h limit</div>
-        </div>
-        <div class="fr-tile">
-          <div class="fr-tile-num" style="color:var(--green-text);" id="tor-stat-hours">—</div>
-          <div class="fr-tile-label">Total hours</div>
-        </div>
-      </div>
+      <!-- Needs Your Approval -- only cancellation requests (entry_type
+           cancel_pending) land here; Approve runs the same approval the
+           Time Off tab's All Records uses, then refreshes this report. -->
+      <div id="tor-approval-banner" style="display:none;"></div>
+
+      <!-- A plain reminder, not an approval queue -- Annual Leave is filed
+           by the staff in OPISPRO, never approved in this app, so this
+           list carries no action button, just a nudge not to lose track. -->
+      <div id="tor-al-reminder-banner" style="display:none;"></div>
 
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
         <button class="fr-pill active" id="tor-filter-all" onclick="setTimeOffReportFilter('all')">All</button>
         <button class="fr-pill" id="tor-filter-out" onclick="setTimeOffReportFilter('out')">Currently Out</button>
         <button class="fr-pill" id="tor-filter-completed" onclick="setTimeOffReportFilter('completed')">Completed</button>
+        <button class="fr-pill" id="tor-filter-pending_cancel" onclick="setTimeOffReportFilter('pending_cancel')">Pending Cancellation</button>
         <button class="fr-pill" id="tor-filter-voided" onclick="setTimeOffReportFilter('voided')">Voided</button>
+        <select class="fr-select" id="tor-staff-select" onchange="setTimeOffReportStaff(this.value)">
+          <option value="">All Staff</option>
+        </select>
         <select class="fr-select" id="tor-range-select" onchange="loadTimeOffReport()">
           <option value="30">Last 30 days</option>
           <option value="90">Last 90 days</option>
           <option value="0">All time</option>
         </select>
         <div style="flex:1;min-width:140px;">
-          <input class="fr-search" id="tor-search-input" placeholder="Search staff or reason…" oninput="renderTimeOffReportTable()">
+          <input class="fr-search" id="tor-search-input" placeholder="Search reason…" oninput="renderTimeOffReportTable()">
         </div>
       </div>
 
@@ -5640,8 +5635,9 @@ html, body {
   // chosen date range (not just the 150-row working list tab-timeoff.js
   // keeps for the Time Off tab itself), so it can replace the Google Sheet.
   var torReportData = [];
-  var torReportFilter = 'all'; // 'all' | 'out' | 'completed' | 'voided'
+  var torReportFilter = 'all'; // 'all' | 'out' | 'completed' | 'pending_cancel' | 'voided'
   var torReportMode = 'timeoff'; // 'timeoff' | 'edo'
+  var torStaffFilter = ''; // '' = All Staff, else an exact staff_name match
 
   async function loadTimeOffReport() {
     var tbody = document.getElementById('tor-table-body');
@@ -5655,12 +5651,105 @@ html, body {
         filter = 'time_out=gte.' + cutoff + '&' + filter;
       }
       torReportData = (await sbGet('time_off_records', filter)) || [];
-      renderTimeOffReportStats(days);
+      torPopulateStaffSelect();
+      renderTimeOffReportBanners();
       renderTimeOffReportTable();
     } catch (e) {
       torReportData = [];
       tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px;">Could not load report.</td></tr>';
     }
+  }
+
+  // Unique staff names in the currently loaded range, so HR can jump
+  // straight to one person's whole history instead of typing it out.
+  function torPopulateStaffSelect() {
+    var sel = document.getElementById('tor-staff-select');
+    if (!sel) return;
+    var names = Array.from(new Set(torReportData.map(function (r) { return r.staff_name; }).filter(Boolean))).sort();
+    sel.innerHTML = '<option value="">All Staff</option>' + names.map(function (n) {
+      return '<option value="' + escHtml(n) + '"' + (n === torStaffFilter ? ' selected' : '') + '>' + escHtml(n) + '</option>';
+    }).join('');
+  }
+
+  function setTimeOffReportStaff(name) {
+    torStaffFilter = name;
+    renderTimeOffReportTable();
+  }
+
+  // Two separate lists, not one blended "approval" banner -- Admin
+  // approval only ever applies to cancelling the trip itself (the same
+  // cancel_pending -> approveCancelTimeOff flow as All Records); applying
+  // Annual Leave to cover the day is a staff action taken in OPISPRO,
+  // entirely outside this app, so that list is a plain reminder with no
+  // action button, not another approval queue.
+  function renderTimeOffReportBanners() {
+    var pending = torReportData.filter(function (r) { return r.entry_type === 'cancel_pending'; });
+    var reminders = torReportData.filter(function (r) { return r.entry_type === 'voided' && r.cancel_requested_at; });
+
+    var approvalEl = document.getElementById('tor-approval-banner');
+    if (approvalEl) {
+      if (!pending.length) {
+        approvalEl.style.display = 'none'; approvalEl.innerHTML = '';
+      } else {
+        approvalEl.style.display = 'block';
+        approvalEl.innerHTML = '<div style="background:var(--amber-bg);border:1px solid #F0DBA3;border-radius:var(--r-lg);padding:14px 16px;margin-bottom:12px;">'
+          + '<div style="font-size:13px;font-weight:800;color:var(--amber-text);margin-bottom:10px;">⚠️ Needs Your Approval — ' + pending.length + ' cancellation request' + (pending.length === 1 ? '' : 's') + '</div>'
+          + pending.map(function (r) {
+            var when = fcDateTime(r.time_out).split(', ')[0];
+            return '<div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface);border-radius:10px;padding:9px 12px;margin-bottom:7px;">'
+              + '<div style="font-size:12.5px;color:var(--text);"><b>' + escHtml(r.staff_name || '') + '</b> — ' + escHtml(r.reason || '') + ', ' + when + (r.duration_minutes != null ? ' · ' + fmtTimeOffDuration(r.duration_minutes) : '') + '</div>'
+              + '<div style="display:flex;align-items:center;gap:10px;">'
+              + '<span class="badge b-amber">Pending Cancellation</span>'
+              + '<button style="font-size:11.5px;font-weight:700;color:#fff;background:var(--green);border:none;padding:6px 13px;border-radius:7px;cursor:pointer;font-family:inherit;" onclick="torApproveCancellation(' + r.id + ')">Approve</button>'
+              + '</div></div>';
+          }).join('')
+          + '</div>';
+      }
+    }
+
+    var remindEl = document.getElementById('tor-al-reminder-banner');
+    if (remindEl) {
+      if (!reminders.length) {
+        remindEl.style.display = 'none'; remindEl.innerHTML = '';
+      } else {
+        remindEl.style.display = 'block';
+        remindEl.innerHTML = '<div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px 16px;margin-bottom:16px;">'
+          + '<div style="font-size:13px;font-weight:800;color:var(--text2);margin-bottom:6px;">📌 Reminder — ' + reminders.length + ' staff ran over 2h and should apply Annual Leave</div>'
+          + '<div style="font-size:11px;color:var(--text3);margin-bottom:8px;">Not an approval step — Annual Leave is filed by the staff in OPISPRO, outside this app. Listed here only so it isn\'t missed.</div>'
+          + reminders.map(function (r) {
+            var when = fcDateTime(r.time_out).split(', ')[0];
+            return '<div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface);border-radius:10px;padding:9px 12px;margin-bottom:7px;">'
+              + '<div style="font-size:12.5px;color:var(--text);"><b>' + escHtml(r.staff_name || '') + '</b> — ' + escHtml(r.reason || '') + ', ' + when + (r.duration_minutes != null ? ' · ' + fmtTimeOffDuration(r.duration_minutes) : '') + ' · cancellation approved</div>'
+              + '<span style="font-size:11.5px;font-weight:700;color:var(--green);text-decoration:underline;cursor:pointer;" onclick="torViewRecord(' + r.id + ')">View</span>'
+              + '</div>';
+          }).join('')
+          + '</div>';
+      }
+    }
+  }
+
+  // Shares adminApproveCancelTimeOff with the Time Off tab's All Records
+  // (same confirm + PATCH + notification-via-toast flow) -- this just also
+  // refreshes the report's own separately-loaded data afterward.
+  async function torApproveCancellation(id) {
+    await adminApproveCancelTimeOff(id);
+    loadTimeOffReport();
+  }
+
+  // Jumps to one record from a banner -- filters the table down to that
+  // person (clearing any text search) and scrolls it into view, rather
+  // than trying to highlight a single row inside a long table.
+  function torViewRecord(id) {
+    var r = torReportData.find(function (x) { return x.id === id; });
+    if (!r) return;
+    torStaffFilter = r.staff_name;
+    var sel = document.getElementById('tor-staff-select');
+    if (sel) sel.value = r.staff_name;
+    var searchInput = document.getElementById('tor-search-input');
+    if (searchInput) searchInput.value = '';
+    setTimeOffReportFilter('all');
+    var wrap = document.querySelector('.fr-table-wrap');
+    if (wrap) wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   function torStatus(r) {
@@ -5681,22 +5770,9 @@ html, body {
     return badge;
   }
 
-  function renderTimeOffReportStats(days) {
-    var total = torReportData.length;
-    var out = torReportData.filter(function (r) { return torStatus(r) === 'out'; }).length;
-    var overLimit = torReportData.filter(function (r) { return torStatus(r) !== 'voided' && torStatus(r) !== 'pending_cancel' && r.duration_minutes > 120; }).length;
-    var totalMinutes = torReportData.filter(function (r) { return torStatus(r) !== 'voided' && torStatus(r) !== 'pending_cancel'; })
-      .reduce(function (sum, r) { return sum + (r.duration_minutes || 0); }, 0);
-    document.getElementById('tor-stat-total').textContent = total;
-    document.getElementById('tor-stat-out').textContent = out;
-    document.getElementById('tor-stat-overlimit').textContent = overLimit;
-    document.getElementById('tor-stat-hours').textContent = (totalMinutes / 60).toFixed(1);
-    document.getElementById('tor-stat-total-label').textContent = days > 0 ? 'Total (last ' + days + ' days)' : 'Total (all time)';
-  }
-
   function setTimeOffReportFilter(f) {
     torReportFilter = f;
-    ['all', 'out', 'completed', 'voided'].forEach(function (k) {
+    ['all', 'out', 'completed', 'pending_cancel', 'voided'].forEach(function (k) {
       var el = document.getElementById('tor-filter-' + k);
       if (el) el.classList.toggle('active', k === f);
     });
@@ -5711,6 +5787,8 @@ html, body {
   function torVisibleRows() {
     var q = (document.getElementById('tor-search-input').value || '').trim().toLowerCase();
     return torReportData.filter(torMatchesFilter).filter(function (r) {
+      return !torStaffFilter || r.staff_name === torStaffFilter;
+    }).filter(function (r) {
       if (!q) return true;
       return (r.staff_name || '').toLowerCase().indexOf(q) !== -1 || (r.reason || '').toLowerCase().indexOf(q) !== -1;
     });
