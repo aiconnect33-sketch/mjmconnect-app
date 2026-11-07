@@ -877,6 +877,18 @@ async function requestCancelTimeOff(id) {
   } catch (e) { alert('Could not request cancellation. Please try again.'); }
 }
 
+// Fire-and-forget, like notifyAnnouncementPush in js/push.js -- pushes a
+// notification to the one staff member whose cancellation was just
+// approved, covering the case where they're not in the app to see
+// timeoffApprovalToastHtml's in-app toast. See
+// docs/cancellation-approved-notify-setup.md for the Edge Function.
+function notifyCancellationApprovedPush(email, reason, day) {
+  fetch(PUSH_SURL + '/functions/v1/notify-cancellation-approved', {
+    method: 'POST', mode: 'no-cors',
+    body: JSON.stringify({ secret: PUSH_SEND_SECRET, email: email, reason: reason, day: day })
+  }).catch(function () {});
+}
+
 // HR Admin/permission-only -- approves a pending cancellation request,
 // finally moving the trip to Voided. If it was still open (never timed
 // back in), this is also what closes it out, timestamped to the moment of
@@ -898,6 +910,8 @@ async function approveCancelTimeOff(id) {
     await sbWrite('PATCH', 'time_off_records', patch, 'id=eq.' + id);
     loadTimeOff();
     Object.assign(record, patch);
+    var day = new Date(record.time_out).toLocaleDateString('en-MY', { day: 'numeric', month: 'short' });
+    notifyCancellationApprovedPush(record.staff_email, record.reason, day);
     var monthStart = localDateStr().slice(0, 8) + '01';
     timeOffMonthlyMinutes(record.staff_email, monthStart).then(function (mins) { syncTimeOffToSheet('update', record, mins); });
   } catch (e) { alert('Could not approve this cancellation. Please try again.'); }

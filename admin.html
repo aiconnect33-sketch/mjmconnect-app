@@ -7228,6 +7228,16 @@ html, body {
     } catch (e) { alert('Could not request cancellation. Please try again.'); }
   }
 
+  // Fire-and-forget, like notifyApprovalPush above -- pushes a notification
+  // to the one staff member whose cancellation was just approved. See
+  // docs/cancellation-approved-notify-setup.md for the Edge Function.
+  function notifyCancellationApprovedPush(email, reason, day) {
+    fetch(PUSH_SURL + '/functions/v1/notify-cancellation-approved', {
+      method: 'POST', mode: 'no-cors',
+      body: JSON.stringify({ secret: PUSH_SEND_SECRET, email: email, reason: reason, day: day })
+    }).catch(function () {});
+  }
+
   async function adminApproveCancelTimeOff(id) {
     if (!confirm('Approve this cancellation? The trip will be marked Voided and moved to Annual Leave. The staff member will be shown a reminder to apply Annual Leave for this day.')) return;
     try {
@@ -7245,6 +7255,8 @@ html, body {
       if (typeof loadDbTimeOff === 'function') loadDbTimeOff();
       if (typeof loadAdminLeaveDuty === 'function') loadAdminLeaveDuty();
       Object.assign(record, patch);
+      var cancelDay = new Date(record.time_out).toLocaleDateString('en-MY', { day: 'numeric', month: 'short' });
+      notifyCancellationApprovedPush(record.staff_email, record.reason, cancelDay);
       var monthStart3 = localDateStr().slice(0, 8) + '01';
       adminTimeOffMonthlyMinutes(record.staff_email, monthStart3).then(function (mins) { adminSyncTimeOffToSheet('update', record, mins); });
     } catch (e) { alert('Could not approve this cancellation. Please try again.'); }
