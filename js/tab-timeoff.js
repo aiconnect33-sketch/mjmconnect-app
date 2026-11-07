@@ -68,6 +68,44 @@ function timeoffRecordChargedMinutes(r) {
   return 0;
 }
 
+// Per staff member, walks that month's countable records in chronological
+// order and flags the ONE that first pushes the running total past the
+// monthly cap -- mirrors the live Currently-Out banner's own check
+// (renderTimeOffStatus), but for a record that's already closed (so there
+// was no "still open" moment to block Time In on). Only the crossing
+// record is flagged, not every record after it, so a month that's already
+// over the cap doesn't light up every later trip too. Returns a plain
+// object of {id: true} for fast lookup in renderTimeOffRow.
+function timeoffComputeMonthlyTriggers(records) {
+  // Grouped by staff AND calendar month (not just staff) -- every current
+  // caller already passes one month's records, so this changes nothing for
+  // them, but it keeps the cumulative sum from bleeding across a month
+  // boundary if a caller (e.g. a multi-month report) ever passes more.
+  var byStaffMonth = {};
+  records.forEach(function (r) {
+    var staffKey = (r.staff_email || '').toLowerCase() || r.staff_name;
+    var monthKey = (r.time_out || '').slice(0, 7);
+    var key = staffKey + '|' + monthKey;
+    if (!byStaffMonth[key]) byStaffMonth[key] = [];
+    byStaffMonth[key].push(r);
+  });
+  var triggers = {};
+  Object.keys(byStaffMonth).forEach(function (key) {
+    var list = byStaffMonth[key].filter(function (r) {
+      return r.entry_type !== 'voided' && r.entry_type !== 'cancel_pending';
+    }).slice().sort(function (a, b) { return new Date(a.time_out) - new Date(b.time_out); });
+    var cumulative = 0;
+    list.forEach(function (r) {
+      var before = cumulative;
+      cumulative += timeoffRecordChargedMinutes(r);
+      if (before <= TIMEOFF_MONTHLY_CAP_MIN && cumulative > TIMEOFF_MONTHLY_CAP_MIN) {
+        triggers[r.id] = true;
+      }
+    });
+  });
+  return triggers;
+}
+
 function timeOffMe() {
   var raw = localStorage.getItem('mjm_user');
   return raw ? JSON.parse(raw) : {};
@@ -184,6 +222,7 @@ async function loadTimeOff() {
     timeoffState.myEmailLow = myEmailLow;
     timeoffState.allRecords = allRecords;
     timeoffState.canManageAll = typeof hasEditPermission === 'function' && hasEditPermission('timeoff');
+    timeoffState.monthlyTriggers = timeoffComputeMonthlyTriggers(allRecords);
 
     if (statusEl) statusEl.innerHTML = timeoffApprovalToastHtml(myRecords) + renderTimeOffStatus(openRecord, monthlyMinutes, dueReminders);
     if (mineEl) mineEl.innerHTML = renderTimeOffMineSection();
@@ -356,17 +395,32 @@ function renderTimeOffStatus(openRecord, monthlyMinutes, dueReminders) {
     var out = new Date(openRecord.time_out);
     var elapsedMin = (Date.now() - out.getTime()) / 60000;
     var elapsedLabel = formatDuration(elapsedMin);
-    var overCap = elapsedMin > TIMEOFF_PER_TRIP_CAP_MIN;
-    if (overCap) {
+    // Two independent ways a still-open trip can be over cap: its own
+    // elapsed time past the 2h/trip limit, or -- even while well under
+    // that -- its live charge (already folded into monthlyMinutes, which
+    // loadTimeOff() computes including this open record) pushing the
+    // month's total past the 4h/month limit. Either blocks Time In the
+    // same way; only the explanation differs.
+    var tripOverCap = elapsedMin > TIMEOFF_PER_TRIP_CAP_MIN;
+    var monthOverCap = monthlyMinutes > TIMEOFF_MONTHLY_CAP_MIN;
+    if (tripOverCap || monthOverCap) {
+      var statusLine = tripOverCap ? 'YOU\'VE PASSED THE 2H LIMIT' : 'YOU\'VE PASSED THE MONTHLY LIMIT';
+      var warnTitle, warnBody;
+      if (tripOverCap) {
+        warnTitle = 'This trip has gone over the 2-hour Time Off limit.';
+        warnBody = 'This needs to be covered by Annual Leave instead of Time Off. Request a cancellation below — once HR approves it, you\'ll be reminded to apply Annual Leave for today.';
+      } else {
+        warnTitle = 'Timing in now would push this month\'s total over the 4-hour limit.';
+        warnBody = 'This trip is still under the 2h/trip limit on its own, but it would bring this month\'s total to ' + formatChargedHours(monthlyMinutes) + '. The same rule as a single over-cap trip applies here — this needs to go through Annual Leave instead. Request a cancellation below — once HR approves it, you\'ll be reminded to apply Annual Leave for today.';
+      }
       html += '<div class="to-out-banner over">'
-        + '<div class="to-status-line">⚠ YOU\'VE PASSED THE 2H LIMIT</div>'
+        + '<div class="to-status-line">⚠ ' + statusLine + '</div>'
         + '<div class="to-reason-line">' + escHtml(openRecord.reason) + '</div>'
         + '<div class="to-time-line">Out since ' + formatClock(out) + ' · ' + elapsedLabel + ' so far</div>'
         + '<button class="book-btn-primary" style="margin-bottom:0;" disabled>✓ I\'m Back — Time In</button>'
         + '</div>'
         + '<div class="to-warn red">'
-        + '<b>⚠ This trip has gone over the 2-hour Time Off limit.</b>'
-        + 'This needs to be covered by Annual Leave instead of Time Off. Request a cancellation below — once HR approves it, you\'ll be reminded to apply Annual Leave for today.'
+        + '<b>⚠ ' + warnTitle + '</b>' + warnBody
         + '<button style="width:100%;margin-top:10px;background:var(--red-text);color:#fff;border:none;border-radius:var(--radius-sm);padding:9px;font-size:11.5px;font-weight:700;" onclick="requestCancelTimeOff(' + openRecord.id + ')">↩ Request Cancellation</button>'
         + '</div>';
     } else {
@@ -466,7 +520,7 @@ function renderTimeOffOverview(records) {
 // every load, same as Book's two panels, so switching is instant. ──
 var timeoffState = {
   today: '', myEmailLow: '', allRecords: [], canManageAll: false,
-  mineCancelledOpen: false, allCancelledOpen: false
+  mineCancelledOpen: false, allCancelledOpen: false, monthlyTriggers: {}
 };
 
 function timeoffCancelToggleHtml(count, isOpen, onclickFn) {
@@ -498,9 +552,15 @@ function renderTimeOffRow(r, myEmailLow, canManageAll, sectionKey) {
   var actualMin = r.time_in ? r.duration_minutes : (Date.now() - out.getTime()) / 60000;
   var charged = chargedMinutes(actualMin);
   var overCap = actualMin > TIMEOFF_PER_TRIP_CAP_MIN;
+  // Even a trip well under the 2h/trip cap can be the one that tipped this
+  // month's total past 4h -- timeoffComputeMonthlyTriggers() flags exactly
+  // one record per staff member per month for that (the one that crosses
+  // the line), computed once in loadTimeOff().
+  var monthlyTrigger = !!(timeoffState.monthlyTriggers && timeoffState.monthlyTriggers[r.id]);
+  var flagged = overCap || monthlyTrigger;
   var badge = isPending
     ? '<span class="badge badge-amber">Pending Cancellation</span>'
-    : (overCap
+    : (flagged
       ? '<span class="badge badge-urgent">' + formatChargedHours(charged) + ' charged</span>'
       : '<span class="badge badge-blue">' + formatChargedHours(charged) + ' charged</span>');
   var entryNote = r.entry_type === 'edited' ? ' <span style="color:var(--amber-text);font-weight:700;">(edited)</span>'
@@ -545,13 +605,19 @@ function renderTimeOffRow(r, myEmailLow, canManageAll, sectionKey) {
           + '<button style="width:100%;margin-top:10px;background:var(--green-dark);color:#fff;border:none;border-radius:var(--radius-sm);padding:9px;font-size:11.5px;font-weight:700;" onclick="approveCancelTimeOff(' + r.id + ')">✓ Approve Cancellation</button>'
         : '<b>⏳ Waiting on HR approval.</b>Once approved, you\'ll be reminded to apply Annual Leave to cover this day.')
       + '</div>';
-  } else if (canManage && overCap && !stillOpen) {
-    // A still-open over-cap record is flagged by the urgent badge above and
-    // already offers Request Cancellation from the Currently Out banner --
-    // no need to repeat the same box here too.
+  } else if (canManage && flagged && !stillOpen) {
+    // A still-open flagged record already offers Request Cancellation from
+    // the Currently Out banner -- no need to repeat the same box here too.
+    var flagTitle, flagBody;
+    if (overCap) {
+      flagTitle = 'This trip ran ' + formatChargedHours(charged) + ' — over the 2h single-trip limit.';
+      flagBody = 'This needs to go through Annual Leave instead of Time Off.';
+    } else {
+      flagTitle = 'This trip pushed the monthly total over the 4h limit.';
+      flagBody = 'It\'s only ' + formatChargedHours(charged) + ' on its own — under the 2h/trip limit — but it\'s the one that tipped the month over 4h. The same rule as a single over-cap trip applies here.';
+    }
     html += '<div class="to-warn red">'
-      + '<b>⚠ This trip ran ' + formatChargedHours(charged) + ' — over the 2h single-trip limit.</b>'
-      + 'This needs to go through Annual Leave instead of Time Off.'
+      + '<b>⚠ ' + flagTitle + '</b>' + flagBody
       + '<button style="width:100%;margin-top:10px;background:var(--red-text);color:#fff;border:none;border-radius:var(--radius-sm);padding:9px;font-size:11.5px;font-weight:700;" onclick="requestCancelTimeOff(' + r.id + ')">↩ Request Cancellation</button>'
       + '</div>';
   }
@@ -772,19 +838,28 @@ async function timeInNow(id) {
     var timeIn = new Date();
     var duration = Math.round((timeIn.getTime() - new Date(record.time_out).getTime()) / 60000);
     // Defense in depth -- the button driving this is normally swapped out
-    // for Request Cancellation once a render shows the trip is over the
+    // for Request Cancellation once a render shows the trip is over either
     // cap (see renderTimeOffStatus), but re-check here too in case this
-    // fires against a stale render (e.g. the cap was crossed the instant
-    // this was tapped).
+    // fires against a stale render (e.g. a cap was crossed the instant
+    // this was tapped). timeOffMonthlyMinutes() already excludes this
+    // still-open record (its duration_minutes is still null), so adding
+    // this trip's own charge to it gives the true total Timing In now
+    // would produce.
+    var monthStart = localDateStr().slice(0, 8) + '01';
+    var monthlyBefore = await timeOffMonthlyMinutes(record.staff_email, monthStart);
     if (duration > TIMEOFF_PER_TRIP_CAP_MIN) {
       alert('This trip has run ' + formatDuration(duration) + ' — over the 2-hour Time Off limit.\n\nPlease apply Annual Leave for today instead. Use "Request Cancellation" to let HR cancel this Time Off record.');
+      loadTimeOff();
+      return;
+    }
+    if (monthlyBefore + chargedMinutes(duration) > TIMEOFF_MONTHLY_CAP_MIN) {
+      alert('Timing in now would push this month\'s total over the 4-hour limit.\n\nPlease apply Annual Leave for today instead. Use "Request Cancellation" to let HR cancel this Time Off record.');
       loadTimeOff();
       return;
     }
     await sbWrite('PATCH', 'time_off_records', { time_in: timeIn.toISOString(), duration_minutes: duration }, 'id=eq.' + id);
     loadTimeOff();
     record.time_in = timeIn.toISOString(); record.duration_minutes = duration;
-    var monthStart = localDateStr().slice(0, 8) + '01';
     timeOffMonthlyMinutes(record.staff_email, monthStart).then(function (mins) { syncTimeOffToSheet('create', record, mins); });
   } catch (e) { alert('Could not record Time In. Please try again.'); }
 }
