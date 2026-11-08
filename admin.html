@@ -1131,7 +1131,19 @@ html, body {
   .dsk-sidebar { display: none; }
 
   @media (min-width: 960px) {
-    .phone-wrap { align-items: stretch; justify-content: flex-start; }
+    /* height + overflow:hidden (not just min-height) -- .screen-body's
+       overscroll-behavior-y:none (added for the mobile pull-to-refresh
+       gesture) blocks scroll from chaining to a parent once it hits its
+       own top. The sidebar has no such restriction, so if the outer page
+       ever had even a sliver of scroll room (e.g. the sidebar's nav list
+       running slightly taller than the window), scrolling over it would
+       "fix" the outer page's position via chaining, while scrolling over
+       the white content area never could -- the whole panel would look
+       stuck part-way down depending purely on which side the mouse was
+       over. Locking the outer page from scrolling at all removes the
+       need for that chaining anywhere: both the sidebar and .screen-body
+       already scroll themselves independently. */
+    .phone-wrap { align-items: stretch; justify-content: flex-start; height: 100vh; height: 100dvh; overflow: hidden; }
     .phone { max-width: none; flex: 1; min-width: 0; }
     .sb { display: none; }
     .topbar .wordmark { display: none; }
