@@ -450,10 +450,24 @@ function fcFilterAndSort(data) {
   });
 }
 
+// Resolves a complaint's CURRENT staff name by email rather than trusting
+// the name snapshotted at submission time -- same pattern as
+// timeoffDisplayName in js/tab-timeoff.js.
+var fcNameMap = {};
+function fcDisplayName(c) {
+  var email = (c.staff_email || '').toLowerCase();
+  return (email && fcNameMap[email]) || c.staff_name;
+}
+
 async function loadTeamComplaints() {
   var el = document.getElementById('fc-team-complaints');
   if (!el) return;
   try {
+    var nameMapRows = await fetch(SURL + '/rest/v1/profiles?select=email,full_name&limit=500',
+      { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } }).then(function (r) { return r.json(); }).catch(function () { return []; });
+    fcNameMap = {};
+    (nameMapRows || []).forEach(function (p) { if (p.email && p.full_name) fcNameMap[p.email.toLowerCase()] = p.full_name; });
+
     var data = await sbGet('faulty_complaints', 'order=created_at.desc&limit=100');
     if (data) data = fcFilterAndSort(data);
     if (!data || !data.length) { el.innerHTML = '<div class="book-empty">No complaints yet.</div>'; return; }
@@ -477,7 +491,7 @@ async function loadTeamComplaints() {
         + '<button class="fc-view-btn" aria-expanded="false" onclick="toggleFcDesc(this,' + c.id + ')"><i class="ti ti-chevron-right"></i> View details</button>'
         + '<div class="fc-desc" id="fc-desc-' + c.id + '">' + escHtml(c.description) + photoHtml + '</div>'
         + '<div class="fc-meta">'
-        + '<div class="fc-meta-line"><i class="ti ti-user"></i> Submitted by <b>&nbsp;' + escHtml(c.staff_name) + '</b>&nbsp;· ' + d + '</div>'
+        + '<div class="fc-meta-line"><i class="ti ti-user"></i> Submitted by <b>&nbsp;' + escHtml(fcDisplayName(c)) + '</b>&nbsp;· ' + d + '</div>'
         + resolvedLine
         + '</div>'
         + actionBtn
