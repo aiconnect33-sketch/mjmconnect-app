@@ -3361,11 +3361,15 @@ html, body {
             })
           });
         }));
-        // DELETE records for staff removed from group
+        // DELETE records for staff removed from group -- resolved to CURRENT
+        // names on both sides of this diff, or a renamed person (whose tag
+        // in `checked` is already their current name) would compare unequal
+        // to their own still-raw-named existing row and get spuriously
+        // deleted + recreated as a "new" staff member.
         var existingNames = [];
-        var existingData = await sbFetch('GET', '/rest/v1/duty_roster?id=in.(' + editingDutyGroupIds.join(',') + ')&select=id,staff_name');
-        if (existingData) existingData.forEach(function(r){ existingNames.push(r.staff_name); });
-        var toRemove = existingData ? existingData.filter(function(r){ return checked.indexOf(r.staff_name) === -1; }) : [];
+        var existingData = await sbFetch('GET', '/rest/v1/duty_roster?id=in.(' + editingDutyGroupIds.join(',') + ')&select=id,staff_name,staff_email');
+        if (existingData) existingData.forEach(function(r){ existingNames.push(dutyDisplayName(r)); });
+        var toRemove = existingData ? existingData.filter(function(r){ return checked.indexOf(dutyDisplayName(r)) === -1; }) : [];
         if (toRemove.length) {
           await Promise.all(toRemove.map(function(r){
             return sbFetch('DELETE', '/rest/v1/duty_roster?id=eq.' + r.id, null, { 'Prefer': '' });
@@ -6387,7 +6391,8 @@ html, body {
       if (!data || !data.length) return;
       var trip = data[0];
       document.getElementById('estatetrip-form-title').textContent = 'Edit Estate Trip';
-      document.getElementById('estatetrip-name').value = trip.staff_name || '';
+      // Resolved to their CURRENT name so re-saving doesn't re-persist a stale one.
+      document.getElementById('estatetrip-name').value = estDisplayName(trip) || '';
       document.getElementById('estatetrip-going-to').value = trip.estate_name || '';
       document.getElementById('estatetrip-date').value = trip.trip_date || '';
       document.getElementById('estatetrip-form').classList.add('visible');
@@ -7932,6 +7937,17 @@ html, body {
 
   async function loadAdminLeaveDuty() {
     var today = localDateStr();
+    // This runs on Home load, independent of whether the Time Off or
+    // Estate Trip tabs have ever been visited -- populate both their name
+    // maps here too, rather than assume loadDbTimeOff()/loadDbEstateTrips()
+    // already did it, or these two cards fall back to stale snapshotted names.
+    try {
+      var homeNameMapRows = await sbFetch('GET', '/rest/v1/profiles?select=email,full_name&limit=500').catch(function () { return []; });
+      var homeNameMap = {};
+      (homeNameMapRows || []).forEach(function (p) { if (p.email && p.full_name) homeNameMap[p.email.toLowerCase()] = p.full_name; });
+      timeoffNameMap = homeNameMap;
+      estNameMap = homeNameMap;
+    } catch (e) {}
     try {
       var leaveEl = document.getElementById('admin-leave-today');
       if (leaveEl && window.location.protocol !== 'file:') {
@@ -7958,7 +7974,7 @@ html, body {
       if (tripEl && window.location.protocol !== 'file:') {
         var trips = await sbFetch('GET', '/rest/v1/estate_trips?trip_date=eq.' + today + '&order=staff_name.asc&limit=50');
         if (trips && trips.length) {
-          var tnames = trips.map(function(r){ return r.staff_name; }).join(', ');
+          var tnames = trips.map(function(r){ return estDisplayName(r); }).join(', ');
           tripEl.innerHTML = '<div class="home-summary-card" onclick="switchTabByName(\'estatetrip\')">'
             + '<div class="home-summary-ic" style="background:var(--estate-bg);color:var(--estate-text);"><i class="ti ti-car"></i></div>'
             + '<div style="flex:1;min-width:0;"><div class="home-summary-title">Today\'s Estate Trip</div>'
@@ -8203,10 +8219,11 @@ html, body {
           if (html) html += '<div style="height:1px;background:var(--border);margin:8px 0;"></div>';
           html += '<div style="font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Estate Trip</div>';
           html += trips.map(function(t) {
-            var ini = t.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
+            var displayName = estDisplayName(t);
+            var ini = displayName.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
             return '<div class="person-row" style="padding:7px 0;">'
               + '<div class="av av-a" style="width:30px;height:30px;font-size:10px;background:var(--blue-bg);color:var(--blue-text);">' + ini + '</div>'
-              + '<div style="flex:1;"><div class="p-name">' + escHtml(t.staff_name) + '</div>'
+              + '<div style="flex:1;"><div class="p-name">' + escHtml(displayName) + '</div>'
               + '<div class="p-sub">Going to ' + escHtml(t.estate_name) + '</div></div>'
               + '</div>';
           }).join('');

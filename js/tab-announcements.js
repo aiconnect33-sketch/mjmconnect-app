@@ -147,10 +147,11 @@ async function showStaffDayDetail(dateStr, hasLeave, hasEvent, hasEstate) {
         if (html) html += '<div style="height:1px;background:#E2E8E5;margin:8px 0;"></div>';
         html += '<div style="font-size:10px;font-weight:600;color:#6B7A73;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Estate Trip</div>';
         html += trips.map(function(t) {
-          var ini = t.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
+          var displayName = typeof estDisplayName === 'function' ? estDisplayName(t) : t.staff_name;
+          var ini = displayName.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
           return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:0.5px solid #E2E8E5;">'
             + '<div style="width:30px;height:30px;border-radius:50%;background:var(--estate-bg);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:var(--estate-text);flex-shrink:0;">' + ini + '</div>'
-            + '<div style="flex:1;"><div style="font-size:12px;font-weight:500;color:#111C18;">' + escHtml(t.staff_name) + '</div>'
+            + '<div style="flex:1;"><div style="font-size:12px;font-weight:500;color:#111C18;">' + escHtml(displayName) + '</div>'
             + '<div style="font-size:11px;color:#6B7A73;">Going to ' + escHtml(t.estate_name) + '</div></div>'
             + '</div>';
         }).join('');
