@@ -376,14 +376,24 @@ function timeoffApprovalToastHtml(myRecords) {
     try { acked = !!localStorage.getItem(ackKey); } catch (e) {}
     if (acked) return;
     var day = new Date(r.time_out).toLocaleDateString('en-MY', { day: 'numeric', month: 'short' });
-    html += '<div class="to-toast">'
+    // Stays until explicitly dismissed (not auto-acked on render) -- it
+    // used to mark itself seen the moment it rendered, so a staff member
+    // who opened the tab once and didn't notice it would never see it
+    // again, even on a fresh page load.
+    html += '<div class="to-toast" id="to-toast-' + r.id + '">'
       + '<div class="to-toast-icon">✓</div>'
-      + '<div><div class="to-toast-title">Cancellation approved</div>'
+      + '<div style="flex:1;min-width:0;"><div class="to-toast-title">Cancellation approved</div>'
       + '<div class="to-toast-body">Your "' + escHtml(r.reason) + '" Time Off was cancelled. Please apply Annual Leave to cover ' + day + '.</div></div>'
+      + '<button class="to-toast-dismiss" onclick="dismissTimeOffApprovalToast(' + r.id + ')" aria-label="Dismiss">&times;</button>'
       + '</div>';
-    try { localStorage.setItem(ackKey, '1'); } catch (e) {}
   });
   return html;
+}
+
+function dismissTimeOffApprovalToast(id) {
+  try { localStorage.setItem('mjm_to_ack_' + id, '1'); } catch (e) {}
+  var el = document.getElementById('to-toast-' + id);
+  if (el) el.remove();
 }
 
 function renderTimeOffStatus(openRecord, monthlyMinutes, dueReminders) {
