@@ -20,6 +20,11 @@
   })();
 </script>
 <meta charset="UTF-8">
+<!-- OPIS PRO's /oauth/authorize rejects our sign-in requests with
+     invalid_client when they carry a Referer header (confirmed: the exact
+     same request with no Referer, typed directly into a browser's address
+     bar, succeeds) -- send no referrer at all so it matches. -->
+<meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="color-scheme" content="light">
 <meta name="theme-color" content="#0F6E56">
