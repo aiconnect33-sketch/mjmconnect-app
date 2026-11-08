@@ -63,7 +63,10 @@ function formatChargedHours(mins) {
 // of sitting at 0 until Time In.
 function timeoffRecordChargedMinutes(r) {
   if (r.entry_type === 'voided' || r.entry_type === 'cancel_pending') return 0;
-  if (r.duration_minutes) return chargedMinutes(r.duration_minutes);
+  // duration_minutes is 0, not falsy-missing, for a trip closed within the
+  // same minute it was opened -- a truthy check here was silently charging
+  // those as 0 instead of the 1h minimum.
+  if (r.duration_minutes != null) return chargedMinutes(r.duration_minutes);
   if (!r.time_in) return chargedMinutes((Date.now() - new Date(r.time_out).getTime()) / 60000);
   return 0;
 }
@@ -123,7 +126,10 @@ async function timeOffMonthlyMinutes(email, monthStart) {
       + '&time_out=gte.' + monthStart + '&entry_type=neq.voided&entry_type=neq.cancel_pending&select=duration_minutes';
     var res = await fetch(url, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
     var rows = await res.json();
-    return (rows || []).reduce(function (sum, r) { return sum + (r.duration_minutes ? chargedMinutes(r.duration_minutes) : 0); }, 0);
+    // null duration_minutes means still-open (correctly excluded here --
+    // callers add the in-progress trip's own charge separately); 0 means
+    // closed with 0 actual minutes, which still charges the 1h minimum.
+    return (rows || []).reduce(function (sum, r) { return sum + (r.duration_minutes != null ? chargedMinutes(r.duration_minutes) : 0); }, 0);
   } catch (e) { return 0; }
 }
 
