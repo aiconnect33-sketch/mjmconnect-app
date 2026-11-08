@@ -3076,10 +3076,12 @@ html, body {
       document.getElementById('duty-form-title').textContent = 'Edit Duty Assignment';
       document.getElementById('duty-date-from').value        = r.date_from  || '';
       document.getElementById('duty-date-to').value          = r.date_to    || '';
-      // Fetch all member names in group and add as tags
-      var allData = await sbFetch('GET', '/rest/v1/duty_roster?id=in.(' + ids.join(',') + ')&select=staff_name');
+      // Fetch all member names in group and add as tags -- resolved to their
+      // CURRENT name (not whatever was snapshotted when assigned), so
+      // re-saving this group doesn't silently re-persist a stale name.
+      var allData = await sbFetch('GET', '/rest/v1/duty_roster?id=in.(' + ids.join(',') + ')&select=staff_name,staff_email');
       if (allData) {
-        allData.forEach(function(m){ if (m.staff_name) selectDutyStaff(m.staff_name); });
+        allData.forEach(function(m){ if (m.staff_name) selectDutyStaff(dutyDisplayName(m)); });
       }
       document.getElementById('duty-form').classList.add('visible');
       document.getElementById('duty-form').scrollIntoView({ behavior:'smooth', block:'start' });
@@ -5536,6 +5538,11 @@ html, body {
         filter = 'created_at=gte.' + cutoff + '&' + filter;
       }
       frReportData = (await sbGet('faulty_complaints', filter)) || [];
+      // Report has its own separately-loaded data -- resolve names here too
+      // rather than assume loadAllComplaints() already populated fcNameMap.
+      var frNameMapRows = await sbFetch('GET', '/rest/v1/profiles?select=email,full_name&limit=500').catch(function () { return []; });
+      fcNameMap = {};
+      (frNameMapRows || []).forEach(function (p) { if (p.email && p.full_name) fcNameMap[p.email.toLowerCase()] = p.full_name; });
       renderFaultyReportStats(days);
       renderFaultyReportTable();
     } catch (e) {
@@ -5591,7 +5598,7 @@ html, body {
       var itemLabel = (c.item === 'Other Issues' && c.item_other) ? c.item_other : (c.item || '');
       return '<tr>'
         + '<td>' + fcDateTime(c.created_at) + '</td>'
-        + '<td>' + escHtml(c.staff_name || '') + '</td>'
+        + '<td>' + escHtml(fcDisplayName(c)) + '</td>'
         + '<td>' + escHtml(c.location || '') + '</td>'
         + '<td>' + escHtml(itemLabel) + '</td>'
         + '<td>' + fcUrgencyBadge(c.urgency) + '</td>'
@@ -5615,7 +5622,7 @@ html, body {
     rows.forEach(function (c) {
       var itemLabel = (c.item === 'Other Issues' && c.item_other) ? c.item_other : (c.item || '');
       lines.push([
-        fcDateTime(c.created_at), c.staff_name, c.location, itemLabel, c.description,
+        fcDateTime(c.created_at), fcDisplayName(c), c.location, itemLabel, c.description,
         c.urgency, c.status, c.resolved_by || '', c.resolved_at ? fcDateTime(c.resolved_at) : ''
       ].map(csvEscape).join(','));
     });
@@ -5637,7 +5644,15 @@ html, body {
   var torReportData = [];
   var torReportFilter = 'all'; // 'all' | 'out' | 'completed' | 'pending_cancel' | 'voided'
   var torReportMode = 'timeoff'; // 'timeoff' | 'edo'
-  var torStaffFilter = ''; // '' = All Staff, else an exact staff_name match
+  var torStaffFilter = ''; // '' = All Staff, else a staff key (see torStaffKey)
+
+  // Keyed by email (falling back to the raw stored name only when a record
+  // has none) so a renamed staff member's whole history -- old records
+  // snapshotted under their old name included -- stays one filterable
+  // person instead of fragmenting into two.
+  function torStaffKey(r) {
+    return (r.staff_email || '').toLowerCase() || r.staff_name;
+  }
 
   async function loadTimeOffReport() {
     var tbody = document.getElementById('tor-table-body');
@@ -5651,6 +5666,12 @@ html, body {
         filter = 'time_out=gte.' + cutoff + '&' + filter;
       }
       torReportData = (await sbGet('time_off_records', filter)) || [];
+      // Report has its own separately-loaded data, independent of whatever
+      // the main Time Off tab has in timeoffNameMap -- resolve it here too
+      // rather than assume that tab was already visited this session.
+      var torNameMapRows = await sbFetch('GET', '/rest/v1/profiles?select=email,full_name&limit=500').catch(function () { return []; });
+      timeoffNameMap = {};
+      (torNameMapRows || []).forEach(function (p) { if (p.email && p.full_name) timeoffNameMap[p.email.toLowerCase()] = p.full_name; });
       torPopulateStaffSelect();
       renderTimeOffReportBanners();
       renderTimeOffReportTable();
@@ -5660,14 +5681,21 @@ html, body {
     }
   }
 
-  // Unique staff names in the currently loaded range, so HR can jump
-  // straight to one person's whole history instead of typing it out.
+  // Unique staff (by key -- see torStaffKey) in the currently loaded range,
+  // so HR can jump straight to one person's whole history instead of typing
+  // it out. The option's label always shows their CURRENT name even for
+  // records stored under an old one.
   function torPopulateStaffSelect() {
     var sel = document.getElementById('tor-staff-select');
     if (!sel) return;
-    var names = Array.from(new Set(torReportData.map(function (r) { return r.staff_name; }).filter(Boolean))).sort();
-    sel.innerHTML = '<option value="">All Staff</option>' + names.map(function (n) {
-      return '<option value="' + escHtml(n) + '"' + (n === torStaffFilter ? ' selected' : '') + '>' + escHtml(n) + '</option>';
+    var byKey = {};
+    torReportData.forEach(function (r) {
+      var key = torStaffKey(r);
+      if (key && !byKey[key]) byKey[key] = timeoffDisplayName(r);
+    });
+    var keys = Object.keys(byKey).sort(function (a, b) { return byKey[a].localeCompare(byKey[b]); });
+    sel.innerHTML = '<option value="">All Staff</option>' + keys.map(function (k) {
+      return '<option value="' + escHtml(k) + '"' + (k === torStaffFilter ? ' selected' : '') + '>' + escHtml(byKey[k]) + '</option>';
     }).join('');
   }
 
@@ -5706,7 +5734,7 @@ html, body {
               if (info.isTrigger) reasonTag = ' <span style="color:var(--amber-text);">· pushes month to ' + fmtTimeOffChargedHours(info.total) + ', over the 4h limit</span>';
             }
             return '<div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface);border-radius:10px;padding:9px 12px;margin-bottom:7px;">'
-              + '<div style="font-size:12.5px;color:var(--text);"><b>' + escHtml(r.staff_name || '') + '</b> — ' + escHtml(r.reason || '') + ', ' + when + (r.duration_minutes != null ? ' · ' + fmtTimeOffDuration(r.duration_minutes) : '') + reasonTag + '</div>'
+              + '<div style="font-size:12.5px;color:var(--text);"><b>' + escHtml(timeoffDisplayName(r)) + '</b> — ' + escHtml(r.reason || '') + ', ' + when + (r.duration_minutes != null ? ' · ' + fmtTimeOffDuration(r.duration_minutes) : '') + reasonTag + '</div>'
               + '<div style="display:flex;align-items:center;gap:10px;">'
               + '<span class="badge b-amber">Pending Cancellation</span>'
               + '<button style="font-size:11.5px;font-weight:700;color:#fff;background:var(--green);border:none;padding:6px 13px;border-radius:7px;cursor:pointer;font-family:inherit;" onclick="torApproveCancellation(' + r.id + ')">Approve</button>'
@@ -5728,7 +5756,7 @@ html, body {
           + reminders.map(function (r) {
             var when = fcDateTime(r.time_out).split(', ')[0];
             return '<div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface);border-radius:10px;padding:9px 12px;margin-bottom:7px;">'
-              + '<div style="font-size:12.5px;color:var(--text);"><b>' + escHtml(r.staff_name || '') + '</b> — ' + escHtml(r.reason || '') + ', ' + when + (r.duration_minutes != null ? ' · ' + fmtTimeOffDuration(r.duration_minutes) : '') + ' · cancellation approved</div>'
+              + '<div style="font-size:12.5px;color:var(--text);"><b>' + escHtml(timeoffDisplayName(r)) + '</b> — ' + escHtml(r.reason || '') + ', ' + when + (r.duration_minutes != null ? ' · ' + fmtTimeOffDuration(r.duration_minutes) : '') + ' · cancellation approved</div>'
               + '<span style="font-size:11.5px;font-weight:700;color:var(--green);text-decoration:underline;cursor:pointer;" onclick="torViewRecord(' + r.id + ')">View</span>'
               + '</div>';
           }).join('')
@@ -5751,9 +5779,9 @@ html, body {
   function torViewRecord(id) {
     var r = torReportData.find(function (x) { return x.id === id; });
     if (!r) return;
-    torStaffFilter = r.staff_name;
+    torStaffFilter = torStaffKey(r);
     var sel = document.getElementById('tor-staff-select');
-    if (sel) sel.value = r.staff_name;
+    if (sel) sel.value = torStaffFilter;
     var searchInput = document.getElementById('tor-search-input');
     if (searchInput) searchInput.value = '';
     setTimeOffReportFilter('all');
@@ -5796,7 +5824,7 @@ html, body {
   function torVisibleRows() {
     var q = (document.getElementById('tor-search-input').value || '').trim().toLowerCase();
     return torReportData.filter(torMatchesFilter).filter(function (r) {
-      return !torStaffFilter || r.staff_name === torStaffFilter;
+      return !torStaffFilter || torStaffKey(r) === torStaffFilter;
     }).filter(function (r) {
       if (!q) return true;
       return (r.staff_name || '').toLowerCase().indexOf(q) !== -1 || (r.reason || '').toLowerCase().indexOf(q) !== -1;
@@ -5816,7 +5844,7 @@ html, body {
       var inParts = r.time_in ? fcDateTime(r.time_in).split(', ') : null;
       return '<tr' + (torStatus(r) === 'voided' ? ' style="opacity:.6;"' : '') + '>'
         + '<td>' + outParts[0] + '</td>'
-        + '<td>' + escHtml(r.staff_name || '') + '</td>'
+        + '<td>' + escHtml(timeoffDisplayName(r)) + '</td>'
         + '<td>' + outParts[1] + '</td>'
         + '<td>' + (inParts ? inParts[1] : '<span style="color:var(--text3);">—</span>') + '</td>'
         + '<td>' + (r.duration_minutes != null ? fmtTimeOffDuration(r.duration_minutes) : '<span style="color:var(--text3);">—</span>') + '</td>'
@@ -5839,7 +5867,7 @@ html, body {
     var lines = [headers.join(',')];
     rows.forEach(function (r) {
       lines.push([
-        fcDateTime(r.time_out).split(',')[0], r.staff_name, fcDateTime(r.time_out),
+        fcDateTime(r.time_out).split(',')[0], timeoffDisplayName(r), fcDateTime(r.time_out),
         r.time_in ? fcDateTime(r.time_in) : '', r.duration_minutes != null ? r.duration_minutes : '',
         r.reason, torStatus(r)
       ].map(csvEscape).join(','));
@@ -6016,10 +6044,23 @@ html, body {
     URL.revokeObjectURL(url);
   }
 
+  // Resolves a complaint's CURRENT staff name by email rather than trusting
+  // the name snapshotted at submission time -- same pattern as
+  // timeoffDisplayName above.
+  var fcNameMap = {};
+  function fcDisplayName(c) {
+    var email = (c.staff_email || '').toLowerCase();
+    return (email && fcNameMap[email]) || c.staff_name;
+  }
+
   async function loadAllComplaints() {
     var el = document.getElementById('fc-admin-list');
     if (!el) return;
     try {
+      var fcNameMapRows = await sbFetch('GET', '/rest/v1/profiles?select=email,full_name&limit=500').catch(function () { return []; });
+      fcNameMap = {};
+      (fcNameMapRows || []).forEach(function (p) { if (p.email && p.full_name) fcNameMap[p.email.toLowerCase()] = p.full_name; });
+
       var data = await sbGet('faulty_complaints', 'order=created_at.desc&limit=100');
       if (data) data = fcFilterAndSort(data);
       if (!data || !data.length) { el.innerHTML = '<div class="book-empty">No complaints yet.</div>'; return; }
@@ -6045,7 +6086,7 @@ html, body {
           + '<button class="fc-view-btn" aria-expanded="false" onclick="toggleFcDesc(this,' + c.id + ')"><i class="ti ti-chevron-right"></i> View details</button>'
           + '<div class="fc-desc" id="fc-desc-' + c.id + '">' + escHtml(c.description) + photoHtml + '</div>'
           + '<div class="fc-meta">'
-          + '<div class="fc-meta-line"><i class="ti ti-user"></i> Submitted by <b>&nbsp;' + escHtml(c.staff_name) + '</b>&nbsp;· ' + d + '</div>'
+          + '<div class="fc-meta-line"><i class="ti ti-user"></i> Submitted by <b>&nbsp;' + escHtml(fcDisplayName(c)) + '</b>&nbsp;· ' + d + '</div>'
           + resolvedLine
           + '</div>'
           + actionBtn
@@ -6290,11 +6331,23 @@ html, body {
   }
 
   // ── LOAD ESTATE TRIPS FROM SUPABASE ──
+  // Resolves a trip's CURRENT staff name by email rather than trusting the
+  // name snapshotted when it was created -- same pattern as timeoffDisplayName.
+  var estNameMap = {};
+  function estDisplayName(r) {
+    var email = (r.staff_email || '').toLowerCase();
+    return (email && estNameMap[email]) || r.staff_name;
+  }
+
   async function loadDbEstateTrips() {
     var card = document.getElementById('estatetrip-list');
     if (!card) return;
     var today = localDateStr();
     try {
+      var estNameMapRows = await sbFetch('GET', '/rest/v1/profiles?select=email,full_name&limit=500').catch(function () { return []; });
+      estNameMap = {};
+      (estNameMapRows || []).forEach(function (p) { if (p.email && p.full_name) estNameMap[p.email.toLowerCase()] = p.full_name; });
+
       var data = await sbFetch('GET', '/rest/v1/estate_trips?trip_date=gte.' + today + '&order=trip_date.asc&limit=200');
       if (!data) return;
       if (!data.length) {
@@ -6309,11 +6362,12 @@ html, body {
         if (!items.length) return '';
         return '<div class="card"><div class="card-label">' + label + '</div>' +
           items.map(function(r) {
-            var ini = r.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
+            var displayName = estDisplayName(r);
+            var ini = displayName.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
             var d = new Date(r.trip_date + 'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'});
             return '<div class="person-row" data-trip-id="' + r.id + '">'
               + '<div class="av av-g">' + ini + '</div>'
-              + '<div style="flex:1;"><div class="p-name">' + escHtml(r.staff_name) + '</div><div class="p-sub">Going to ' + escHtml(r.estate_name) + ' · ' + d + '</div></div>'
+              + '<div style="flex:1;"><div class="p-name">' + escHtml(displayName) + '</div><div class="p-sub">Going to ' + escHtml(r.estate_name) + ' · ' + d + '</div></div>'
               + '<div style="display:flex;gap:6px;">'
               + '<div class="btn-icon" onclick="editEstateTripDb(this)" title="Edit"><i class="ti ti-pencil"></i></div>'
               + '<div class="btn-icon danger" onclick="deleteEstateTripDb(this)" title="Delete"><i class="ti ti-trash"></i></div></div>'
@@ -7348,11 +7402,25 @@ html, body {
   // ── LOAD DUTY FROM SUPABASE ──
   // Collapsed to "who's on now" per role, tap to expand into that role's
   // full active/upcoming schedule (mirrors js/tab-duty.js on the staff side).
+  // Resolves a duty assignment's CURRENT staff name by email rather than
+  // trusting the name snapshotted when it was assigned -- same pattern as
+  // timeoffDisplayName above. Display-only: the assignment is still
+  // grouped/edited by role + date range, never by name.
+  var dutyNameMap = {};
+  function dutyDisplayName(r) {
+    var email = (r.staff_email || '').toLowerCase();
+    return (email && dutyNameMap[email]) || r.staff_name;
+  }
+
   async function loadDbDuty() {
     var el = document.getElementById('duty-db-list');
     if (!el) return;
     var today = localDateStr();
     try {
+      var dutyNameMapRows = await sbFetch('GET', '/rest/v1/profiles?select=email,full_name&limit=500').catch(function () { return []; });
+      dutyNameMap = {};
+      (dutyNameMapRows || []).forEach(function (p) { if (p.email && p.full_name) dutyNameMap[p.email.toLowerCase()] = p.full_name; });
+
       var data = await sbFetch('GET', '/rest/v1/duty_roster?date_to=gte.' + today + '&order=duty_role.asc,date_from.asc&limit=200');
       if (!data) return;
       var cntEl = document.getElementById('duty-count');
@@ -7393,11 +7461,12 @@ html, body {
             + '<div class="btn-icon danger" onclick="event.stopPropagation();deleteDutyGroup(this)" title="Delete"><i class="ti ti-trash"></i></div>'
             + '</div></div>'
             + g.members.map(function(r, mi) {
-              var ini = r.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
+              var displayName = dutyDisplayName(r);
+              var ini = displayName.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
               var avCls = avColors[(gi + mi) % avColors.length];
               return '<div class="duty-slot" data-duty-id="' + r.id + '">'
                 + '<div class="duty-person"><div class="av ' + avCls + '">' + ini + '</div>'
-                + '<div><div class="p-name">' + escHtml(r.staff_name) + '</div></div></div>'
+                + '<div><div class="p-name">' + escHtml(displayName) + '</div></div></div>'
                 + '</div>';
             }).join('')
             + '</div>';
@@ -7454,7 +7523,7 @@ html, body {
       if (!data || !data.length) return;
       var r = data[0];
       editingDutyId = id;
-      editingDutyOriginalStaff = r.staff_name || null;
+      editingDutyOriginalStaff = dutyDisplayName(r) || null;
       document.getElementById('duty-form-title').textContent = 'Edit Duty Assignment';
       document.getElementById('duty-role-input').value       = r.duty_role  || '';
       document.getElementById('duty-date-from').value        = r.date_from  || '';
@@ -7464,7 +7533,8 @@ html, body {
       var tags = document.getElementById('duty-staff-tags');
       if (tags) tags.innerHTML = '';
       await loadDutyStaffDropdown();
-      if (r.staff_name) selectDutyStaff(r.staff_name);
+      // Resolved to their CURRENT name so re-saving doesn't re-persist a stale one.
+      if (r.staff_name) selectDutyStaff(dutyDisplayName(r));
       document.getElementById('duty-form').classList.add('visible');
       document.getElementById('duty-form').scrollIntoView({ behavior:'smooth', block:'start' });
     } catch(e) {}

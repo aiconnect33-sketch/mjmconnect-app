@@ -1,5 +1,14 @@
 // ── tab-estatetrip.js — Estate Trip tab (bottom nav) + Home today's estate trip ──
 
+// Resolves a trip's CURRENT staff name by email rather than trusting the
+// name snapshotted when it was created -- same pattern as timeoffDisplayName
+// in js/tab-timeoff.js.
+var estNameMap = {};
+function estDisplayName(r) {
+  var email = (r.staff_email || '').toLowerCase();
+  return (email && estNameMap[email]) || r.staff_name;
+}
+
 async function loadEstateTrips() {
   if (window.location.protocol === 'file:') return;
   var today = localDateStr();
@@ -10,6 +19,13 @@ async function loadEstateTrips() {
   var myEmailLow = (me.email || '').toLowerCase();
   var isAdminUser = me.role === 'hradmin' || me.role === 'superadmin';
 
+  try {
+    var nameMapRows = await fetch(SURL + '/rest/v1/profiles?select=email,full_name&limit=500',
+      { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } }).then(function (r) { return r.json(); });
+    estNameMap = {};
+    (nameMapRows || []).forEach(function (p) { if (p.email && p.full_name) estNameMap[p.email.toLowerCase()] = p.full_name; });
+  } catch (e) { estNameMap = {}; }
+
   // ── HOME TAB: today's estate trips ──
   var homeEl = document.getElementById('home-estatetrip-today');
   if (homeEl) {
@@ -18,7 +34,7 @@ async function loadEstateTrips() {
       var res  = await fetch(url, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
       var data = await res.json();
       if (data && data.length) {
-        var names = data.map(function(r){ return r.staff_name; }).join(', ');
+        var names = data.map(function(r){ return estDisplayName(r); }).join(', ');
         homeEl.innerHTML = '<div class="home-summary-card" onclick="switchNav(\'estatetrip\');loadEstateTrips()">'
           + '<div class="home-summary-ic" style="background:var(--estate-bg);color:var(--estate-text);"><i class="ti ti-car"></i></div>'
           + '<div style="flex:1;min-width:0;"><div class="home-summary-title">Today\'s Estate Trip</div>'
@@ -52,7 +68,8 @@ async function loadEstateTrips() {
         if (!items.length) return '';
         var h = '<div class="section-row"><div class="section-title">' + title + '</div></div><div class="card">';
         items.forEach(function(r, i) {
-          var ini = r.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
+          var displayName = estDisplayName(r);
+          var ini = displayName.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
           var avCls = avColors[i % avColors.length];
           var d = new Date(r.trip_date + 'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short'});
           var canManage = isAdminUser || (myEmailLow && r.staff_email && r.staff_email.toLowerCase() === myEmailLow);
@@ -64,7 +81,7 @@ async function loadEstateTrips() {
             : '';
           h += '<div class="person-row" data-trip-id="' + escHtml(r.id) + '" data-staff-email="' + escHtml(r.staff_email || '') + '">'
             + '<div class="avatar ' + avCls + '">' + ini + '</div>'
-            + '<div style="flex:1;"><div class="person-name">' + escHtml(r.staff_name) + '</div>'
+            + '<div style="flex:1;"><div class="person-name">' + escHtml(displayName) + '</div>'
             + '<div class="person-sub">Going to ' + escHtml(r.estate_name) + ' · ' + d + '</div></div>'
             + editBtn
             + delBtn

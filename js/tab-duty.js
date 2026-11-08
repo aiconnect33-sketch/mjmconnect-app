@@ -1,9 +1,27 @@
 // ── tab-duty.js — Duty tab ──
 
+// Resolves a duty assignment's CURRENT staff name by email rather than
+// trusting the name snapshotted when it was assigned -- same pattern as
+// timeoffDisplayName in js/tab-timeoff.js. Display-only: the assignment
+// itself is still grouped/edited by role + date range, never by name, so
+// this doesn't touch editDutyAssignment/deleteDutyAssignment at all.
+var dutyNameMap = {};
+function dutyDisplayName(r) {
+  var email = (r.staff_email || '').toLowerCase();
+  return (email && dutyNameMap[email]) || r.staff_name;
+}
+
 async function loadDuty() {
   if (window.location.protocol === 'file:') return;
   var today = localDateStr();
   var avColors = ['av-green','av-amber','av-coral','av-blue','av-purple','av-red'];
+
+  try {
+    var nameMapRows = await fetch(SURL + '/rest/v1/profiles?select=email,full_name&limit=500',
+      { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } }).then(function (r) { return r.json(); });
+    dutyNameMap = {};
+    (nameMapRows || []).forEach(function (p) { if (p.email && p.full_name) dutyNameMap[p.email.toLowerCase()] = p.full_name; });
+  } catch (e) { dutyNameMap = {}; }
 
   // ── DUTY TAB: collapsed to "who's on now" per role, tap to expand ──
   var tabEl = document.getElementById('duty-tab-list');
@@ -52,7 +70,7 @@ async function loadDuty() {
           var isActive   = g.date_from <= today && today <= (g.date_to || g.date_from);
           var badgeCls   = isActive ? 'badge-success' : 'badge-info';
           var badgeLabel = isActive ? 'Active' : 'Upcoming';
-          var memberNames = g.members.map(function(m){ return m.staff_name; }).join(', ');
+          var memberNames = g.members.map(function(m){ return dutyDisplayName(m); }).join(', ');
           var delBtn = canEdit
             ? '<div style="cursor:pointer;color:var(--red-text);" onclick="event.stopPropagation();deleteDutyAssignment(\'' + escJsAttr(g.ids.join(',')) + '\',\'' + escJsAttr(role) + '\',\'' + escJsAttr(dateLabel) + '\',\'' + escJsAttr(memberNames) + '\')"><i class="ti ti-trash"></i></div>'
             : '';
@@ -61,14 +79,15 @@ async function loadDuty() {
             + '<div style="font-size:11px;color:var(--text-secondary);">' + dateLabel + '</div>'
             + '<div style="display:flex;align-items:center;gap:8px;"><span class="badge ' + badgeCls + '">' + badgeLabel + '</span>' + delBtn + '</div></div>'
             + g.members.map(function(r, mi) {
-              var pIni   = r.staff_name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
+              var displayName = dutyDisplayName(r);
+              var pIni   = displayName.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
               var avCls  = avColors[(gi + mi) % avColors.length];
               var editBtn = canEdit
-                ? '<div style="cursor:pointer;color:var(--text-secondary);margin-left:6px;" onclick="event.stopPropagation();editDutyAssignment(\'' + escJsAttr(r.id) + '\',\'' + escJsAttr(r.staff_name) + '\',\'' + escJsAttr(r.duty_role || '') + '\',\'' + escJsAttr(r.date_from) + '\',\'' + escJsAttr(r.date_to) + '\')"><i class="ti ti-pencil"></i></div>'
+                ? '<div style="cursor:pointer;color:var(--text-secondary);margin-left:6px;" onclick="event.stopPropagation();editDutyAssignment(\'' + escJsAttr(r.id) + '\',\'' + escJsAttr(displayName) + '\',\'' + escJsAttr(r.duty_role || '') + '\',\'' + escJsAttr(r.date_from) + '\',\'' + escJsAttr(r.date_to) + '\')"><i class="ti ti-pencil"></i></div>'
                 : '';
               return '<div class="person-row" style="padding:5px 0;">'
                 + '<div class="avatar ' + avCls + '" style="font-size:10px;">' + pIni + '</div>'
-                + '<div style="flex:1;"><div class="person-name" style="font-size:12px;">' + escHtml(r.staff_name) + '</div></div>'
+                + '<div style="flex:1;"><div class="person-name" style="font-size:12px;">' + escHtml(displayName) + '</div></div>'
                 + editBtn
                 + '</div>';
             }).join('')
