@@ -168,6 +168,37 @@ async function sha256Base64Url(input) {
   return base64UrlEncode(new Uint8Array(digest));
 }
 
+// OPIS PRO's /oauth/authorize rejects state/nonce/code_challenge values
+// containing "-" or "_" with a generic invalid_client error, even though
+// PKCE (and their own discovery document) requires base64url encoding,
+// whose alphabet is exactly A-Za-z0-9-_ -- confirmed with the OPIS PRO
+// team by isolating it against a byte-identical request that only changed
+// one such character. A random 43-character base64url string has roughly
+// a 75% chance of containing one, so this would break most real sign-ins.
+// Work around it by rejection sampling: regenerate until the result is
+// clean of both, which keeps full, uniformly-random entropy among the
+// accepted outputs (unlike substituting characters after the fact, which
+// would make those positions predictable). Each attempt is a cheap local
+// crypto call; a few dozen retries is typical and still sub-millisecond.
+function cleanRandomBase64Url(numBytes) {
+  for (var attempt = 0; attempt < 500; attempt++) {
+    var v = randomBase64Url(numBytes);
+    if (!/[-_]/.test(v)) return v;
+  }
+  return randomBase64Url(numBytes); // not expected to be reached
+}
+async function cleanVerifierAndChallenge() {
+  for (var attempt = 0; attempt < 500; attempt++) {
+    var verifier = randomBase64Url(32);
+    if (/[-_]/.test(verifier)) continue;
+    var challenge = await sha256Base64Url(verifier);
+    if (/[-_]/.test(challenge)) continue;
+    return { verifier: verifier, challenge: challenge };
+  }
+  var fallbackVerifier = randomBase64Url(32); // not expected to be reached
+  return { verifier: fallbackVerifier, challenge: await sha256Base64Url(fallbackVerifier) };
+}
+
 var ssoPopup = null;
 var ssoCloseCheckTimer = null;
 
@@ -186,10 +217,11 @@ function startSignIn() {
 }
 
 async function prepareAndGo(popup, isNarrow) {
-  var state = randomBase64Url(32);
-  var nonce = randomBase64Url(32);
-  var codeVerifier = randomBase64Url(32);
-  var codeChallenge = await sha256Base64Url(codeVerifier);
+  var state = cleanRandomBase64Url(32);
+  var nonce = cleanRandomBase64Url(32);
+  var vc = await cleanVerifierAndChallenge();
+  var codeVerifier = vc.verifier;
+  var codeChallenge = vc.challenge;
 
   // localStorage, not sessionStorage: the popup needs to read these back
   // once OPIS PRO sends it back to our origin, and Chrome's site isolation
@@ -209,7 +241,14 @@ async function prepareAndGo(popup, isNarrow) {
     + '?response_type=code'
     + '&client_id=' + encodeURIComponent(OPISPRO_OAUTH_CLIENT_ID)
     + '&redirect_uri=' + encodeURIComponent(SSO_REDIRECT_URI)
-    + '&scope=' + encodeURIComponent('openid profile email location')
+    // 'location' dropped from the scope: confirmed with the OPIS PRO team
+    // that this client isn't actually granted it server-side yet (it's
+    // globally listed as supported in their discovery document, but
+    // requesting it for THIS client fails the same way the character
+    // issue above does). Per the guide, a missing location is meant to be
+    // treated as unknown, not block sign-in -- completeSignIn already does
+    // that. Add it back once the client is granted the scope.
+    + '&scope=' + encodeURIComponent('openid profile email')
     + '&state=' + encodeURIComponent(state)
     + '&nonce=' + encodeURIComponent(nonce)
     + '&code_challenge=' + encodeURIComponent(codeChallenge)
