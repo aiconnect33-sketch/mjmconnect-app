@@ -6381,7 +6381,10 @@ html, body {
   // of sitting at 0 until Time In.
   function timeoffRecordChargedMinutes(r) {
     if (r.entry_type === 'voided' || r.entry_type === 'cancel_pending') return 0;
-    if (r.duration_minutes) return timeOffChargedMinutes(r.duration_minutes);
+    // duration_minutes is 0, not falsy-missing, for a trip closed within the
+    // same minute it was opened -- a truthy check here was silently charging
+    // those as 0 instead of the 1h minimum.
+    if (r.duration_minutes != null) return timeOffChargedMinutes(r.duration_minutes);
     if (!r.time_in) return timeOffChargedMinutes((Date.now() - new Date(r.time_out).getTime()) / 60000);
     return 0;
   }
@@ -6440,7 +6443,7 @@ html, body {
     var cumulative = 0;
     for (var i = 0; i < list.length; i++) {
       if (list[i].id === r.id) {
-        cumulative += timeOffChargedMinutes(list[i].duration_minutes || ((Date.now() - new Date(list[i].time_out).getTime()) / 60000));
+        cumulative += timeOffChargedMinutes(list[i].duration_minutes != null ? list[i].duration_minutes : ((Date.now() - new Date(list[i].time_out).getTime()) / 60000));
         break;
       }
       cumulative += timeoffRecordChargedMinutes(list[i]);
@@ -6847,7 +6850,10 @@ html, body {
   async function adminTimeOffMonthlyMinutes(email, monthStart) {
     try {
       var rows = await sbFetch('GET', '/rest/v1/time_off_records?staff_email=eq.' + encodeURIComponent(email) + '&time_out=gte.' + monthStart + '&entry_type=neq.voided&entry_type=neq.cancel_pending&select=duration_minutes');
-      return (rows || []).reduce(function (sum, r) { return sum + (r.duration_minutes ? timeOffChargedMinutes(r.duration_minutes) : 0); }, 0);
+      // null duration_minutes means still-open (correctly excluded here --
+      // callers add the in-progress trip's own charge separately); 0 means
+      // closed with 0 actual minutes, which still charges the 1h minimum.
+      return (rows || []).reduce(function (sum, r) { return sum + (r.duration_minutes != null ? timeOffChargedMinutes(r.duration_minutes) : 0); }, 0);
     } catch (e) { return 0; }
   }
 
@@ -7228,6 +7234,16 @@ html, body {
     } catch (e) { alert('Could not request cancellation. Please try again.'); }
   }
 
+  // Fire-and-forget, like notifyApprovalPush above -- pushes a notification
+  // to the one staff member whose cancellation was just approved. See
+  // docs/cancellation-approved-notify-setup.md for the Edge Function.
+  function notifyCancellationApprovedPush(email, reason, day) {
+    fetch(PUSH_SURL + '/functions/v1/notify-cancellation-approved', {
+      method: 'POST', mode: 'no-cors',
+      body: JSON.stringify({ secret: PUSH_SEND_SECRET, email: email, reason: reason, day: day })
+    }).catch(function () {});
+  }
+
   async function adminApproveCancelTimeOff(id) {
     if (!confirm('Approve this cancellation? The trip will be marked Voided and moved to Annual Leave. The staff member will be shown a reminder to apply Annual Leave for this day.')) return;
     try {
@@ -7245,6 +7261,8 @@ html, body {
       if (typeof loadDbTimeOff === 'function') loadDbTimeOff();
       if (typeof loadAdminLeaveDuty === 'function') loadAdminLeaveDuty();
       Object.assign(record, patch);
+      var cancelDay = new Date(record.time_out).toLocaleDateString('en-MY', { day: 'numeric', month: 'short' });
+      notifyCancellationApprovedPush(record.staff_email, record.reason, cancelDay);
       var monthStart3 = localDateStr().slice(0, 8) + '01';
       adminTimeOffMonthlyMinutes(record.staff_email, monthStart3).then(function (mins) { adminSyncTimeOffToSheet('update', record, mins); });
     } catch (e) { alert('Could not approve this cancellation. Please try again.'); }

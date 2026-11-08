@@ -63,7 +63,10 @@ function formatChargedHours(mins) {
 // of sitting at 0 until Time In.
 function timeoffRecordChargedMinutes(r) {
   if (r.entry_type === 'voided' || r.entry_type === 'cancel_pending') return 0;
-  if (r.duration_minutes) return chargedMinutes(r.duration_minutes);
+  // duration_minutes is 0, not falsy-missing, for a trip closed within the
+  // same minute it was opened -- a truthy check here was silently charging
+  // those as 0 instead of the 1h minimum.
+  if (r.duration_minutes != null) return chargedMinutes(r.duration_minutes);
   if (!r.time_in) return chargedMinutes((Date.now() - new Date(r.time_out).getTime()) / 60000);
   return 0;
 }
@@ -123,7 +126,10 @@ async function timeOffMonthlyMinutes(email, monthStart) {
       + '&time_out=gte.' + monthStart + '&entry_type=neq.voided&entry_type=neq.cancel_pending&select=duration_minutes';
     var res = await fetch(url, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
     var rows = await res.json();
-    return (rows || []).reduce(function (sum, r) { return sum + (r.duration_minutes ? chargedMinutes(r.duration_minutes) : 0); }, 0);
+    // null duration_minutes means still-open (correctly excluded here --
+    // callers add the in-progress trip's own charge separately); 0 means
+    // closed with 0 actual minutes, which still charges the 1h minimum.
+    return (rows || []).reduce(function (sum, r) { return sum + (r.duration_minutes != null ? chargedMinutes(r.duration_minutes) : 0); }, 0);
   } catch (e) { return 0; }
 }
 
@@ -877,6 +883,18 @@ async function requestCancelTimeOff(id) {
   } catch (e) { alert('Could not request cancellation. Please try again.'); }
 }
 
+// Fire-and-forget, like notifyAnnouncementPush in js/push.js -- pushes a
+// notification to the one staff member whose cancellation was just
+// approved, covering the case where they're not in the app to see
+// timeoffApprovalToastHtml's in-app toast. See
+// docs/cancellation-approved-notify-setup.md for the Edge Function.
+function notifyCancellationApprovedPush(email, reason, day) {
+  fetch(PUSH_SURL + '/functions/v1/notify-cancellation-approved', {
+    method: 'POST', mode: 'no-cors',
+    body: JSON.stringify({ secret: PUSH_SEND_SECRET, email: email, reason: reason, day: day })
+  }).catch(function () {});
+}
+
 // HR Admin/permission-only -- approves a pending cancellation request,
 // finally moving the trip to Voided. If it was still open (never timed
 // back in), this is also what closes it out, timestamped to the moment of
@@ -898,6 +916,8 @@ async function approveCancelTimeOff(id) {
     await sbWrite('PATCH', 'time_off_records', patch, 'id=eq.' + id);
     loadTimeOff();
     Object.assign(record, patch);
+    var day = new Date(record.time_out).toLocaleDateString('en-MY', { day: 'numeric', month: 'short' });
+    notifyCancellationApprovedPush(record.staff_email, record.reason, day);
     var monthStart = localDateStr().slice(0, 8) + '01';
     timeOffMonthlyMinutes(record.staff_email, monthStart).then(function (mins) { syncTimeOffToSheet('update', record, mins); });
   } catch (e) { alert('Could not approve this cancellation. Please try again.'); }
