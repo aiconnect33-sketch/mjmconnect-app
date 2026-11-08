@@ -5,7 +5,11 @@
   // Runs before any stylesheet/font is fetched below, so an already-logged-in
   // user redirects immediately instead of paying for this page's fonts/icons
   // (and then index.html's/admin.html's on top) just to bounce straight off it.
+  // Skipped on an OAuth callback load (?code=/&error=) -- that has to run
+  // the callback-handling script further down, even if a stale mjm_user
+  // happens to still be sitting in localStorage from a previous session.
   (function() {
+    if (window.location.search.indexOf('code=') !== -1 || window.location.search.indexOf('error=') !== -1) return;
     var raw = localStorage.getItem('mjm_user');
     if (raw) {
       try {
@@ -40,43 +44,26 @@ html,body{min-height:100%;font-family:'Inter',-apple-system,sans-serif;backgroun
 .app-name{font-size:22px;font-weight:700;color:#E1F5EE}
 .app-name span{color:var(--green-lite);font-weight:400}
 .card-body{padding:24px}
-.section-label{font-size:13px;font-weight:600;color:var(--text);margin-bottom:16px;text-align:center}
-.form-group{margin-bottom:14px}
-.form-label{display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px}
-.input-wrap{position:relative}
-.form-input{width:100%;border:1px solid var(--border);border-radius:var(--r-md);padding:10px 36px;font-size:13px;color:var(--text);background:var(--surface);font-family:inherit;outline:none;transition:border-color 0.15s,box-shadow 0.15s;-webkit-appearance:none}
-.form-input::placeholder{color:var(--text3)}
-.form-input:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(15,110,86,0.1)}
-.form-input.error{border-color:var(--red-text)}
-.input-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--text3);pointer-events:none}
-.input-icon-right{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--text3);background:none;border:none;cursor:pointer;padding:0}
-.field-error{font-size:11px;color:var(--red-text);margin-top:5px;display:none;align-items:center;gap:4px}
-.field-error.visible{display:flex}
-.forgot-row{text-align:right;margin-top:-6px;margin-bottom:16px}
-.link-btn{background:none;border:none;color:var(--green);font-size:12px;font-weight:500;font-family:inherit;cursor:pointer;padding:0}
-.btn-primary{width:100%;background:var(--green);color:#fff;border:none;border-radius:var(--r-md);padding:12px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:background 0.15s;margin-bottom:8px}
+.section-label{font-size:13px;font-weight:600;color:var(--text);margin-bottom:18px;text-align:center}
+.btn-primary{width:100%;background:var(--green);color:#fff;border:none;border-radius:var(--r-md);padding:13px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;transition:background 0.15s;margin-bottom:8px}
+.btn-primary i{font-size:16px}
 .btn-primary:disabled{background:var(--text3);cursor:not-allowed}
-.or-divider{display:flex;align-items:center;gap:10px;margin:14px 0}
-.or-divider::before,.or-divider::after{content:'';flex:1;height:0.5px;background:var(--border)}
-.or-divider span{font-size:11px;color:var(--text3)}
 .alert{border-radius:var(--r-md);padding:10px 12px;font-size:12px;line-height:1.5;margin-bottom:14px;display:none;align-items:flex-start;gap:8px}
 .alert.visible{display:flex}
 .alert i{font-size:15px;flex-shrink:0;margin-top:1px}
 .alert-error{background:var(--red-bg);color:var(--red-text)}
-.alert-success{background:var(--green-bg);color:var(--green-text)}
 .hdivider{height:0.5px;background:var(--border);margin:0 24px 18px}
-.card-footer{padding:0 24px 22px;text-align:center}
-.no-account-note{font-size:12px;color:var(--text2);line-height:1.6}
-.no-account-note strong{color:var(--text);font-weight:600}
-.no-account-note .small{font-size:11px;color:var(--text3);display:block;margin-top:2px}
+.card-footer{padding:0 24px 22px;text-align:center;font-size:11px;color:var(--text3)}
 .version-tag{text-align:center;margin-top:20px;font-size:11px;color:#aaa}
-.spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;display:none}
-@keyframes spin{to{transform:rotate(360deg)}}
-.panel{display:none}.panel.active{display:block}
-.back-btn{display:flex;align-items:center;gap:6px;background:none;border:none;color:var(--green);font-size:13px;font-weight:500;font-family:inherit;cursor:pointer;padding:0;margin-bottom:14px}
-.opispro-note{background:var(--green-bg);border-radius:var(--r-md);padding:10px 12px;display:flex;gap:8px;align-items:flex-start;margin-bottom:16px}
+.opispro-note{background:var(--green-bg);border-radius:var(--r-md);padding:10px 12px;display:flex;gap:8px;align-items:flex-start;margin-top:16px}
 .opispro-note i{font-size:14px;color:var(--green);flex-shrink:0;margin-top:1px}
 .opispro-note span{font-size:11.5px;color:var(--green-text);line-height:1.5}
+.waiting-box{border:1.5px dashed var(--green);background:var(--green-bg);border-radius:var(--r-lg);padding:20px 16px;text-align:center}
+.waiting-spinner{width:26px;height:26px;border:3px solid rgba(15,110,86,0.2);border-top-color:var(--green);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.waiting-title{font-size:13px;font-weight:700;color:var(--green-text);margin-bottom:4px}
+.waiting-sub{font-size:11.5px;color:var(--text2);line-height:1.5}
+.cancel-link{display:block;margin:14px auto 0;background:none;border:none;color:var(--text2);font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;padding:0;text-decoration:underline}
 </style>
 </head>
 <body>
@@ -90,36 +77,25 @@ html,body{min-height:100%;font-family:'Inter',-apple-system,sans-serif;backgroun
 
   <div id="panel-login" class="panel active">
     <div class="card-body">
-      <div class="section-label">Sign in with your OPISPRO account</div>
-      <div class="alert alert-error" id="login-alert"><i class="ti ti-alert-circle"></i><span id="login-alert-msg">Incorrect email or password.</span></div>
-      <div class="opispro-note"><i class="ti ti-info-circle"></i><span>No invite needed — use the same email and password you use for OPISPRO. First time signing in? An Admin will need to approve your access before you can use the app.</span></div>
-      <form autocomplete="on" onsubmit="return false;">
-      <div class="form-group">
-        <label class="form-label">Work Email</label>
-        <div class="input-wrap">
-          <i class="ti ti-mail input-icon"></i>
-          <input class="form-input" type="email" id="email" name="email" placeholder="Enter your work email" autocomplete="email">
-        </div>
-        <div class="field-error" id="email-error"><i class="ti ti-alert-circle"></i><span>Please enter a valid email.</span></div>
+      <div class="section-label">Sign in to your account</div>
+      <div class="alert alert-error" id="login-alert"><i class="ti ti-alert-circle"></i><span id="login-alert-msg">Sign-in failed. Please try again.</span></div>
+
+      <div id="sso-default">
+        <button class="btn-primary" id="sso-btn" onclick="startSignIn()"><i class="ti ti-login-2"></i>Sign in with OPIS PRO</button>
+        <div class="opispro-note"><i class="ti ti-info-circle"></i><span>You'll be taken to OPIS PRO to sign in — MJMConnect never sees your password. First time signing in? An Admin will need to approve your access before you can use the app.</span></div>
       </div>
-      <div class="form-group">
-        <label class="form-label">OPISPRO Password</label>
-        <div class="input-wrap">
-          <i class="ti ti-lock input-icon"></i>
-          <input class="form-input" type="password" id="password" name="password" placeholder="Your OPISPRO password" autocomplete="current-password">
-          <button class="input-icon-right" type="button" onclick="togglePassword()"><i class="ti ti-eye" id="pw-icon"></i></button>
+
+      <div id="sso-waiting" style="display:none;">
+        <div class="waiting-box">
+          <div class="waiting-spinner"></div>
+          <div class="waiting-title">Finish signing in in the OPIS PRO window</div>
+          <div class="waiting-sub">A small window opened for you to sign in with OPIS PRO. Once you're done there, you'll be brought back here automatically.</div>
         </div>
-        <div class="field-error" id="pw-error"><i class="ti ti-alert-circle"></i><span>Password cannot be empty.</span></div>
+        <button class="cancel-link" onclick="cancelSignIn()">Cancel</button>
       </div>
-      <button class="btn-primary" id="signin-btn" type="button" onclick="handleSignIn()">
-        <span id="signin-label">Sign In</span><div class="spinner" id="signin-spinner"></div>
-      </button>
-      </form>
     </div>
     <div class="hdivider"></div>
-    <div class="card-footer">
-      <div class="no-account-note">Wrong details? Check your OPISPRO login.<span class="small">MJMConnect doesn't have a separate password.</span></div>
-    </div>
+    <div class="card-footer">Having trouble? Contact HR.</div>
   </div>
 </div>
 <div class="version-tag">MJMConnect · v1.0 · © 2026</div>
@@ -138,6 +114,15 @@ var OPISPRO_CLIENT_SECRET = 'mWfK3xNqL8vY2bRz6cTdP9hJ4sAeU1oG';
 // docs/pending-approval-notify-setup.md) -- same secret js/push.js already
 // uses for send-announcement-push, since both functions share one project.
 var PENDING_NOTIFY_SECRET = 'NkFQfYHY9-H9iVvbUOxFetYsNk8k6-0U';
+
+// Public by design, like every other OAuth client id -- see
+// docs/opispro-sso-setup.md for the server-side half of this flow.
+var OPISPRO_OAUTH_CLIENT_ID = '01a1af8d-7e6e-71bd-8bc7-e375641e47c0';
+var OPISPRO_ISSUER = 'https://opispro.com';
+// Always resolves to this exact page's own URL (e.g.
+// https://mjmconnect.opispro.com/login.html) -- the callback URL
+// registered with the OPIS PRO admin must match this exactly.
+var SSO_REDIRECT_URI = window.location.origin + window.location.pathname;
 
 // Fire-and-forget, like notifyAnnouncementPush in js/push.js -- never
 // blocks or fails the sign-in it accompanies. No explicit Content-Type:
@@ -159,38 +144,149 @@ async function sbFetch(method, path, body) {
   try { return await res.json(); } catch(e) { return null; }
 }
 
-async function handleSignIn() {
+// ── "Sign in with OPIS PRO" (OpenID Connect, Authorization Code + PKCE S256) ──
+// See docs/opispro-sso-setup.md for the server-side token exchange +
+// ID-token verification this flow relies on.
+
+function base64UrlEncode(bytes) {
+  var str = '';
+  for (var i = 0; i < bytes.length; i++) str += String.fromCharCode(bytes[i]);
+  return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function randomBase64Url(numBytes) {
+  var bytes = new Uint8Array(numBytes);
+  crypto.getRandomValues(bytes);
+  return base64UrlEncode(bytes);
+}
+async function sha256Base64Url(input) {
+  var digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input));
+  return base64UrlEncode(new Uint8Array(digest));
+}
+
+var ssoPopup = null;
+var ssoCloseCheckTimer = null;
+
+function startSignIn() {
   clearErrors();
-  var email = document.getElementById('email').value.trim().toLowerCase();
-  var pw    = document.getElementById('password').value;
-  if (!isValidEmail(email)) { document.getElementById('email').classList.add('error'); document.getElementById('email-error').classList.add('visible'); return; }
-  if (!pw) { document.getElementById('password').classList.add('error'); document.getElementById('pw-error').classList.add('visible'); return; }
-  setLoading('signin', true);
+  var isNarrow = window.innerWidth < 700;
+  var popup = null;
+  if (!isNarrow) {
+    // Open synchronously, in direct response to the click, with nothing
+    // async before it -- the guide is explicit that browsers can block
+    // window.open() once an await has already happened. Point it at the
+    // real authorize URL once the PKCE values are ready, just below.
+    popup = window.open('', 'opispro_sso', 'width=480,height=640');
+  }
+  prepareAndGo(popup, isNarrow);
+}
+
+async function prepareAndGo(popup, isNarrow) {
+  var state = randomBase64Url(32);
+  var nonce = randomBase64Url(32);
+  var codeVerifier = randomBase64Url(32);
+  var codeChallenge = await sha256Base64Url(codeVerifier);
+
+  // localStorage, not sessionStorage: the popup needs to read these back
+  // once OPIS PRO sends it back to our origin, and Chrome's site isolation
+  // can swap a popup into a fresh browsing-context group after it visits a
+  // different origin and returns -- taking window.opener and any
+  // sessionStorage inheritance with it. localStorage has no such lineage;
+  // it's one plain per-origin store every window/tab of this origin reads
+  // the same way. Cleared as soon as they're read back, in
+  // runSsoCallback below.
   try {
-    var res = await fetch(SURL + '/functions/v1/opispro-login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ secret: OPISPRO_CLIENT_SECRET, email: email, password: pw })
-    });
-    var result = await res.json();
+    localStorage.setItem('opispro_sso_state', state);
+    localStorage.setItem('opispro_sso_nonce', nonce);
+    localStorage.setItem('opispro_sso_verifier', codeVerifier);
+  } catch (e) {}
 
-    if (result.error_no !== 0 || !result.data) {
-      setLoading('signin', false);
-      document.getElementById('login-alert-msg').textContent = result.message || 'Incorrect email or password. Please try again.';
-      document.getElementById('login-alert').classList.add('visible');
-      document.getElementById('email').classList.add('error');
-      document.getElementById('password').classList.add('error');
-      return;
+  var authorizeUrl = OPISPRO_ISSUER + '/oauth/authorize'
+    + '?response_type=code'
+    + '&client_id=' + encodeURIComponent(OPISPRO_OAUTH_CLIENT_ID)
+    + '&redirect_uri=' + encodeURIComponent(SSO_REDIRECT_URI)
+    + '&scope=' + encodeURIComponent('openid profile email location')
+    + '&state=' + encodeURIComponent(state)
+    + '&nonce=' + encodeURIComponent(nonce)
+    + '&code_challenge=' + encodeURIComponent(codeChallenge)
+    + '&code_challenge_method=S256';
+
+  if (!popup || popup.closed || isNarrow) {
+    window.location.href = authorizeUrl;
+    return;
+  }
+  try {
+    popup.location.href = authorizeUrl;
+  } catch (e) {
+    try { popup.close(); } catch (e2) {}
+    window.location.href = authorizeUrl;
+    return;
+  }
+
+  ssoPopup = popup;
+  showSsoState('waiting');
+  window.addEventListener('storage', handleSsoStorageResult);
+  // Recovers the main window if the person just closes the popup instead
+  // of finishing or cancelling inside it -- otherwise it's stuck showing
+  // "waiting" forever.
+  ssoCloseCheckTimer = setInterval(function () {
+    if (ssoPopup && ssoPopup.closed) {
+      clearInterval(ssoCloseCheckTimer);
+      window.removeEventListener('storage', handleSsoStorageResult);
+      if (document.getElementById('sso-waiting').style.display !== 'none') {
+        showSignInError('Sign-in cancelled. Please try again.');
+      }
     }
+  }, 500);
+}
 
-    // OPISPRO accepted the credentials -- find (or create) the matching
-    // MJMConnect profile. A brand-new email lands as role:'pending' until
-    // an Admin approves it (see admin.html's Pending Approvals queue).
+function cancelSignIn() {
+  if (ssoCloseCheckTimer) clearInterval(ssoCloseCheckTimer);
+  window.removeEventListener('storage', handleSsoStorageResult);
+  if (ssoPopup && !ssoPopup.closed) { try { ssoPopup.close(); } catch (e) {} }
+  showSsoState('default');
+}
+
+// Fired in the MAIN window when the popup writes its result to
+// localStorage (see finish() in runSsoCallback below) -- the storage event
+// only ever fires in OTHER same-origin windows, never the one that made
+// the write, which is exactly the handoff this needs: it doesn't depend on
+// window.opener, which the popup may no longer have by this point.
+function handleSsoStorageResult(e) {
+  if (e.key !== 'opispro_sso_result' || !e.newValue) return;
+  if (ssoCloseCheckTimer) clearInterval(ssoCloseCheckTimer);
+  window.removeEventListener('storage', handleSsoStorageResult);
+  try { localStorage.removeItem('opispro_sso_result'); } catch (err) {}
+  if (ssoPopup && !ssoPopup.closed) { try { ssoPopup.close(); } catch (err) {} }
+  var result;
+  try { result = JSON.parse(e.newValue); } catch (err) { showSignInError('Sign-in failed. Please try again.'); return; }
+  if (result.ok) completeSignIn(result.data); else showSignInError(result.message || 'Sign-in failed. Please try again.');
+}
+
+function showSsoState(which) {
+  document.getElementById('sso-default').style.display = which === 'default' ? 'block' : 'none';
+  document.getElementById('sso-waiting').style.display = which === 'waiting' ? 'block' : 'none';
+}
+function showSignInError(msg) {
+  showSsoState('default');
+  document.getElementById('login-alert-msg').textContent = msg;
+  document.getElementById('login-alert').classList.add('visible');
+}
+function clearErrors() { document.querySelectorAll('.alert').forEach(function(a){ a.classList.remove('visible'); }); }
+
+// Shared by both the popup-callback path and the redirect-fallback path --
+// find (or create) the matching MJMConnect profile and start the local
+// session. A brand-new email lands as role:'pending' until an Admin
+// approves it (see admin.html's Pending Approvals queue) -- unchanged from
+// the old password-based flow this replaces.
+async function completeSignIn(data) {
+  var email = ((data && data.email) || '').trim().toLowerCase();
+  if (!email) { showSignInError('Could not verify your OPIS PRO account. Please try again.'); return; }
+  try {
     var profile = await sbFetch('GET', '/rest/v1/profiles?email=eq.' + encodeURIComponent(email) + '&select=*');
-    var role, name, permissions = null, location = result.data.location;
+    var role, name, permissions = null, location = data.location;
     if (profile && profile.length > 0) {
       role = profile[0].role || 'staff';
-      name = profile[0].full_name || result.data.name;
+      name = profile[0].full_name || data.name;
       permissions = profile[0].permissions || null;
       location = profile[0].opispro_location || location;
       // Profiles created before opispro_user_id existed (or before this
@@ -200,30 +296,25 @@ async function handleSignIn() {
       // MJMConnect even though they're a perfectly valid approved account.
       // Backfill it the first time we see them sign in after the fact,
       // rather than requiring a manual SQL fix per legacy account.
-      if (!profile[0].opispro_user_id && result.data.user_id) {
+      if (!profile[0].opispro_user_id && data.user_id) {
         try {
           await sbFetch('PATCH', '/rest/v1/profiles?email=eq.' + encodeURIComponent(email), {
-            opispro_user_id: result.data.user_id
+            opispro_user_id: data.user_id
           });
         } catch (e) {}
       }
     } else {
       role = 'pending';
-      name = result.data.name;
+      name = data.name;
       var created = await sbFetch('POST', '/rest/v1/profiles', {
         email: email,
         full_name: name,
         role: 'pending',
         phone: '',
-        opispro_user_id: result.data.user_id,
+        opispro_user_id: data.user_id,
         opispro_location: location
       });
-      if (!created) {
-        setLoading('signin', false);
-        document.getElementById('login-alert-msg').textContent = 'Could not set up your account. Please try again.';
-        document.getElementById('login-alert').classList.add('visible');
-        return;
-      }
+      if (!created) { showSignInError('Could not set up your account. Please try again.'); return; }
       notifyPendingApproval(name, email, location);
     }
 
@@ -237,27 +328,95 @@ async function handleSignIn() {
     var dest = (role === 'superadmin' || role === 'hradmin') ? 'admin.html' : 'index.html';
     window.location.replace(dest);
   } catch(e) {
-    setLoading('signin', false);
-    document.getElementById('login-alert-msg').textContent = 'Connection error. Check your internet and try again.';
-    document.getElementById('login-alert').classList.add('visible');
+    showSignInError('Connection error. Check your internet and try again.');
   }
 }
 
-function togglePassword() {
-  var i = document.getElementById('password'), ic = document.getElementById('pw-icon');
-  if (i.type === 'password') { i.type = 'text'; ic.className = 'ti ti-eye-off'; } else { i.type = 'password'; ic.className = 'ti ti-eye'; }
+// ── OAuth callback handling -- this same page is the registered callback
+// URL, loaded a second time (inside the popup, or back at the top level
+// for the redirect fallback) once OPIS PRO sends the browser back here. ──
+(function () {
+  var params = new URLSearchParams(window.location.search);
+  var code = params.get('code');
+  var err = params.get('error');
+  if (!code && !err) return; // a normal page load, nothing to do here
+
+  // Strip the query string so reloading this exact URL doesn't try to
+  // reuse an already-spent (or now-stale) authorization code.
+  window.history.replaceState({}, '', window.location.pathname);
+
+  runSsoCallback(code, err, params.get('state'));
+})();
+
+async function runSsoCallback(code, err, returnedState) {
+  // window.name survives even a cross-origin round trip (unlike
+  // window.opener, which Chrome's site isolation can sever once the popup
+  // has visited a different origin and come back) -- it was set once, at
+  // window.open() time, to this exact value (see startSignIn above).
+  var isPopup = window.name === 'opispro_sso';
+  if (isPopup) showSsoState('waiting');
+
+  function finish(ok, payload) {
+    if (isPopup) {
+      try {
+        localStorage.setItem('opispro_sso_result', JSON.stringify({ ok: ok, data: ok ? payload : null, message: ok ? null : payload }));
+      } catch (e) {}
+      try { window.close(); } catch (e) {}
+      // In case the browser won't close this popup, fall back to showing
+      // the result right here instead of leaving a blank/stuck tab.
+      setTimeout(function () {
+        if (ok) completeSignIn(payload); else showSignInError(payload);
+      }, 300);
+      return;
+    }
+    if (ok) completeSignIn(payload); else showSignInError(payload);
+  }
+
+  if (err) {
+    finish(false, err === 'access_denied' ? 'Sign-in cancelled.' : 'Sign-in failed. Please try again.');
+    return;
+  }
+
+  var savedState, savedNonce, savedVerifier;
+  try {
+    savedState = localStorage.getItem('opispro_sso_state');
+    savedNonce = localStorage.getItem('opispro_sso_nonce');
+    savedVerifier = localStorage.getItem('opispro_sso_verifier');
+  } catch (e) {}
+  try {
+    localStorage.removeItem('opispro_sso_state');
+    localStorage.removeItem('opispro_sso_nonce');
+    localStorage.removeItem('opispro_sso_verifier');
+  } catch (e) {}
+
+  if (!savedState || !savedNonce || !savedVerifier || returnedState !== savedState) {
+    finish(false, 'Sign-in expired. Please try again.');
+    return;
+  }
+
+  try {
+    var res = await fetch(SURL + '/functions/v1/opispro-sso-exchange', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        secret: OPISPRO_CLIENT_SECRET,
+        code: code,
+        code_verifier: savedVerifier,
+        nonce: savedNonce,
+        redirect_uri: SSO_REDIRECT_URI
+      })
+    });
+    var result = await res.json();
+    if (result.error_no !== 0 || !result.data) {
+      finish(false, result.message || 'Sign-in failed. Please try again.');
+      return;
+    }
+    finish(true, result.data);
+  } catch (e) {
+    finish(false, 'Connection error. Check your internet and try again.');
+  }
 }
-function clearErrors() { document.querySelectorAll('.field-error').forEach(function(e){ e.classList.remove('visible'); }); document.querySelectorAll('.form-input').forEach(function(i){ i.classList.remove('error'); }); document.querySelectorAll('.alert').forEach(function(a){ a.classList.remove('visible'); }); }
-function isValidEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()); }
-function setLoading(w, on) {
-  var btn = document.getElementById('signin-btn');
-  var lbl = document.getElementById('signin-label');
-  var spn = document.getElementById('signin-spinner');
-  btn.disabled = on; lbl.style.display = on ? 'none' : 'inline'; spn.style.display = on ? 'block' : 'none';
-}
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') handleSignIn();
-});
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
     navigator.serviceWorker.register('sw.js').catch(function(e){});
