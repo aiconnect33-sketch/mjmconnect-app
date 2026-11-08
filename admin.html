@@ -5789,8 +5789,11 @@ html, body {
     var searchInput = document.getElementById('tor-search-input');
     if (searchInput) searchInput.value = '';
     setTimeOffReportFilter('all');
-    var wrap = document.querySelector('.fr-table-wrap');
-    if (wrap) wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // .fr-table-wrap is reused by the Faulty Report's table too, earlier in
+    // the DOM -- a bare class selector here grabs that one instead, so
+    // nothing visibly scrolls. tor-table-body is this report's own id.
+    var tableBody = document.getElementById('tor-table-body');
+    if (tableBody) tableBody.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   function torStatus(r) {
