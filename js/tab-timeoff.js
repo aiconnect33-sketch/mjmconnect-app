@@ -620,7 +620,7 @@ function renderTimeOffRow(r, myEmailLow, canManageAll, sectionKey) {
       flagBody = 'This needs to go through Annual Leave instead of Time Off.';
     } else {
       flagTitle = 'This trip pushed the monthly total over the 4h limit.';
-      flagBody = 'It\'s only ' + formatChargedHours(charged) + ' on its own — under the 2h/trip limit — but it\'s the one that tipped the month over 4h. The same rule as a single over-cap trip applies here.';
+      flagBody = 'It\'s only ' + formatChargedHours(charged) + ' on its own — under the 2h/trip limit — but it\'s the one that tipped the month over 4h. The same rule as a single over-cap trip applies here — this needs to go through Annual Leave instead of Time Off.';
     }
     html += '<div class="to-warn red">'
       + '<b>⚠ ' + flagTitle + '</b>' + flagBody
