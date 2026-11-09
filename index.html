@@ -16,10 +16,16 @@
       var role = JSON.parse(raw).role;
       if (role === 'superadmin' || role === 'hradmin') {
         window.location.replace('admin.html');
+      } else if (role === 'pending') {
+        // Keep the Home layout below from being painted while core.js is
+        // still downloading -- showPendingApprovalScreen() swaps in
+        // "Almost there!" and lifts this.
+        document.documentElement.classList.add('pending-boot');
       }
     } catch (e) {}
   })();
 </script>
+<style>html.pending-boot{background:#F4F6F5}html.pending-boot body{visibility:hidden}</style>
 <script>
   // Mobile viewport height fix -- on some Android browsers/WebViews, 100vh
   // (and even 100dvh) ends up taller than what's actually visible, so
