@@ -430,6 +430,7 @@ function showPendingApprovalScreen(u) {
         '</div>' +
       '</div>' +
     '</div>';
+  document.documentElement.classList.remove('pending-boot');
   renderPendingPushOptIn();
   initPendingApprovalPoll(u.email);
 }
