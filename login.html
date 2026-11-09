@@ -9,7 +9,12 @@
   // the callback-handling script further down, even if a stale mjm_user
   // happens to still be sitting in localStorage from a previous session.
   (function() {
-    if (window.location.search.indexOf('code=') !== -1 || window.location.search.indexOf('error=') !== -1) return;
+    if (window.location.search.indexOf('code=') !== -1 || window.location.search.indexOf('error=') !== -1) {
+      // Set before first paint so the return trip from OPIS PRO shows
+      // "Signing you in..." straight away, not a flash of the sign-in button.
+      document.documentElement.classList.add('sso-callback');
+      return;
+    }
     var raw = localStorage.getItem('mjm_user');
     if (raw) {
       try {
@@ -68,6 +73,9 @@ html,body{min-height:100%;font-family:'Inter',-apple-system,sans-serif;backgroun
 @keyframes spin{to{transform:rotate(360deg)}}
 .waiting-title{font-size:13px;font-weight:700;color:var(--green-text);margin-bottom:4px}
 .waiting-sub{font-size:11.5px;color:var(--text2);line-height:1.5}
+#sso-finishing{display:none}
+html.sso-callback #sso-default{display:none}
+html.sso-callback #sso-finishing{display:block}
 .cancel-link{display:block;margin:14px auto 0;background:none;border:none;color:var(--text2);font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;padding:0;text-decoration:underline}
 </style>
 </head>
@@ -97,6 +105,14 @@ html,body{min-height:100%;font-family:'Inter',-apple-system,sans-serif;backgroun
           <div class="waiting-sub">A small window opened for you to sign in with OPIS PRO. Once you're done there, you'll be brought back here automatically.</div>
         </div>
         <button class="cancel-link" onclick="cancelSignIn()">Cancel</button>
+      </div>
+
+      <div id="sso-finishing">
+        <div class="waiting-box">
+          <div class="waiting-spinner"></div>
+          <div class="waiting-title">Signing you in…</div>
+          <div class="waiting-sub">Just a moment while we confirm your OPIS PRO sign-in.</div>
+        </div>
       </div>
     </div>
     <div class="hdivider"></div>
@@ -307,8 +323,10 @@ function handleSsoStorageResult(e) {
 }
 
 function showSsoState(which) {
+  document.documentElement.classList.remove('sso-callback');
   document.getElementById('sso-default').style.display = which === 'default' ? 'block' : 'none';
   document.getElementById('sso-waiting').style.display = which === 'waiting' ? 'block' : 'none';
+  document.getElementById('sso-finishing').style.display = which === 'finishing' ? 'block' : 'none';
 }
 function showSignInError(msg) {
   showSsoState('default');
@@ -398,7 +416,6 @@ async function runSsoCallback(code, err, returnedState) {
   // has visited a different origin and come back) -- it was set once, at
   // window.open() time, to this exact value (see startSignIn above).
   var isPopup = window.name === 'opispro_sso';
-  if (isPopup) showSsoState('waiting');
 
   function finish(ok, payload) {
     if (isPopup) {
