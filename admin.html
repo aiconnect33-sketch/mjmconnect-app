@@ -6141,7 +6141,8 @@ html, body {
   }
 
   // ── LOAD ANNOUNCEMENTS FROM SUPABASE ──
-  // Matches the staff app's Announcements tab: items drop off after 5 days.
+  // Matches the staff app's Announcements tab: items drop off after 5 days,
+  // unless their end date keeps them on the Home banner longer than that.
   async function loadDbAnnouncements() {
     try {
       var data = await sbFetch('GET', '/rest/v1/announcements?order=created_at.desc&limit=200');
@@ -6155,7 +6156,9 @@ html, body {
       var today = localDateStr();
       var cut5 = addDaysToDateStr(today, -5);
       function annPublishDate(a) { return a.publish_date || localDateStr(new Date(a.created_at)); }
-      var tabItems = data.filter(function(a){ return annPublishDate(a) >= cut5; });
+      var tabItems = data.filter(function(a){
+        return annPublishDate(a) >= cut5 || (a.active_until_date && today <= a.active_until_date);
+      });
       var countEl = document.getElementById('ann-count');
       if (countEl) countEl.textContent = '(' + tabItems.length + ')';
       if (!tabItems.length) {
