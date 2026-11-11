@@ -203,9 +203,11 @@ async function loadAnnouncements() {
     }
     var cut5 = addDaysToDateStr(today, -5);
     var bannerItems = data.filter(annIsLiveOnHome);
+    // Also keep anything still on the Home banner (an end date set further
+    // out than 5 days), so tapping that banner always finds it here.
     var tabItems    = data.filter(function(a){
       var pub = annPublishDate(a);
-      return pub <= today && pub >= cut5;
+      return (pub <= today && pub >= cut5) || annIsLiveOnHome(a);
     });
 
     // Banner
