@@ -379,6 +379,7 @@ async function submitFaultyComplaint() {
     var inserted = await sbWrite('POST', 'faulty_complaints', payload);
     var newId = inserted && inserted[0] ? inserted[0].id : null;
     syncFcToSheet(payload, fcState.photoFile, newId);
+    if (typeof notifyFaultyReportPush === 'function') notifyFaultyReportPush(payload);
 
     resetFaultyForm();
     showFcAlert('fc-success');

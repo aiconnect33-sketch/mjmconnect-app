@@ -111,6 +111,25 @@ function notifyAnnouncementPush(title, body) {
   }).catch(function () {});
 }
 
+// Fire-and-forget, like notifyAnnouncementPush -- never blocks or fails the
+// complaint save it accompanies. Notifies whoever's on duty today under a
+// duty role flagged notify_faulty (the same people the Sheet email goes
+// to); the Edge Function looks them up itself, so this can't be pointed at
+// anyone else. See docs/faulty-report-notify-setup.md.
+function notifyFaultyReportPush(payload) {
+  fetch(PUSH_SURL + '/functions/v1/notify-faulty-report', {
+    method: 'POST', mode: 'no-cors',
+    body: JSON.stringify({
+      secret: PUSH_SEND_SECRET,
+      item: payload.item_other || payload.item,
+      location: payload.location,
+      urgency: payload.urgency,
+      reportedBy: payload.staff_name,
+      reporterEmail: payload.staff_email
+    })
+  }).catch(function () {});
+}
+
 // ── Auto pre-prompt on Home ──
 // Explains why before the OS's own permission dialog appears (asking cold
 // tends to get a reflexive "Don't Allow", which the OS then remembers and

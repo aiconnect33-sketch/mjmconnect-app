@@ -5542,6 +5542,7 @@ html, body {
       var inserted = await sbFetch('POST', '/rest/v1/faulty_complaints', payload);
       var newId = inserted && inserted[0] ? inserted[0].id : null;
       syncFcToSheet(payload, fcState.photoFile, newId);
+      if (typeof notifyFaultyReportPush === 'function') notifyFaultyReportPush(payload);
 
       resetFaultyForm();
       showBookAlert('fc-success');
