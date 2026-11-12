@@ -124,6 +124,7 @@ function notifyFaultyReportPush(payload) {
       item: payload.item_other || payload.item,
       location: payload.location,
       urgency: payload.urgency,
+      description: payload.description,
       reportedBy: payload.staff_name,
       reporterEmail: payload.staff_email
     })

@@ -59,7 +59,8 @@ the app's call to it just quietly fails.
 2. From a **different** account, lodge a faulty report.
 3. Within a few seconds the on-duty person's phone should show a
    notification like *"New faulty report · Urgent -- Aircond at Meeting
-   Room 1, reported by Aina Rahman."*, even if the app is closed.
+   Room 1: "Not cooling, water dripping" — reported by Aina Rahman."*, even
+   if the app is closed.
 
 ## Edge Function code
 
@@ -245,7 +246,7 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders() });
   if (req.method !== 'POST') return new Response('method not allowed', { status: 405, headers: corsHeaders() });
 
-  let body: { secret?: string; item?: string; location?: string; urgency?: string; reportedBy?: string; reporterEmail?: string };
+  let body: { secret?: string; item?: string; location?: string; urgency?: string; description?: string; reportedBy?: string; reporterEmail?: string };
   try {
     body = await req.json();
   } catch (_e) {
@@ -260,9 +261,15 @@ Deno.serve(async (req) => {
   const reportedBy = String(body.reportedBy || 'a staff member').slice(0, 100);
   const reporterEmail = String(body.reporterEmail || '').toLowerCase();
   const urgencyLabel = URGENCY_LABELS[String(body.urgency || '')] || '';
+  // What the reporter wrote, on one line and short enough for a phone
+  // notification.
+  let description = String(body.description || '').replace(/\s+/g, ' ').trim();
+  if (description.length > 120) description = description.slice(0, 119).trimEnd() + '…';
 
   const title = 'New faulty report' + (urgencyLabel ? ' · ' + urgencyLabel : '');
-  const message = item + ' at ' + location + ', reported by ' + reportedBy + '.';
+  const message = description
+    ? item + ' at ' + location + ': "' + description + '" — reported by ' + reportedBy + '.'
+    : item + ' at ' + location + ', reported by ' + reportedBy + '.';
 
   try {
     const recipients = (await onDutyEmails()).filter((e) => e !== reporterEmail);
