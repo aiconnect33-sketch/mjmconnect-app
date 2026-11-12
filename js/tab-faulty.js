@@ -425,7 +425,9 @@ function fcUrgencyBadge(u) {
 }
 
 function fcStatusBadge(s) {
-  return s === 'resolved' ? '<span class="badge badge-success">Resolved</span>' : '<span class="badge badge-amber">Open</span>';
+  if (s === 'resolved') return '<span class="badge badge-success">Resolved</span>';
+  if (s === 'in_progress') return '<span class="badge badge-blue">In Progress</span>';
+  return '<span class="badge badge-amber">Open</span>';
 }
 
 // Consistent "27 Aug 2026, 8:11 AM" format for both Submitted and Resolved lines.
@@ -438,14 +440,17 @@ function fcDateTime(iso) {
 
 // Drops complaints resolved more than 5 days ago (they stay in Supabase and
 // the synced Sheet forever — this only affects what shows in the app), then
-// sorts open complaints first, resolved ones after (most recently resolved first).
+// sorts Open first (nobody's on it yet), then In Progress, then Resolved
+// (most recently resolved first).
+var FC_STATUS_ORDER = { open: 0, in_progress: 1, resolved: 2 };
 function fcFilterAndSort(data) {
   var cutoff = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
   return data.filter(function (c) {
     return c.status !== 'resolved' || !c.resolved_at || new Date(c.resolved_at) >= cutoff;
   }).sort(function (a, b) {
-    var aR = a.status === 'resolved', bR = b.status === 'resolved';
-    if (aR !== bR) return aR ? 1 : -1;
+    var aO = FC_STATUS_ORDER[a.status] || 0, bO = FC_STATUS_ORDER[b.status] || 0;
+    if (aO !== bO) return aO - bO;
+    var aR = a.status === 'resolved';
     var field = aR ? 'resolved_at' : 'created_at';
     return new Date(b[field] || 0) - new Date(a[field] || 0);
   });
@@ -470,14 +475,17 @@ async function loadTeamComplaints() {
     (nameMapRows || []).forEach(function (p) { if (p.email && p.full_name) fcNameMap[p.email.toLowerCase()] = p.full_name; });
 
     var data = await sbGet('faulty_complaints', 'order=created_at.desc&limit=100');
-    if (data) data = fcFilterAndSort(data);
+    if (data && Array.isArray(data)) data = fcFilterAndSort(data);
     if (!data || !data.length) { el.innerHTML = '<div class="book-empty">No complaints yet.</div>'; return; }
-    el.innerHTML = data.map(function (c) {
+    await fcpLoadUpdates(data);
+    var shown = data.filter(fcpMatchesFilter);
+    el.innerHTML = fcpFilterBarHtml(data) + (shown.length ? '' : '<div class="book-empty">No complaints here.</div>') + shown.map(function (c) {
       var itemLabel = c.item === 'Other Issues' && c.item_other ? c.item_other : c.item;
       var isResolved = c.status === 'resolved';
       var d = fcDateTime(c.created_at);
+      // I'll handle this / Add update / Mark Resolved -- see js/faulty-progress.js.
       // Reopening is admin-only -- staff can resolve but not undo a resolution.
-      var actionBtn = isResolved ? '' : '<button class="fc-btn-resolve" onclick="resolveFaultyComplaint(' + c.id + ')">✓ Mark Resolved</button>';
+      var actionBtn = fcpActionsHtml(c);
       var resolvedLine = '';
       if (isResolved && c.resolved_by) {
         var resolvedAt = fcDateTime(c.resolved_at);
@@ -491,6 +499,7 @@ async function loadTeamComplaints() {
         + '<div class="fc-loc"><i class="ti ti-map-pin"></i> ' + escHtml(c.location) + '</div>'
         + '<button class="fc-view-btn" aria-expanded="false" onclick="toggleFcDesc(this,' + c.id + ')"><i class="ti ti-chevron-right"></i> View details</button>'
         + '<div class="fc-desc" id="fc-desc-' + c.id + '">' + escHtml(c.description) + photoHtml + '</div>'
+        + fcpHandledHtml(c, fcNameMap)
         + '<div class="fc-meta">'
         + '<div class="fc-meta-line"><i class="ti ti-user"></i> Submitted by <b>&nbsp;' + escHtml(fcDisplayName(c)) + '</b>&nbsp;· ' + d + '</div>'
         + resolvedLine
@@ -503,24 +512,13 @@ async function loadTeamComplaints() {
   }
 }
 
+// Called by js/faulty-progress.js after someone handles, updates or resolves a complaint.
+function fcpReload() { loadTeamComplaints(); }
+
 function toggleFcDesc(btn, id) {
   var desc = document.getElementById('fc-desc-' + id);
   if (!desc) return;
   var open = desc.classList.toggle('open');
   btn.setAttribute('aria-expanded', open ? 'true' : 'false');
   btn.innerHTML = '<i class="ti ti-chevron-right"></i> ' + (open ? 'Hide details' : 'View details');
-}
-
-// Reopening a resolved complaint is admin-only -- see admin.html.
-async function resolveFaultyComplaint(id) {
-  var raw = localStorage.getItem('mjm_user');
-  var u = raw ? JSON.parse(raw) : {};
-  var resolvedBy = u.name || u.email || 'Unknown';
-  try {
-    await sbWrite('PATCH', 'faulty_complaints', { status: 'resolved', resolved_by: resolvedBy, resolved_at: new Date().toISOString() }, 'id=eq.' + id);
-    syncFcResolveToSheet(id, 'resolve', resolvedBy);
-    loadTeamComplaints();
-  } catch (e) {
-    alert('Could not update: ' + e.message);
-  }
 }

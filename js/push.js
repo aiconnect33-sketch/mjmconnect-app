@@ -131,6 +131,24 @@ function notifyFaultyReportPush(payload) {
   }).catch(function () {});
 }
 
+// Same function, kind 'claimed': tells the rest of today's on-duty team that
+// someone tapped "I'll handle this" (js/faulty-progress.js), so nobody else
+// chases the same contractor. The person handling it is left out.
+function notifyFaultyClaimPush(info) {
+  fetch(PUSH_SURL + '/functions/v1/notify-faulty-report', {
+    method: 'POST', mode: 'no-cors',
+    body: JSON.stringify({
+      secret: PUSH_SEND_SECRET,
+      kind: 'claimed',
+      item: info.item,
+      location: info.location,
+      note: info.note || '',
+      handledBy: info.handledBy,
+      handlerEmail: info.handlerEmail
+    })
+  }).catch(function () {});
+}
+
 // ── Auto pre-prompt on Home ──
 // Explains why before the OS's own permission dialog appears (asking cold
 // tends to get a reflexive "Don't Allow", which the OS then remembers and
