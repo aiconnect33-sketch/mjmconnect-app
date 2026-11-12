@@ -11,6 +11,12 @@ Triggered fire-and-forget by `notifyFaultyReportPush()` in `js/push.js`,
 called from both `js/tab-faulty.js` and `admin.html` right after the report
 saves. It never blocks or fails the report itself.
 
+The same function also sends the **"<name> is handling it"** heads-up
+(`kind: 'claimed'`, from `notifyFaultyClaimPush()` in `js/push.js`) when
+someone taps **I'll handle this** on a complaint (`js/faulty-progress.js`),
+so the rest of the on-duty team knows not to chase the same contractor. The
+person handling it is left out.
+
 ## Why the function looks up who's on duty itself
 
 Unlike the Time Off one, the app doesn't tell this function *who* to
@@ -31,6 +37,19 @@ secrets (added for `send-announcement-push`).
 Only people who turned on notifications on their phone (the "Get notified
 instantly" banner on Home, or Profile -> Notifications) can receive it.
 Anyone on duty without that is simply skipped -- they still get the email.
+
+## Updating an already-deployed function
+
+If `notify-faulty-report` is already deployed (it is, if faulty report
+notifications already reach phones), open it in the Supabase dashboard ->
+**Edge Functions** -> `notify-faulty-report` -> **Code**, replace everything
+with the code from the **Edge Function code** section below, and click
+**Deploy**. Nothing else changes -- same name, same secrets, Verify JWT stays
+off.
+
+Do this **before** the In Progress buttons go live: the old code doesn't
+know about `kind: 'claimed'` and would announce every "I'll handle this" as
+a new faulty report.
 
 ## One-time setup
 
@@ -61,20 +80,27 @@ the app's call to it just quietly fails.
    notification like *"New faulty report · Urgent -- Aircond at Meeting
    Room 1: "Not cooling, water dripping" — reported by Aina Rahman."*, even
    if the app is closed.
+4. From a third account, tap **I'll handle this** on that report and write
+   a short note. The on-duty person should get *"Aina Rahman is handling it
+   -- Aircond at Meeting Room 1: "Called the contractor""*. Whoever tapped
+   it doesn't get one.
 
 ## Edge Function code
 
 ```typescript
 // supabase/functions/notify-faulty-report/index.ts
 //
-// Sends a Web Push notification about a new faulty report to whoever is on
-// duty today under a duty role flagged notify_faulty -- the same people
-// the Google Sheet script emails. Called fire-and-forget from
-// notifyFaultyReportPush() in js/push.js, after the report has saved.
+// Sends a Web Push notification to whoever is on duty today under a duty
+// role flagged notify_faulty -- the same people the Google Sheet script
+// emails. Two kinds, both called fire-and-forget from js/push.js:
+//   'new'     (default) notifyFaultyReportPush() -- a report was lodged.
+//             Leaves out the person who lodged it.
+//   'claimed' notifyFaultyClaimPush() -- someone tapped "I'll handle this".
+//             Leaves out the person handling it.
 //
 // Works out the recipients itself from duty_roles + duty_roster (never
 // from the request), so the shared secret can't be used to notify anyone
-// else. Leaves out the person who lodged the report.
+// else.
 //
 // Shares its secrets with the other push functions (see
 // docs/push-notifications-setup.md) -- nothing new to add:
@@ -246,7 +272,11 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders() });
   if (req.method !== 'POST') return new Response('method not allowed', { status: 405, headers: corsHeaders() });
 
-  let body: { secret?: string; item?: string; location?: string; urgency?: string; description?: string; reportedBy?: string; reporterEmail?: string };
+  let body: {
+    secret?: string; kind?: string; item?: string; location?: string; urgency?: string;
+    description?: string; reportedBy?: string; reporterEmail?: string;
+    note?: string; handledBy?: string; handlerEmail?: string;
+  };
   try {
     body = await req.json();
   } catch (_e) {
@@ -256,23 +286,40 @@ Deno.serve(async (req) => {
     return new Response('unauthorized', { status: 401, headers: corsHeaders() });
   }
 
+  const kind = String(body.kind || 'new');
+  if (kind !== 'new' && kind !== 'claimed') {
+    return new Response('unknown kind', { status: 400, headers: corsHeaders() });
+  }
+
   const item = String(body.item || 'An item').slice(0, 100);
   const location = String(body.location || 'an unknown location').slice(0, 100);
-  const reportedBy = String(body.reportedBy || 'a staff member').slice(0, 100);
-  const reporterEmail = String(body.reporterEmail || '').toLowerCase();
-  const urgencyLabel = URGENCY_LABELS[String(body.urgency || '')] || '';
-  // What the reporter wrote, on one line and short enough for a phone
-  // notification.
-  let description = String(body.description || '').replace(/\s+/g, ' ').trim();
-  if (description.length > 120) description = description.slice(0, 119).trimEnd() + '…';
 
-  const title = 'New faulty report' + (urgencyLabel ? ' · ' + urgencyLabel : '');
-  const message = description
-    ? item + ' at ' + location + ': "' + description + '" — reported by ' + reportedBy + '.'
-    : item + ' at ' + location + ', reported by ' + reportedBy + '.';
+  // Free text on one line and short enough for a phone notification.
+  const oneLine = (v: unknown) => {
+    const t = String(v || '').replace(/\s+/g, ' ').trim();
+    return t.length > 120 ? t.slice(0, 119).trimEnd() + '…' : t;
+  };
+
+  let title: string, message: string, skipEmail: string;
+  if (kind === 'claimed') {
+    const handledBy = String(body.handledBy || 'Someone').slice(0, 100);
+    const note = oneLine(body.note);
+    title = handledBy + ' is handling it';
+    message = note ? item + ' at ' + location + ': "' + note + '"' : item + ' at ' + location + '.';
+    skipEmail = String(body.handlerEmail || '').toLowerCase();
+  } else {
+    const reportedBy = String(body.reportedBy || 'a staff member').slice(0, 100);
+    const urgencyLabel = URGENCY_LABELS[String(body.urgency || '')] || '';
+    const description = oneLine(body.description);
+    title = 'New faulty report' + (urgencyLabel ? ' · ' + urgencyLabel : '');
+    message = description
+      ? item + ' at ' + location + ': "' + description + '" — reported by ' + reportedBy + '.'
+      : item + ' at ' + location + ', reported by ' + reportedBy + '.';
+    skipEmail = String(body.reporterEmail || '').toLowerCase();
+  }
 
   try {
-    const recipients = (await onDutyEmails()).filter((e) => e !== reporterEmail);
+    const recipients = (await onDutyEmails()).filter((e) => e !== skipEmail);
 
     let sent = 0, removed = 0, total = 0;
     for (const email of recipients) {

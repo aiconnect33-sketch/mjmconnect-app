@@ -1206,6 +1206,7 @@ html, body {
 </head>
 <body>
 <script src="js/push.js"></script>
+<script src="js/faulty-progress.js"></script>
 <script>
   // Auth guard — require a logged-in session with an admin role
   (function() {
@@ -2310,6 +2311,10 @@ html, body {
           <div class="fr-tile-label">Open</div>
         </div>
         <div class="fr-tile">
+          <div class="fr-tile-num" style="color:var(--blue-text);" id="fr-stat-inprogress">—</div>
+          <div class="fr-tile-label">In Progress</div>
+        </div>
+        <div class="fr-tile">
           <div class="fr-tile-num" style="color:var(--green-text);" id="fr-stat-resolved">—</div>
           <div class="fr-tile-label">Resolved</div>
         </div>
@@ -2322,6 +2327,7 @@ html, body {
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
         <button class="fr-pill active" id="fr-filter-all" onclick="setFaultyReportFilter('all')">All</button>
         <button class="fr-pill" id="fr-filter-open" onclick="setFaultyReportFilter('open')">Open</button>
+        <button class="fr-pill" id="fr-filter-in_progress" onclick="setFaultyReportFilter('in_progress')">In Progress</button>
         <button class="fr-pill" id="fr-filter-resolved" onclick="setFaultyReportFilter('resolved')">Resolved</button>
         <select class="fr-select" id="fr-range-select" onchange="loadFaultyReport()">
           <option value="30">Last 30 days</option>
@@ -5575,7 +5581,9 @@ html, body {
     return '<span class="badge b-green">Non-urgent</span>';
   }
   function fcStatusBadge(s) {
-    return s === 'resolved' ? '<span class="badge b-green">Resolved</span>' : '<span class="badge b-amber">Open</span>';
+    if (s === 'resolved') return '<span class="badge b-green">Resolved</span>';
+    if (s === 'in_progress') return '<span class="badge b-blue">In Progress</span>';
+    return '<span class="badge b-amber">Open</span>';
   }
 
   // Consistent "27 Aug 2026, 8:11 AM" format for both Submitted and Resolved lines.
@@ -5588,14 +5596,17 @@ html, body {
 
   // Drops complaints resolved more than 5 days ago (they stay in Supabase and
   // the synced Sheet forever — this only affects what shows in the app), then
-  // sorts open complaints first, resolved ones after (most recently resolved first).
+  // sorts Open first (nobody's on it yet), then In Progress, then Resolved
+  // (most recently resolved first).
+  var FC_STATUS_ORDER = { open: 0, in_progress: 1, resolved: 2 };
   function fcFilterAndSort(data) {
     var cutoff = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
     return data.filter(function (c) {
       return c.status !== 'resolved' || !c.resolved_at || new Date(c.resolved_at) >= cutoff;
     }).sort(function (a, b) {
-      var aR = a.status === 'resolved', bR = b.status === 'resolved';
-      if (aR !== bR) return aR ? 1 : -1;
+      var aO = FC_STATUS_ORDER[a.status] || 0, bO = FC_STATUS_ORDER[b.status] || 0;
+      if (aO !== bO) return aO - bO;
+      var aR = a.status === 'resolved';
       var field = aR ? 'resolved_at' : 'created_at';
       return new Date(b[field] || 0) - new Date(a[field] || 0);
     });
@@ -5606,7 +5617,8 @@ html, body {
   // the chosen date range -- including complaints resolved long ago -- since
   // the point of a report is the full history the Google Sheet already has.
   var frReportData = [];
-  var frReportFilter = 'all'; // 'all' | 'open' | 'resolved'
+  var frReportFilter = 'all'; // 'all' | 'open' | 'in_progress' | 'resolved'
+  var frUpdates = {}; // complaint id -> [update notes], oldest first, for the CSV
 
   async function loadFaultyReport() {
     var tbody = document.getElementById('fr-table-body');
@@ -5620,6 +5632,8 @@ html, body {
         filter = 'created_at=gte.' + cutoff + '&' + filter;
       }
       frReportData = (await sbGet('faulty_complaints', filter)) || [];
+      if (!Array.isArray(frReportData)) frReportData = [];
+      await loadFaultyReportUpdates();
       // Report has its own separately-loaded data -- resolve names here too
       // rather than assume loadAllComplaints() already populated fcNameMap.
       var frNameMapRows = await sbFetch('GET', '/rest/v1/profiles?select=email,full_name&limit=500').catch(function () { return []; });
@@ -5633,20 +5647,35 @@ html, body {
     }
   }
 
+  // The In Progress notes for the CSV. Fetched in batches so a long date
+  // range doesn't build one enormous URL. Left empty if the table isn't there.
+  async function loadFaultyReportUpdates() {
+    frUpdates = {};
+    var ids = frReportData.map(function (c) { return c.id; });
+    for (var i = 0; i < ids.length; i += 150) {
+      try {
+        var rows = await sbFetch('GET', '/rest/v1/faulty_complaint_updates?complaint_id=in.(' + ids.slice(i, i + 150).join(',') + ')&order=created_at.asc');
+        (rows || []).forEach(function (r) { (frUpdates[r.complaint_id] = frUpdates[r.complaint_id] || []).push(r); });
+      } catch (e) {}
+    }
+  }
+
   function renderFaultyReportStats(days) {
     var total = frReportData.length;
-    var open = frReportData.filter(function (c) { return c.status !== 'resolved'; }).length;
+    var open = frReportData.filter(function (c) { return (c.status || 'open') === 'open'; }).length;
+    var inProgress = frReportData.filter(function (c) { return c.status === 'in_progress'; }).length;
     var immediateOpen = frReportData.filter(function (c) { return c.status !== 'resolved' && c.urgency === 'immediate'; }).length;
     document.getElementById('fr-stat-total').textContent = total;
     document.getElementById('fr-stat-open').textContent = open;
-    document.getElementById('fr-stat-resolved').textContent = total - open;
+    document.getElementById('fr-stat-inprogress').textContent = inProgress;
+    document.getElementById('fr-stat-resolved').textContent = total - open - inProgress;
     document.getElementById('fr-stat-immediate').textContent = immediateOpen;
     document.getElementById('fr-stat-total-label').textContent = days > 0 ? 'Total (last ' + days + ' days)' : 'Total (all time)';
   }
 
   function setFaultyReportFilter(f) {
     frReportFilter = f;
-    ['all', 'open', 'resolved'].forEach(function (k) {
+    ['all', 'open', 'in_progress', 'resolved'].forEach(function (k) {
       var el = document.getElementById('fr-filter-' + k);
       if (el) el.classList.toggle('active', k === f);
     });
@@ -5654,7 +5683,8 @@ html, body {
   }
 
   function frMatchesFilter(c) {
-    if (frReportFilter === 'open') return c.status !== 'resolved';
+    if (frReportFilter === 'open') return (c.status || 'open') === 'open';
+    if (frReportFilter === 'in_progress') return c.status === 'in_progress';
     if (frReportFilter === 'resolved') return c.status === 'resolved';
     return true;
   }
@@ -5694,7 +5724,8 @@ html, body {
   // what you get, same convention as the table itself.
   function downloadFaultyReportCsv() {
     var rows = frVisibleRows();
-    var headers = ['Timestamp', 'Staff Name', 'Location', 'Item', 'Description', 'Urgency', 'Status', 'Resolved By', 'Resolved At'];
+    var headers = ['Timestamp', 'Staff Name', 'Location', 'Item', 'Description', 'Urgency', 'Status', 'Handled By', 'Handled Since', 'Updates', 'Resolved By', 'Resolved At'];
+    var statusLabel = { open: 'open', in_progress: 'in progress', resolved: 'resolved' };
     function csvEscape(v) {
       v = String(v == null ? '' : v);
       if (/[",\n]/.test(v)) v = '"' + v.replace(/"/g, '""') + '"';
@@ -5705,7 +5736,13 @@ html, body {
       var itemLabel = (c.item === 'Other Issues' && c.item_other) ? c.item_other : (c.item || '');
       lines.push([
         fcDateTime(c.created_at), fcDisplayName(c), c.location, itemLabel, c.description,
-        c.urgency, c.status, c.resolved_by || '', c.resolved_at ? fcDateTime(c.resolved_at) : ''
+        c.urgency, statusLabel[c.status] || c.status,
+        c.handled_by ? ((c.handled_by_email && fcNameMap[c.handled_by_email.toLowerCase()]) || c.handled_by) : '',
+        c.handled_at ? fcDateTime(c.handled_at) : '',
+        (frUpdates[c.id] || []).map(function (u) {
+          return fcDateTime(u.created_at) + ' ' + ((u.author_email && fcNameMap[u.author_email.toLowerCase()]) || u.author_name || '') + ': ' + u.note;
+        }).join('\n'),
+        c.resolved_by || '', c.resolved_at ? fcDateTime(c.resolved_at) : ''
       ].map(csvEscape).join(','));
     });
     var blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
@@ -6141,9 +6178,11 @@ html, body {
       (fcNameMapRows || []).forEach(function (p) { if (p.email && p.full_name) fcNameMap[p.email.toLowerCase()] = p.full_name; });
 
       var data = await sbGet('faulty_complaints', 'order=created_at.desc&limit=100');
-      if (data) data = fcFilterAndSort(data);
+      if (data && Array.isArray(data)) data = fcFilterAndSort(data);
       if (!data || !data.length) { el.innerHTML = '<div class="book-empty">No complaints yet.</div>'; return; }
-      el.innerHTML = data.map(function (c) {
+      await fcpLoadUpdates(data);
+      var shown = data.filter(fcpMatchesFilter);
+      el.innerHTML = fcpFilterBarHtml(data) + (shown.length ? '' : '<div class="book-empty">No complaints here.</div>') + shown.map(function (c) {
         var itemLabel = c.item === 'Other Issues' && c.item_other ? c.item_other : c.item;
         var isResolved = c.status === 'resolved';
         var cardClass = (c.urgency === 'immediate' && !isResolved) ? 'fc-card row-immediate' : 'fc-card';
@@ -6156,14 +6195,16 @@ html, body {
         var photoHtml = c.photo_url
           ? '<a class="fc-photo-view" href="' + escHtml(c.photo_url) + '" target="_blank"><img src="' + escHtml(c.photo_url) + '" alt="Attached photo"></a>'
           : '';
+        // I'll handle this / Add update / Mark Resolved -- see js/faulty-progress.js.
         var actionBtn = isResolved
           ? '<button class="fc-btn-reopen" onclick="reopenFaultyComplaint(' + c.id + ')">Reopen</button>'
-          : '<button class="fc-btn-resolve" onclick="resolveFaultyComplaint(' + c.id + ')">✓ Mark Resolved</button>';
+          : fcpActionsHtml(c);
         return '<div class="' + cardClass + '">'
           + '<div class="fc-card-head"><div class="fc-card-name">' + escHtml(itemLabel) + '</div><div class="fc-card-badges">' + fcUrgencyBadge(c.urgency) + fcStatusBadge(c.status) + '</div></div>'
           + '<div class="fc-loc"><i class="ti ti-map-pin"></i> ' + escHtml(c.location) + '</div>'
           + '<button class="fc-view-btn" aria-expanded="false" onclick="toggleFcDesc(this,' + c.id + ')"><i class="ti ti-chevron-right"></i> View details</button>'
           + '<div class="fc-desc" id="fc-desc-' + c.id + '">' + escHtml(c.description) + photoHtml + '</div>'
+          + fcpHandledHtml(c, fcNameMap)
           + '<div class="fc-meta">'
           + '<div class="fc-meta-line"><i class="ti ti-user"></i> Submitted by <b>&nbsp;' + escHtml(fcDisplayName(c)) + '</b>&nbsp;· ' + d + '</div>'
           + resolvedLine
@@ -6176,6 +6217,9 @@ html, body {
     }
   }
 
+  // Called by js/faulty-progress.js after someone handles, updates or resolves a complaint.
+  function fcpReload() { loadAllComplaints(); }
+
   function toggleFcDesc(btn, id) {
     var desc = document.getElementById('fc-desc-' + id);
     if (!desc) return;
@@ -6184,21 +6228,11 @@ html, body {
     btn.innerHTML = '<i class="ti ti-chevron-right"></i> ' + (open ? 'Hide details' : 'View details');
   }
 
-  async function resolveFaultyComplaint(id) {
-    var raw = localStorage.getItem('mjm_user');
-    var u = raw ? JSON.parse(raw) : {};
-    var resolvedBy = u.name || u.email || 'Admin';
-    var resolvedAt = new Date().toISOString();
-    try {
-      await sbFetch('PATCH', '/rest/v1/faulty_complaints?id=eq.' + id, { status: 'resolved', resolved_by: resolvedBy, resolved_at: resolvedAt }, { 'Prefer': '' });
-      syncFcResolveToSheet(id, 'resolve', resolvedBy);
-      loadAllComplaints();
-    } catch (e) { alert('Could not update: ' + e.message); }
-  }
-
+  // Goes back to In Progress if someone was already handling it, else Open.
   async function reopenFaultyComplaint(id) {
+    var c = fcpComplaints[id] || {};
     try {
-      await sbFetch('PATCH', '/rest/v1/faulty_complaints?id=eq.' + id, { status: 'open', resolved_by: null, resolved_at: null }, { 'Prefer': '' });
+      await sbFetch('PATCH', '/rest/v1/faulty_complaints?id=eq.' + id, { status: c.handled_by ? 'in_progress' : 'open', resolved_by: null, resolved_at: null }, { 'Prefer': '' });
       syncFcResolveToSheet(id, 'reopen', null);
       loadAllComplaints();
     } catch (e) { alert('Could not update: ' + e.message); }
