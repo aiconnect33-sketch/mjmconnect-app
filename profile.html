@@ -241,6 +241,10 @@ window.addEventListener('DOMContentLoaded', async function() {
       if (data && data.length > 0) {
         var p = data[0];
         if (p.full_name) {
+          if (p.full_name !== user.name) {
+            user.name = p.full_name;
+            localStorage.setItem('mjm_user', JSON.stringify(user));
+          }
           document.getElementById('edit-name').value   = p.full_name;
           document.getElementById('profile-name').textContent = p.full_name;
           var pts = p.full_name.split(' ').filter(Boolean);

@@ -505,9 +505,44 @@ function initPendingApprovalPoll(email) {
 // gesture below, so "pull to refresh" never has to fall back to a real
 // location.reload() (which blanks the whole page while index.html and
 // every js/tab-*.js file it loads re-fetch over the network).
+function paintUserName() {
+  var raw = localStorage.getItem('mjm_user');
+  if (!raw) return;
+  var u = JSON.parse(raw);
+  var parts = (u.name || u.email || '').split(/[@.\s]/);
+  var initials = parts.filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
+  var el = document.getElementById('top-av-initials');
+  if (el) el.textContent = initials || 'ST';
+  var el2 = document.getElementById('menu-av-initials');
+  if (el2) el2.textContent = initials || 'ST';
+  var greetEl = document.getElementById('greet-name-text');
+  if (greetEl && (u.name || u.email)) greetEl.textContent = u.name || u.email;
+  var dskAv = document.getElementById('dsk-av-initials');
+  if (dskAv) dskAv.textContent = initials || 'ST';
+  var dskNameEl = document.getElementById('dsk-foot-name');
+  if (dskNameEl && (u.name || u.email)) dskNameEl.textContent = u.name || u.email;
+}
+
+// The session's name is a copy taken at sign-in, and staff stay signed in
+// indefinitely -- re-read it so a rename (by an Admin, or from another
+// device) reaches the greeting, avatar and "My Bookings" matching.
+async function syncSessionName() {
+  var raw = localStorage.getItem('mjm_user');
+  if (!raw) return;
+  var u = JSON.parse(raw);
+  if (!u.email) return;
+  var rows = await sbGet('profiles', 'email=eq.' + encodeURIComponent(u.email) + '&select=full_name&order=email');
+  var fresh = rows && rows[0] && rows[0].full_name;
+  if (!fresh || fresh === u.name) return;
+  u.name = fresh;
+  localStorage.setItem('mjm_user', JSON.stringify(u));
+  paintUserName();
+}
+
 async function refreshAppData() {
   if (window.location.protocol !== 'file:') {
     await Promise.all([
+      syncSessionName().catch(function () {}),
       loadAnnouncements(),
       loadLeave(),
       loadDuty(),
@@ -601,23 +636,7 @@ window.addEventListener('DOMContentLoaded', function() {
   initPullToRefresh();
   initVersionCheck();
   initHomeResetOnReturn();
-  // Set top avatar initials
-  var raw = localStorage.getItem('mjm_user');
-  if (raw) {
-    var u = JSON.parse(raw);
-    var parts = (u.name || u.email || '').split(/[@.\s]/);
-    var initials = parts.filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
-    var el = document.getElementById('top-av-initials');
-    if (el) el.textContent = initials || 'ST';
-    var el2 = document.getElementById('menu-av-initials');
-    if (el2) el2.textContent = initials || 'ST';
-    var greetEl = document.getElementById('greet-name-text');
-    if (greetEl && (u.name || u.email)) greetEl.textContent = u.name || u.email;
-    var dskAv = document.getElementById('dsk-av-initials');
-    if (dskAv) dskAv.textContent = initials || 'ST';
-    var dskNameEl = document.getElementById('dsk-foot-name');
-    if (dskNameEl && (u.name || u.email)) dskNameEl.textContent = u.name || u.email;
-  }
+  paintUserName();
   var dateEl = document.getElementById('greet-date-text');
   if (dateEl) dateEl.textContent = new Date().toLocaleDateString('en-MY', { weekday: 'long', day: 'numeric', month: 'short' });
   refreshAppData();

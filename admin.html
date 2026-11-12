@@ -4107,10 +4107,44 @@ html, body {
   // Re-fetches every section's live data in place, without navigating --
   // used both on initial load and by the pull-to-refresh gesture, so "pull
   // to refresh" never has to fall back to a real location.reload().
+  function paintUserName() {
+    var raw = localStorage.getItem('mjm_user');
+    if (!raw) return;
+    var u = JSON.parse(raw);
+    var nameParts = (u.name || u.email || '').split(/[@.\s]/).filter(Boolean);
+    var initials  = nameParts.slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('') || 'SA';
+    var topAv = document.getElementById('top-av-initials');
+    if (topAv) topAv.textContent = initials;
+    var menuAv = document.getElementById('menu-av-initials');
+    if (menuAv) menuAv.textContent = initials;
+    var greetEl = document.getElementById('greet-name-text');
+    if (greetEl && (u.name || u.email)) greetEl.textContent = u.name || u.email;
+    var dskAv = document.getElementById('dsk-av-initials');
+    if (dskAv) dskAv.textContent = initials;
+    var dskNameEl = document.getElementById('dsk-foot-name');
+    if (dskNameEl && (u.name || u.email)) dskNameEl.textContent = u.name || u.email;
+  }
+
+  // Same as the staff app's syncSessionName(): the session's name is a copy
+  // taken at sign-in, so re-read it to pick up a rename.
+  async function syncSessionName() {
+    var raw = localStorage.getItem('mjm_user');
+    if (!raw) return;
+    var u = JSON.parse(raw);
+    if (!u.email) return;
+    var rows = await sbFetch('GET', '/rest/v1/profiles?email=eq.' + encodeURIComponent(u.email) + '&select=full_name');
+    var fresh = rows && rows[0] && rows[0].full_name;
+    if (!fresh || fresh === u.name) return;
+    u.name = fresh;
+    localStorage.setItem('mjm_user', JSON.stringify(u));
+    paintUserName();
+  }
+
   async function refreshAdminData() {
     renderSettingsPage();
     if (window.location.protocol !== 'file:') {
       await Promise.all([
+        syncSessionName().catch(function () {}),
         loadDbAnnouncements(),
         loadDbLeave(),
         loadDbDuty(),
@@ -4197,23 +4231,7 @@ html, body {
     initPullToRefresh();
     initVersionCheck();
     initHomeResetOnReturn();
-    // Set top avatar initials and role from session
-    var raw = localStorage.getItem('mjm_user');
-    if (raw) {
-      var u = JSON.parse(raw);
-      var nameParts = (u.name || u.email || '').split(/[@.\s]/).filter(Boolean);
-      var initials  = nameParts.slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('') || 'SA';
-      var topAv = document.getElementById('top-av-initials');
-      if (topAv) topAv.textContent = initials;
-      var menuAv = document.getElementById('menu-av-initials');
-      if (menuAv) menuAv.textContent = initials;
-      var greetEl = document.getElementById('greet-name-text');
-      if (greetEl && (u.name || u.email)) greetEl.textContent = u.name || u.email;
-      var dskAv = document.getElementById('dsk-av-initials');
-      if (dskAv) dskAv.textContent = initials;
-      var dskNameEl = document.getElementById('dsk-foot-name');
-      if (dskNameEl && (u.name || u.email)) dskNameEl.textContent = u.name || u.email;
-    }
+    paintUserName();
     var dateEl = document.getElementById('greet-date-text');
     if (dateEl) dateEl.textContent = new Date().toLocaleDateString('en-MY', { weekday: 'long', day: 'numeric', month: 'short' });
     refreshAdminData();
