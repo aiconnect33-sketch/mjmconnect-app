@@ -218,6 +218,11 @@ async function cleanVerifierAndChallenge() {
 var ssoPopup = null;
 var ssoCloseCheckTimer = null;
 
+// Set by every Sign Out button; cleared once someone signs in again.
+function signedOut() {
+  try { return localStorage.getItem('mjm_signed_out') === '1'; } catch (e) { return false; }
+}
+
 function startSignIn() {
   clearErrors();
   var isNarrow = window.innerWidth < 700;
@@ -268,7 +273,14 @@ async function prepareAndGo(popup, isNarrow) {
     + '&state=' + encodeURIComponent(state)
     + '&nonce=' + encodeURIComponent(nonce)
     + '&code_challenge=' + encodeURIComponent(codeChallenge)
-    + '&code_challenge_method=S256';
+    + '&code_challenge_method=S256'
+    // After someone taps Sign Out, OPIS PRO is usually still signed in in
+    // this browser, so without this the next sign-in would go straight
+    // through with no password. prompt=login (standard OpenID Connect,
+    // supported by OPIS PRO's Laravel Passport) makes OPIS PRO ask for the
+    // email and password again. Only after an explicit Sign Out -- simply
+    // closing the app never reaches this page, since the session is kept.
+    + (signedOut() ? '&prompt=login' : '');
 
   if (!popup || popup.closed || isNarrow) {
     window.location.href = authorizeUrl;
@@ -381,6 +393,7 @@ async function completeSignIn(data) {
     }
 
     localStorage.setItem('mjm_user', JSON.stringify({ email: email, role: role, name: name, permissions: permissions, opispro_location: location }));
+    try { localStorage.removeItem('mjm_signed_out'); } catch (e) {}
     // Clear any cached pages and redirect
     if ('caches' in window) {
       caches.keys().then(function(names) {

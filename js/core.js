@@ -396,6 +396,9 @@ function restoreLastTab() {
 function logout() {
   if (confirm('Sign out of MJMConnect?')) {
     localStorage.removeItem('mjm_user');
+    // Makes the next "Sign in with OPIS PRO" ask for the password again
+    // (see login.html) instead of quietly reusing the OPIS PRO session.
+    try { localStorage.setItem('mjm_signed_out', '1'); } catch (e) {}
     // Clear the remembered tab too, so logging back in always lands on
     // Home instead of restoreLastTab() picking up where this session left off.
     try {
