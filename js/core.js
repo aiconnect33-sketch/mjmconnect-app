@@ -343,6 +343,8 @@ function rememberTab(name) {
 // and relaunched it, so restoreLastTab() below checks the same timestamp).
 var BACKGROUNDED_AT_KEY = 'mjm_backgrounded_at';
 var HOME_RESET_AFTER_MS = 2 * 60 * 1000;
+// Coming back after this long reloads the data, same as a pull-to-refresh.
+var AUTO_REFRESH_AFTER_MS = 60 * 1000;
 
 function initHomeResetOnReturn() {
   document.addEventListener('visibilitychange', function () {
@@ -354,6 +356,9 @@ function initHomeResetOnReturn() {
     try { ts = parseInt(sessionStorage.getItem(BACKGROUNDED_AT_KEY), 10); } catch (e) { ts = NaN; }
     if (ts && (Date.now() - ts) > HOME_RESET_AFTER_MS && currentScreenName !== 'home') {
       switchTabByName('home');
+    }
+    if (ts && (Date.now() - ts) > AUTO_REFRESH_AFTER_MS && !hasUnsavedInput()) {
+      refreshAppData();
     }
   });
 }
@@ -601,12 +606,29 @@ function initVersionCheck() {
   var knownTag = null;
   var checking = false;
 
+  // The page plus every script it loads from this site -- most updates
+  // only touch a js/ file, which checking the page alone would miss.
+  function appFiles() {
+    var files = [selfUrl];
+    document.querySelectorAll('script[src]').forEach(function (s) {
+      var src = s.getAttribute('src');
+      if (src && !/^(https?:)?\/\//.test(src)) files.push(src);
+    });
+    return files;
+  }
+
   function checkForUpdate() {
     if (checking) return;
     checking = true;
-    fetch(selfUrl, { method: 'HEAD', cache: 'no-store' }).then(function (res) {
-      var tag = res.headers.get('etag') || res.headers.get('last-modified');
-      if (!tag) return;
+    Promise.all(appFiles().map(function (f) {
+      return fetch(f, { method: 'HEAD', cache: 'no-store' })
+        .then(function (res) { return res.ok ? (res.headers.get('etag') || res.headers.get('last-modified') || '') : null; })
+        .catch(function () { return null; });
+    })).then(function (tags) {
+      // Offline or a failed request: don't compare an incomplete picture.
+      if (tags.indexOf(null) !== -1) return;
+      var tag = tags.join('|');
+      if (!tag.replace(/\|/g, '')) return;
       if (knownTag === null) { knownTag = tag; return; }
       if (tag === knownTag) return;
       // Safe to apply quietly unless it would blow away something
