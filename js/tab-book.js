@@ -120,6 +120,7 @@ function initBookTab() {
   var now = new Date();
   if (vCalYear === undefined) { vCalYear = now.getFullYear(); vCalMonth = now.getMonth(); }
   if (rCalYear === undefined) { rCalYear = now.getFullYear(); rCalMonth = now.getMonth(); }
+  loadBookNameMap();
   renderVehiclePicker();
   updateVehicleCardInfo();
   renderRoomPicker();
@@ -161,6 +162,39 @@ function switchBookRecordsPill(prefix, which) {
   pDate.style.color      = isDate ? '#fff' : 'var(--text-secondary)';
   pMine.style.background = isDate ? 'transparent' : 'var(--green-dark)';
   pMine.style.color      = isDate ? 'var(--text-secondary)' : '#fff';
+}
+
+// ════════════════════════════
+//  WHO BOOKED IT
+// ════════════════════════════
+
+// Bookings are linked to whoever made them by email (booked_by_email);
+// booked_by is only the name they had at the time. Rows from before the
+// email column existed have no email, so they fall back to that name.
+var bookNameMap = {};
+var bookNameMapReady = null;
+function loadBookNameMap() {
+  bookNameMapReady = sbGet('profiles', 'select=email,full_name&order=email&limit=500').then(function (rows) {
+    bookNameMap = {};
+    (rows || []).forEach(function (p) { if (p.email && p.full_name) bookNameMap[p.email.toLowerCase()] = p.full_name; });
+  }).catch(function () {});
+  return bookNameMapReady;
+}
+function bookDisplayName(b) {
+  var email = (b.booked_by_email || '').toLowerCase();
+  return (email && bookNameMap[email]) || b.booked_by || 'Unknown';
+}
+function isMyBooking(b, u) {
+  var em = (u.email || '').toLowerCase();
+  if (b.booked_by_email) return !!em && b.booked_by_email.toLowerCase() === em;
+  var by = (b.booked_by || '').toLowerCase();
+  var nm = (u.name || '').toLowerCase();
+  return !!by && ((!!em && by === em) || (!!nm && by === nm));
+}
+function myBookingEmail() {
+  var raw = localStorage.getItem('mjm_user');
+  var u = raw ? JSON.parse(raw) : {};
+  return (u.email || '').toLowerCase() || null;
 }
 
 // ════════════════════════════
@@ -304,7 +338,8 @@ async function checkVehicleClash() {
         });
       }
       if (clash) {
-        var msg = 'Already booked by ' + clash.booked_by + ' on ' + fmtDate(vSelectedDates[i]);
+        if (bookNameMapReady) await bookNameMapReady;
+        var msg = 'Already booked by ' + bookDisplayName(clash) + ' on ' + fmtDate(vSelectedDates[i]);
         msg += clash.is_full_day ? ' (Full day).' : ' (' + fmtTime(clash.time_from) + '–' + fmtTime(clash.time_to) + ').';
         document.getElementById('v-clash-msg').textContent = msg;
         document.getElementById('v-clash-alert').style.display = 'flex';
@@ -339,7 +374,7 @@ async function submitVehicleBooking() {
         headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY,
                    'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
         body: JSON.stringify({
-          booked_by: bookedBy, booking_date: d, vehicle_name: vSelectedVehicle,
+          booked_by: bookedBy, booked_by_email: myBookingEmail(), booking_date: d, vehicle_name: vSelectedVehicle,
           is_full_day: vIsFullDay,
           time_from: vIsFullDay ? null : to24h(tfrom),
           time_to:   vIsFullDay ? null : to24h(tto),
@@ -439,13 +474,7 @@ async function loadMyVehicleBookings() {
     var res  = await fetch(url, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
     var data = await res.json();
     if (!data || !data.length) { el.innerHTML = '<div class="book-empty">No bookings this month.</div>'; return; }
-    var mine = data.filter(function(b) {
-      if (!b.booked_by) return false;
-      var by = b.booked_by.toLowerCase();
-      var em = u.email ? u.email.toLowerCase() : '';
-      var nm = u.name  ? u.name.toLowerCase()  : '';
-      return (em && by === em) || (nm && (by === nm || by.indexOf(nm) === 0));
-    });
+    var mine = data.filter(function(b) { return isMyBooking(b, u); });
     if (!mine.length) { el.innerHTML = '<div class="book-empty">No bookings this month.</div>'; return; }
     el.innerHTML = mine.map(function(b) {
       var d       = fmtDate(b.booking_date);
@@ -610,7 +639,7 @@ function checkRoomClash() {
   });
   if (clash) {
     document.getElementById('r-clash-msg').textContent =
-      'Already booked by ' + clash.booked_by + ' (' + fmtTime(clash.time_from) + '–' + fmtTime(clash.time_to) + ').';
+      'Already booked by ' + bookDisplayName(clash) + ' (' + fmtTime(clash.time_from) + '–' + fmtTime(clash.time_to) + ').';
     document.getElementById('r-clash-alert').style.display = 'flex';
   }
 }
@@ -638,7 +667,7 @@ async function submitRoomBooking() {
         headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY,
                    'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
         body: JSON.stringify({
-          booked_by: bookedBy, booking_date: d, room_name: rSelectedRoom,
+          booked_by: bookedBy, booked_by_email: myBookingEmail(), booking_date: d, room_name: rSelectedRoom,
           time_from: to24h(tfrom), time_to: to24h(tto), purpose: purpose || null
         })
       });
@@ -735,13 +764,7 @@ async function loadMyRoomBookings() {
     var res  = await fetch(url, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
     var data = await res.json();
     if (!data || !data.length) { el.innerHTML = '<div class="book-empty">No room bookings this month.</div>'; return; }
-    var mine = data.filter(function(b) {
-      if (!b.booked_by) return false;
-      var by = b.booked_by.toLowerCase();
-      var em = u.email ? u.email.toLowerCase() : '';
-      var nm = u.name  ? u.name.toLowerCase()  : '';
-      return (em && by === em) || (nm && (by === nm || by.indexOf(nm) === 0));
-    });
+    var mine = data.filter(function(b) { return isMyBooking(b, u); });
     if (!mine.length) { el.innerHTML = '<div class="book-empty">No room bookings this month.</div>'; return; }
     el.innerHTML = mine.map(function(b) {
       var d = fmtDate(b.booking_date);
@@ -793,12 +816,9 @@ async function showDayDetail(type, dateStr) {
     if (!data || data.length === 0) {
       body.innerHTML = '<div class="book-empty">No bookings on this date.</div>'; return;
     }
+    if (bookNameMapReady) await bookNameMapReady;
     body.innerHTML = data.map(function(b) {
-      var byLow  = (b.booked_by || '').toLowerCase();
-      var emLow  = u2.email ? u2.email.toLowerCase() : '';
-      var nmLow  = u2.name  ? u2.name.toLowerCase()  : '';
-      var isMine = (emLow && byLow === emLow) ||
-                   (nmLow && (byLow === nmLow || byLow.indexOf(nmLow) === 0));
+      var isMine = isMyBooking(b, u2);
       var timeStr  = type === 'vehicle'
         ? (b.is_full_day ? 'Full Day' : fmtTime(b.time_from) + ' – ' + fmtTime(b.time_to))
         : fmtTime(b.time_from) + ' – ' + fmtTime(b.time_to);
@@ -806,7 +826,7 @@ async function showDayDetail(type, dateStr) {
         ? 'cancelVehicleBookingFromDetail(\'' + b.id + '\')'
         : 'cancelRoomBookingFromDetail(\'' + b.id + '\')';
       return '<div class="book-item" style="margin-bottom:8px;">'
-        + '<div class="book-item-header"><div class="book-item-name">' + escHtml(b.booked_by) + '</div>'
+        + '<div class="book-item-header"><div class="book-item-name">' + escHtml(bookDisplayName(b)) + '</div>'
         + '<span class="badge ' + (isMine ? 'badge-info' : 'badge-amber') + '">' + (isMine ? 'Mine' : 'Booked') + '</span></div>'
         + '<div class="book-item-date"><i class="ti ti-clock" style="font-size:11px;"></i> ' + timeStr + '</div>'
         + (b.purpose ? '<div class="book-item-purpose">' + escHtml(b.purpose) + '</div>' : '')

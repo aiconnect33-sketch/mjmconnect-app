@@ -18,6 +18,7 @@ async function loadStaffEvents() {
     var url  = SURL + '/rest/v1/events?event_date=gte.' + today + '&order=event_date.asc,event_time.asc&limit=200';
     var res  = await fetch(url, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
     var data = await res.json();
+    var nameMap = await fetchProfileNameMap();
     if (!data || !data.length) {
       el.innerHTML = '<div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">No upcoming events.</div>';
       return;
@@ -43,7 +44,7 @@ async function loadStaffEvents() {
         + '</div>'
         + '<div class="card-title">' + escHtml(ev.title) + '</div>'
         + (ev.description ? '<div class="card-body">' + escHtml(ev.description) + '</div>' : '')
-        + '<div style="font-size:11px;color:var(--text-light);margin-top:6px;"><i class="ti ti-user"></i> ' + escHtml(ev.created_by || 'Staff') + '</div>'
+        + '<div style="font-size:11px;color:var(--text-light);margin-top:6px;"><i class="ti ti-user"></i> ' + escHtml((ev.created_by_email && nameMap[ev.created_by_email.toLowerCase()]) || ev.created_by || 'Staff') + '</div>'
         + actions
         + '</div>';
     }).join('');
