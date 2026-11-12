@@ -182,7 +182,7 @@ html,body{min-height:100%;font-family:'Inter',-apple-system,sans-serif;backgroun
     <div class="push-row">
       <div>
         <div class="push-row-title">Push Notifications</div>
-        <div class="push-row-sub" id="push-status-text">Get notified on this device when HR posts an announcement.</div>
+        <div class="push-row-sub" id="push-status-text">Get notified on this device about announcements, approvals and faulty reports.</div>
       </div>
       <label class="push-switch">
         <input type="checkbox" id="push-toggle" onchange="onPushToggle(this)">
@@ -296,11 +296,11 @@ async function updatePushStatusText() {
     toggle.disabled = false;
     toggle.checked = false;
   } else if (status === 'subscribed') {
-    el.textContent = "You'll be notified on this device when HR posts an announcement.";
+    el.textContent = "You'll be notified on this device about announcements, approvals and faulty reports.";
     toggle.disabled = false;
     toggle.checked = true;
   } else {
-    el.textContent = 'Get notified on this device when HR posts an announcement.';
+    el.textContent = 'Get notified on this device about announcements, approvals and faulty reports.';
     toggle.disabled = false;
     toggle.checked = false;
   }
