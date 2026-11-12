@@ -218,6 +218,16 @@ async function cleanVerifierAndChallenge() {
 var ssoPopup = null;
 var ssoCloseCheckTimer = null;
 
+// OPIS PRO accepts prompt=login and signs the person out, but then sends
+// the browser to GET api/application/cccc/login, a POST-only API route, so
+// they see a "405 Method Not Allowed" error page instead of the login form
+// (Laravel Passport throws an AuthenticationException with no redirect, and
+// OPIS PRO's app sends those to its route named 'login', which is the API
+// one). Reloading works, because by then they're signed out and the normal
+// redirect is used. Turn this back on once OPIS PRO points that redirect
+// at their real login page.
+var OPISPRO_PROMPT_LOGIN_WORKS = false;
+
 // Set by every Sign Out button; cleared once someone signs in again.
 function signedOut() {
   try { return localStorage.getItem('mjm_signed_out') === '1'; } catch (e) { return false; }
@@ -275,12 +285,12 @@ async function prepareAndGo(popup, isNarrow) {
     + '&code_challenge=' + encodeURIComponent(codeChallenge)
     + '&code_challenge_method=S256'
     // After someone taps Sign Out, OPIS PRO is usually still signed in in
-    // this browser, so without this the next sign-in would go straight
-    // through with no password. prompt=login (standard OpenID Connect,
-    // supported by OPIS PRO's Laravel Passport) makes OPIS PRO ask for the
-    // email and password again. Only after an explicit Sign Out -- simply
-    // closing the app never reaches this page, since the session is kept.
-    + (signedOut() ? '&prompt=login' : '');
+    // this browser, so the next sign-in goes straight through with no
+    // password. prompt=login (standard OpenID Connect) makes OPIS PRO ask
+    // for the email and password again -- only after an explicit Sign Out.
+    // Switched off by OPISPRO_PROMPT_LOGIN_WORKS below until OPIS PRO fixes
+    // their side.
+    + (OPISPRO_PROMPT_LOGIN_WORKS && signedOut() ? '&prompt=login' : '');
 
   if (!popup || popup.closed || isNarrow) {
     window.location.href = authorizeUrl;
