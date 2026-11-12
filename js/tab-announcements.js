@@ -171,6 +171,7 @@ async function loadAnnouncements() {
   try {
     var data = await sbGet('announcements', 'limit=200');
     if (!data) return;
+    var nameMap = await fetchProfileNameMap();
     var today = localDateStr();
     function addDaysToDateStr(dateStr, days) {
       var d = new Date(dateStr + 'T00:00:00');
@@ -260,7 +261,7 @@ async function loadAnnouncements() {
           + '<div class="card-meta"><span class="card-time">' + annDisplayDateTime(ann) + '</span></div>'
           + '<div class="card-title">' + escHtml(ann.title) + '</div>'
           + '<div class="card-body">'  + escHtml(ann.body)  + '</div>'
-          + '<div style="font-size:11px;color:var(--text-light);margin-top:6px;"><i class="ti ti-user"></i> ' + escHtml(ann.posted_by || 'Staff') + '</div>'
+          + '<div style="font-size:11px;color:var(--text-light);margin-top:6px;"><i class="ti ti-user"></i> ' + escHtml((ann.posted_by_email && nameMap[ann.posted_by_email.toLowerCase()]) || ann.posted_by || 'Staff') + '</div>'
           + actions
           + '</div>';
       }).join('');

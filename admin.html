@@ -4399,6 +4399,7 @@ html, body {
     var now = new Date();
     if (vCalYear === undefined) { vCalYear = now.getFullYear(); vCalMonth = now.getMonth(); }
     if (rCalYear === undefined) { rCalYear = now.getFullYear(); rCalMonth = now.getMonth(); }
+    loadBookNameMap();
     renderVehiclePicker();
     updateVehicleCardInfo();
     renderRoomPicker();
@@ -4438,6 +4439,39 @@ html, body {
     pDate.style.color      = isDate ? '#fff' : 'var(--text2)';
     pMine.style.background = isDate ? 'transparent' : 'var(--green)';
     pMine.style.color      = isDate ? 'var(--text2)' : '#fff';
+  }
+
+  // ════════════════════════════
+  //  WHO BOOKED IT
+  // ════════════════════════════
+
+  // Same as js/tab-book.js: bookings are linked to whoever made them by
+  // email (booked_by_email); booked_by is only the name they had at the
+  // time, used as a fallback for rows from before the email column existed.
+  var bookNameMap = {};
+  var bookNameMapReady = null;
+  function loadBookNameMap() {
+    bookNameMapReady = sbFetch('GET', '/rest/v1/profiles?select=email,full_name&limit=500').then(function (rows) {
+      bookNameMap = {};
+      (rows || []).forEach(function (p) { if (p.email && p.full_name) bookNameMap[p.email.toLowerCase()] = p.full_name; });
+    }).catch(function () {});
+    return bookNameMapReady;
+  }
+  function bookDisplayName(b) {
+    var email = (b.booked_by_email || '').toLowerCase();
+    return (email && bookNameMap[email]) || b.booked_by || 'Unknown';
+  }
+  function isMyBooking(b, u) {
+    var em = (u.email || '').toLowerCase();
+    if (b.booked_by_email) return !!em && b.booked_by_email.toLowerCase() === em;
+    var by = (b.booked_by || '').toLowerCase();
+    var nm = (u.name || '').toLowerCase();
+    return !!by && ((!!em && by === em) || (!!nm && by === nm));
+  }
+  function myBookingEmail() {
+    var raw = localStorage.getItem('mjm_user');
+    var u = raw ? JSON.parse(raw) : {};
+    return (u.email || '').toLowerCase() || null;
   }
 
   // ════════════════════════════
@@ -4578,7 +4612,8 @@ html, body {
           });
         }
         if (clash) {
-          var msg = 'Already booked by ' + clash.booked_by + ' on ' + fmtDate(vSelectedDates[i]);
+          if (bookNameMapReady) await bookNameMapReady;
+          var msg = 'Already booked by ' + bookDisplayName(clash) + ' on ' + fmtDate(vSelectedDates[i]);
           msg += clash.is_full_day ? ' (Full day).' : ' (' + fmtTime(clash.time_from) + '–' + fmtTime(clash.time_to) + ').';
           document.getElementById('v-clash-msg').textContent = msg;
           document.getElementById('v-clash-alert').style.display = 'flex';
@@ -4613,7 +4648,7 @@ html, body {
           headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY,
                      'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
           body: JSON.stringify({
-            booked_by: bookedBy, booking_date: d, vehicle_name: vSelectedVehicle,
+            booked_by: bookedBy, booked_by_email: myBookingEmail(), booking_date: d, vehicle_name: vSelectedVehicle,
             is_full_day: vIsFullDay,
             time_from: vIsFullDay ? null : to24h(tfrom),
             time_to:   vIsFullDay ? null : to24h(tto),
@@ -4713,13 +4748,7 @@ html, body {
       var res  = await fetch(url, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
       var data = await res.json();
       if (!data || !data.length) { el.innerHTML = '<div class="book-empty">No bookings this month.</div>'; return; }
-      var mine = data.filter(function(b) {
-        if (!b.booked_by) return false;
-        var by = b.booked_by.toLowerCase();
-        var em = u.email ? u.email.toLowerCase() : '';
-        var nm = u.name  ? u.name.toLowerCase()  : '';
-        return (em && by === em) || (nm && (by === nm || by.indexOf(nm) === 0));
-      });
+      var mine = data.filter(function(b) { return isMyBooking(b, u); });
       if (!mine.length) { el.innerHTML = '<div class="book-empty">No bookings this month.</div>'; return; }
       el.innerHTML = mine.map(function(b) {
         var d       = fmtDate(b.booking_date);
@@ -4883,7 +4912,7 @@ html, body {
     });
     if (clash) {
       document.getElementById('r-clash-msg').textContent =
-        'Already booked by ' + clash.booked_by + ' (' + fmtTime(clash.time_from) + '–' + fmtTime(clash.time_to) + ').';
+        'Already booked by ' + bookDisplayName(clash) + ' (' + fmtTime(clash.time_from) + '–' + fmtTime(clash.time_to) + ').';
       document.getElementById('r-clash-alert').style.display = 'flex';
     }
   }
@@ -4911,7 +4940,7 @@ html, body {
           headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY,
                      'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
           body: JSON.stringify({
-            booked_by: bookedBy, booking_date: d, room_name: rSelectedRoom,
+            booked_by: bookedBy, booked_by_email: myBookingEmail(), booking_date: d, room_name: rSelectedRoom,
             time_from: to24h(tfrom), time_to: to24h(tto), purpose: purpose || null
           })
         });
@@ -5008,13 +5037,7 @@ html, body {
       var res  = await fetch(url, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
       var data = await res.json();
       if (!data || !data.length) { el.innerHTML = '<div class="book-empty">No room bookings this month.</div>'; return; }
-      var mine = data.filter(function(b) {
-        if (!b.booked_by) return false;
-        var by = b.booked_by.toLowerCase();
-        var em = u.email ? u.email.toLowerCase() : '';
-        var nm = u.name  ? u.name.toLowerCase()  : '';
-        return (em && by === em) || (nm && (by === nm || by.indexOf(nm) === 0));
-      });
+      var mine = data.filter(function(b) { return isMyBooking(b, u); });
       if (!mine.length) { el.innerHTML = '<div class="book-empty">No room bookings this month.</div>'; return; }
       el.innerHTML = mine.map(function(b) {
         var d = fmtDate(b.booking_date);
@@ -5066,12 +5089,9 @@ html, body {
       if (!data || data.length === 0) {
         body.innerHTML = '<div class="book-empty">No bookings on this date.</div>'; return;
       }
+      if (bookNameMapReady) await bookNameMapReady;
       body.innerHTML = data.map(function(b) {
-        var byLow  = (b.booked_by || '').toLowerCase();
-        var emLow  = u2.email ? u2.email.toLowerCase() : '';
-        var nmLow  = u2.name  ? u2.name.toLowerCase()  : '';
-        var isMine = (emLow && byLow === emLow) ||
-                     (nmLow && (byLow === nmLow || byLow.indexOf(nmLow) === 0));
+        var isMine = isMyBooking(b, u2);
         var timeStr  = type === 'vehicle'
           ? (b.is_full_day ? 'Full Day' : fmtTime(b.time_from) + ' – ' + fmtTime(b.time_to))
           : fmtTime(b.time_from) + ' – ' + fmtTime(b.time_to);
@@ -5079,7 +5099,7 @@ html, body {
           ? 'cancelVehicleBookingFromDetail(\'' + b.id + '\')'
           : 'cancelRoomBookingFromDetail(\'' + b.id + '\')';
         return '<div class="book-item" style="margin-bottom:8px;">'
-          + '<div class="book-item-header"><div class="book-item-name">' + escHtml(b.booked_by) + '</div>'
+          + '<div class="book-item-header"><div class="book-item-name">' + escHtml(bookDisplayName(b)) + '</div>'
           + '<span class="badge ' + (isMine ? 'b-blue' : 'b-amber') + '">' + (isMine ? 'Mine' : 'Booked') + '</span></div>'
           + '<div class="book-item-date"><i class="ti ti-clock" style="font-size:11px;"></i> ' + timeStr + '</div>'
           + (b.purpose ? '<div class="book-item-purpose">' + escHtml(b.purpose) + '</div>' : '')
@@ -6161,10 +6181,23 @@ html, body {
   // ── LOAD ANNOUNCEMENTS FROM SUPABASE ──
   // Matches the staff app's Announcements tab: items drop off after 5 days,
   // unless their end date keeps them on the Home banner longer than that.
+  // email (lowercased) -> current full_name, for showing who posted/created a
+  // record by their current name rather than the name saved on the record.
+  async function fetchProfileNameMap() {
+    var map = {};
+    try {
+      var rows = await sbFetch('GET', '/rest/v1/profiles?select=email,full_name&limit=500');
+      (rows || []).forEach(function (p) { if (p.email && p.full_name) map[p.email.toLowerCase()] = p.full_name; });
+    } catch (e) {}
+    return map;
+  }
+
   async function loadDbAnnouncements() {
     try {
       var data = await sbFetch('GET', '/rest/v1/announcements?order=created_at.desc&limit=200');
       if (!data) return;
+      var nameMap = await fetchProfileNameMap();
+      function annAuthor(ann) { return (ann.posted_by_email && nameMap[ann.posted_by_email.toLowerCase()]) || ann.posted_by || 'HR'; }
       var list = document.getElementById('ann-list');
       if (!list) return;
       // Anchored off publish_date (falls back to the created_at date for
@@ -6213,9 +6246,9 @@ html, body {
             scheduledBadge = '';
           }
           var queuedLine = isScheduled
-            ? '<div class="ann-author"><i class="ti ti-user"></i> Queued by ' + escHtml(ann.posted_by || 'HR') + ' on '
+            ? '<div class="ann-author"><i class="ti ti-user"></i> Queued by ' + escHtml(annAuthor(ann)) + ' on '
               + new Date(ann.created_at).toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'}) + '</div>'
-            : '<div class="ann-author"><i class="ti ti-user"></i> ' + escHtml(ann.posted_by || 'HR') + '</div>';
+            : '<div class="ann-author"><i class="ti ti-user"></i> ' + escHtml(annAuthor(ann)) + '</div>';
           return '<div class="ann-item" data-id="' + ann.id + '" data-posted-by="' + escHtml(ann.posted_by || 'HR')
             + '" data-publish-date="' + escHtml(ann.publish_date || '') + '" data-active-until-date="' + escHtml(ann.active_until_date || '')
             + '" data-created-date="' + localDateStr(new Date(ann.created_at)) + '">'
@@ -8139,6 +8172,7 @@ html, body {
     try {
       var data = await sbFetch('GET', '/rest/v1/events?event_date=gte.' + today + '&order=event_date.asc&limit=200');
       if (!data) return;
+      var nameMap = await fetchProfileNameMap();
       if (upCnt) upCnt.textContent = data.length ? '(' + data.length + ')' : '';
       if (!data.length) {
         upEl.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:14px 0;">No upcoming events.</div>';
@@ -8151,7 +8185,7 @@ html, body {
           + '<div class="ann-meta"><span class="badge b-purple">Event</span><span class="ann-time" style="color:var(--text);font-weight:700;">' + d + t + '</span></div>'
           + '<div class="ann-title">' + escHtml(ev.title) + '</div>'
           + (ev.description ? '<div class="ann-body">' + escHtml(ev.description) + '</div>' : '')
-          + '<div class="ann-actions"><div class="ann-author"><i class="ti ti-user"></i> ' + escHtml(ev.created_by || 'HR') + '</div>'
+          + '<div class="ann-actions"><div class="ann-author"><i class="ti ti-user"></i> ' + escHtml((ev.created_by_email && nameMap[ev.created_by_email.toLowerCase()]) || ev.created_by || 'HR') + '</div>'
           + '<div class="btn-icon" onclick="editEventDb(this)" title="Edit"><i class="ti ti-pencil"></i></div>'
           + '<div class="btn-icon danger" onclick="deleteEventDb(this)"><i class="ti ti-trash"></i></div>'
           + '</div></div>';

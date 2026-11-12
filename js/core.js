@@ -21,6 +21,17 @@ async function sbGet(table, filter) {
   try { return await res.json(); } catch(e) { return []; }
 }
 
+// email (lowercased) -> current full_name, for showing who posted/created a
+// record by their current name rather than the name saved on the record.
+async function fetchProfileNameMap() {
+  var map = {};
+  try {
+    var rows = await sbGet('profiles', 'select=email,full_name&order=email&limit=500');
+    (rows || []).forEach(function (p) { if (p.email && p.full_name) map[p.email.toLowerCase()] = p.full_name; });
+  } catch (e) {}
+  return map;
+}
+
 async function sbWrite(method, table, body, filter) {
   var url = SURL + '/rest/v1/' + table;
   if (filter) url += '?' + filter;
