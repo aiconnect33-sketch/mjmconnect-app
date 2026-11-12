@@ -148,7 +148,7 @@ html, body {
   width: 30px; height: 30px; border-radius: 50%;
   background: var(--green-mid);
   display: flex; align-items: center; justify-content: center;
-  font-size: 11px; font-weight: 700; color: #E1F5EE; cursor: pointer;
+  font-size: 11px; font-weight: 700; color: #E1F5EE;
 }
 
 /* ── TAB NAV ── */
@@ -1322,7 +1322,7 @@ html, body {
         <i class="ti ti-history" style="font-size:20px;color:#E1F5EE;"></i>
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;">
-        <div class="top-av" id="top-av-initials" onclick="window.location.href='profile.html'" title="My Profile" style="cursor:pointer;">SA</div>
+        <div class="top-av" id="top-av-initials">SA</div>
       </div>
     </div>
   </div>
@@ -2502,6 +2502,9 @@ html, body {
           </div>
           <span class="badge b-purple" id="settings-role-badge">Super Admin</span>
         </div>
+        <button class="btn-ghost" style="margin:12px 0 0;" onclick="window.location.href='profile.html'">
+          <i class="ti ti-user"></i> My Profile
+        </button>
       </div>
 
       <!-- Manage Admins -->
