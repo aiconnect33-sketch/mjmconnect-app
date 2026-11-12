@@ -187,7 +187,7 @@ async function checkPushAutoPrompt() {
     +     '</div>'
     +     '<div style="flex:1;">'
     +       '<div style="font-size:14px;font-weight:700;color:#085041;margin-bottom:3px;">Get notified instantly</div>'
-    +       '<div style="font-size:12.5px;color:#3E5B51;line-height:1.5;">Turn on notifications so you don\'t miss it when HR posts an announcement — even when the app is closed.</div>'
+    +       '<div style="font-size:12.5px;color:#3E5B51;line-height:1.5;">Turn on notifications so you don\'t miss announcements, approvals and faulty reports — even when the app is closed.</div>'
     +     '</div>'
     +   '</div>'
     +   '<div style="display:flex;gap:8px;justify-content:flex-end;">'
