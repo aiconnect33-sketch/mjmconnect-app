@@ -7550,6 +7550,24 @@ html, body {
     return (email && dutyNameMap[email]) || r.staff_name;
   }
 
+  // Month band label for a duty date range, e.g. "NOVEMBER 2026", or
+  // "NOVEMBER – DECEMBER 2026" / "DECEMBER 2026 – JANUARY 2027" when the
+  // range runs across months. Shown as a coloured band at the top of each
+  // group so the months don't run together.
+  function dutyMonthLabel(from, to) {
+    var a = new Date(from + 'T00:00:00'), b = new Date((to || from) + 'T00:00:00');
+    function m(d) { return d.toLocaleDateString('en-MY', { month: 'long' }).toUpperCase(); }
+    if (a.getFullYear() !== b.getFullYear()) return m(a) + ' ' + a.getFullYear() + ' – ' + m(b) + ' ' + b.getFullYear();
+    if (a.getMonth() !== b.getMonth()) return m(a) + ' – ' + m(b) + ' ' + b.getFullYear();
+    return m(a) + ' ' + a.getFullYear();
+  }
+
+  // Short dates under the band, e.g. "1 Nov – 30 Nov" (the band already has the year).
+  function dutyShortRange(from, to) {
+    function d(s) { return new Date(s + 'T00:00:00').toLocaleDateString('en-MY', { day: 'numeric', month: 'short' }); }
+    return (!to || to === from) ? d(from) : d(from) + ' – ' + d(to);
+  }
+
   async function loadDbDuty() {
     var el = document.getElementById('duty-db-list');
     if (!el) return;
@@ -7590,14 +7608,17 @@ html, body {
           var dateLabel = from === to ? from : from + ' – ' + to;
           var isActive = g.date_from <= today && today <= (g.date_to || g.date_from);
           var allIds = g.members.map(function(r){ return r.id; }).join(',');
-          return '<div class="duty-group" style="' + (gi > 0 ? 'border-top:1px solid var(--border);padding-top:9px;margin-top:9px;' : '') + '" data-group-ids="' + allIds + '" data-date-label="' + escHtml(dateLabel) + '" data-role="' + escHtml(role) + '">'
-            + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
-            + '<div style="font-size:11px;color:var(--text3);"><i class="ti ti-calendar" style="font-size:11px;"></i> ' + dateLabel + '</div>'
+          // Each month starts with a full-width coloured band (green for the
+          // one on duty now, grey for later ones) so months don't run together.
+          return '<div class="duty-group" style="' + (gi > 0 ? 'margin-top:10px;' : '') + '" data-group-ids="' + allIds + '" data-date-label="' + escHtml(dateLabel) + '" data-role="' + escHtml(role) + '">'
+            + '<div class="duty-month-band' + (isActive ? ' now' : '') + '" style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0 -14px 0 -33px;padding:7px 14px 7px 33px;background:' + (isActive ? 'var(--green-bg)' : '#F1F4F3') + ';">'
+            + '<div style="font-size:11.5px;font-weight:800;letter-spacing:.8px;color:' + (isActive ? 'var(--green-text)' : '#4B5A54') + ';">' + escHtml(dutyMonthLabel(g.date_from, g.date_to)) + '</div>'
             + '<div style="display:flex;align-items:center;gap:6px;">'
-            + '<span class="badge ' + (isActive ? 'b-green' : 'b-blue') + '">' + (isActive ? 'Active' : 'Upcoming') + '</span>'
+            + '<span class="badge ' + (isActive ? 'b-green' : 'b-blue') + '" style="background:#fff;">' + (isActive ? 'On duty now' : 'Upcoming') + '</span>'
             + '<div class="btn-icon" onclick="event.stopPropagation();editDutyGroup(this)" title="Edit"><i class="ti ti-pencil"></i></div>'
             + '<div class="btn-icon danger" onclick="event.stopPropagation();deleteDutyGroup(this)" title="Delete"><i class="ti ti-trash"></i></div>'
             + '</div></div>'
+            + '<div style="font-size:10.5px;color:var(--text3);margin:6px 0 4px;"><i class="ti ti-calendar" style="font-size:10.5px;"></i> ' + dutyShortRange(g.date_from, g.date_to) + '</div>'
             + g.members.map(function(r, mi) {
               var displayName = dutyDisplayName(r);
               var ini = displayName.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');

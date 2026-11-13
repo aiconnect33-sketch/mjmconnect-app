@@ -11,6 +11,24 @@ function dutyDisplayName(r) {
   return (email && dutyNameMap[email]) || r.staff_name;
 }
 
+// Month band label for a duty date range, e.g. "NOVEMBER 2026", or
+// "NOVEMBER – DECEMBER 2026" / "DECEMBER 2026 – JANUARY 2027" when the
+// range runs across months. Shown as a coloured band at the top of each
+// group so the months don't run together.
+function dutyMonthLabel(from, to) {
+  var a = new Date(from + 'T00:00:00'), b = new Date((to || from) + 'T00:00:00');
+  function m(d) { return d.toLocaleDateString('en-MY', { month: 'long' }).toUpperCase(); }
+  if (a.getFullYear() !== b.getFullYear()) return m(a) + ' ' + a.getFullYear() + ' – ' + m(b) + ' ' + b.getFullYear();
+  if (a.getMonth() !== b.getMonth()) return m(a) + ' – ' + m(b) + ' ' + b.getFullYear();
+  return m(a) + ' ' + a.getFullYear();
+}
+
+// Short dates under the band, e.g. "1 Nov – 30 Nov" (the band already has the year).
+function dutyShortRange(from, to) {
+  function d(s) { return new Date(s + 'T00:00:00').toLocaleDateString('en-MY', { day: 'numeric', month: 'short' }); }
+  return (!to || to === from) ? d(from) : d(from) + ' – ' + d(to);
+}
+
 async function loadDuty() {
   if (window.location.protocol === 'file:') return;
   var today = localDateStr();
@@ -69,15 +87,18 @@ async function loadDuty() {
           var dateLabel  = from === to ? from : from + ' – ' + to;
           var isActive   = g.date_from <= today && today <= (g.date_to || g.date_from);
           var badgeCls   = isActive ? 'badge-success' : 'badge-info';
-          var badgeLabel = isActive ? 'Active' : 'Upcoming';
+          var badgeLabel = isActive ? 'On duty now' : 'Upcoming';
           var memberNames = g.members.map(function(m){ return dutyDisplayName(m); }).join(', ');
           var delBtn = canEdit
             ? '<div style="cursor:pointer;color:var(--red-text);" onclick="event.stopPropagation();deleteDutyAssignment(\'' + escJsAttr(g.ids.join(',')) + '\',\'' + escJsAttr(role) + '\',\'' + escJsAttr(dateLabel) + '\',\'' + escJsAttr(memberNames) + '\')"><i class="ti ti-trash"></i></div>'
             : '';
-          return '<div style="' + (gi > 0 ? 'border-top:1px solid var(--border);padding-top:9px;margin-top:9px;' : '') + '">'
-            + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">'
-            + '<div style="font-size:11px;color:var(--text-secondary);">' + dateLabel + '</div>'
-            + '<div style="display:flex;align-items:center;gap:8px;"><span class="badge ' + badgeCls + '">' + badgeLabel + '</span>' + delBtn + '</div></div>'
+          // Each month starts with a full-width coloured band (green for the
+          // one on duty now, grey for later ones) so months don't run together.
+          return '<div style="' + (gi > 0 ? 'margin-top:10px;' : '') + '">'
+            + '<div class="duty-month-band' + (isActive ? ' now' : '') + '" style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0 -14px 0 -33px;padding:8px 14px 8px 33px;background:' + (isActive ? 'var(--green-bg)' : '#F1F4F3') + ';">'
+            + '<div style="font-size:11.5px;font-weight:800;letter-spacing:.8px;color:' + (isActive ? 'var(--green-text)' : '#4B5A54') + ';">' + escHtml(dutyMonthLabel(g.date_from, g.date_to)) + '</div>'
+            + '<div style="display:flex;align-items:center;gap:8px;"><span class="badge ' + badgeCls + '" style="background:#fff;">' + badgeLabel + '</span>' + delBtn + '</div></div>'
+            + '<div style="font-size:10.5px;color:var(--text-secondary);margin:6px 0 2px;">' + dutyShortRange(g.date_from, g.date_to) + '</div>'
             + g.members.map(function(r, mi) {
               var displayName = dutyDisplayName(r);
               var pIni   = displayName.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
