@@ -234,6 +234,9 @@ function selectVehicle(name) {
   hideVehicleForm();
   loadVehicleCalendar();
   loadMyVehicleBookings();
+  // A date was already picked: show that date's bookings for the NEW
+  // vehicle straight away, instead of leaving the old vehicle's list up.
+  if (vDetailDate) showDayDetail('vehicle', vDetailDate, true);
   try { sessionStorage.setItem('mjm_last_book_vehicle', name); } catch (e) {}
 }
 
@@ -538,6 +541,7 @@ function selectRoom(name) {
   hideRoomForm();
   loadRoomCalendar();
   loadMyRoomBookings();
+  if (rDetailDate) showDayDetail('room', rDetailDate, true);
   try { sessionStorage.setItem('mjm_last_book_room', name); } catch (e) {}
 }
 
@@ -796,13 +800,16 @@ async function cancelMyRoomBooking(id) {
 //  DAY DETAIL (shown inline below the calendar, not a popup)
 // ════════════════════════════
 
-async function showDayDetail(type, dateStr) {
+// keepPill: true when re-showing the same date after switching vehicle/room,
+// so it doesn't pull someone off the My Bookings pill.
+async function showDayDetail(type, dateStr, keepPill) {
   if (type === 'vehicle') { vDetailDate = dateStr; renderVehicleCalendar(vBookedDatesCache); }
   else                    { rDetailDate = dateStr; renderRoomCalendar(rBookedDatesCache); }
 
   // Tapping a date always means "show me that date's bookings" -- jump
   // back to the Selected Date pill even if My Bookings was showing.
-  switchBookRecordsPill(type === 'vehicle' ? 'v' : 'r', 'date');
+  if (!keepPill) switchBookRecordsPill(type === 'vehicle' ? 'v' : 'r', 'date');
+  var forItem = type === 'vehicle' ? vSelectedVehicle : rSelectedRoom;
 
   var body = document.getElementById(type === 'vehicle' ? 'v-day-detail' : 'r-day-detail');
   if (body) body.innerHTML = '<div class="book-empty">Loading...</div>';
@@ -813,8 +820,12 @@ async function showDayDetail(type, dateStr) {
       ? await sbGet('vehicle_bookings', 'booking_date=eq.' + dateStr + '&vehicle_name=eq.' + encodeURIComponent(vSelectedVehicle) + '&order=time_from.asc')
       : await sbGet('room_bookings',    'booking_date=eq.' + dateStr + '&room_name=eq.' + encodeURIComponent(rSelectedRoom) + '&order=time_from.asc');
     if (!body) return;
+    // Switched vehicle/room (or date) again while this was loading -- a
+    // newer call owns the list now, so don't overwrite it with stale data.
+    if (forItem !== (type === 'vehicle' ? vSelectedVehicle : rSelectedRoom)) return;
+    if (dateStr !== (type === 'vehicle' ? vDetailDate : rDetailDate)) return;
     if (!data || data.length === 0) {
-      body.innerHTML = '<div class="book-empty">No bookings on this date.</div>'; return;
+      body.innerHTML = '<div class="book-empty">No bookings for ' + escHtml(forItem) + ' on this date.</div>'; return;
     }
     if (bookNameMapReady) await bookNameMapReady;
     body.innerHTML = data.map(function(b) {
