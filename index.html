@@ -926,7 +926,7 @@
     /* minmax(0, ...): without it a column can't shrink below its content's
        natural width, so a long single-line "Today on Leave" name list
        pushed the side column wider and squeezed the calendar to nothing. */
-    .dashboard-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr); gap: 16px; align-items: start; }
+    .dashboard-grid { display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); gap: 16px; align-items: start; }
     .dsk-side-col { display: flex; flex-direction: column; }
     .dsk-qa-wrap { grid-column: 1 / -1; }
   }
