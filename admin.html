@@ -6503,7 +6503,19 @@ html, body {
 
       function renderEstateTripGroup(label, items) {
         if (!items.length) return '';
-        return '<div class="card"><div class="card-label">' + label + '</div>' +
+        // Same look as the Leave tab's "Currently on Leave": Today gets a
+        // green border, filled green dot and green heading; Upcoming an
+        // outlined dot -- so who's out today stands out at a glance.
+        var isToday = label === 'Today';
+        var dotStyle = isToday
+          ? 'width:7px;height:7px;border-radius:50%;background:#0F6E5C;flex-shrink:0;'
+          : 'width:7px;height:7px;border-radius:50%;border:1.5px solid #111C18;flex-shrink:0;';
+        var labelColor = isToday ? '#0F6E5C' : '#111C18';
+        var cardBorder = isToday ? 'border:1.5px solid #0F6E5C;' : '';
+        return '<div class="card" style="' + cardBorder + '"><div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">'
+          + '<span style="' + dotStyle + '"></span>'
+          + '<span class="card-label" style="margin-bottom:0;font-weight:800;color:' + labelColor + ';">' + label + '</span>'
+          + '</div>' +
           items.map(function(r) {
             var displayName = estDisplayName(r);
             var ini = displayName.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
