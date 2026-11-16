@@ -12,12 +12,12 @@ var OPISPRO_CLIENT_SECRET = 'mWfK3xNqL8vY2bRz6cTdP9hJ4sAeU1oG';
 
 var LEAVE_SHORT_CODE = {
   ANNUAL: 'AL', SICK: 'MC', HOSPITALIZATION: 'HL', COMPASSIONATE: 'CL',
-  MATERNITY: 'ML', PATERNITY: 'PL', UNPAID: 'UL'
+  MATERNITY: 'ML', PATERNITY: 'PL', UNPAID: 'UL', EVENT_DAY_OFF: '🏆 EDO'
 };
 var LEAVE_FULL_NAME = {
   ANNUAL: 'Annual Leave', SICK: 'Sick Leave', HOSPITALIZATION: 'Hospitalisation Leave',
   COMPASSIONATE: 'Compassionate Leave', MATERNITY: 'Maternity Leave', PATERNITY: 'Paternity Leave',
-  UNPAID: 'Unpaid Leave'
+  UNPAID: 'Unpaid Leave', EVENT_DAY_OFF: 'Event Day Off'
 };
 
 async function fetchOpisproLeaves(date, days) {
@@ -28,8 +28,59 @@ async function fetchOpisproLeaves(date, days) {
       body: JSON.stringify({ secret: OPISPRO_CLIENT_SECRET, date: date, days: days })
     });
     var result = await res.json();
-    return (result && result.ok) ? result.data : null;
+    return (result && result.ok) ? await mergeEventDayOffs(result.data, date, days) : null;
   } catch (e) { return null; }
+}
+
+// Event Day Off is granted and redeemed inside MJMConnect, not OPISPRO,
+// so it's merged into the OPISPRO leave data here as leave_type
+// 'EVENT_DAY_OFF' -- that way Home's "Today on Leave", the Leave tab and
+// the calendar all show who's off on their reward day, instead of them
+// looking absent. If HR also keyed the same day into OPISPRO, that day's
+// row is relabelled rather than listed twice (matched via
+// profiles.opispro_user_id, falling back to the name).
+async function mergeEventDayOffs(data, date, days) {
+  if (!data || !Array.isArray(data.users)) return data;
+  try {
+    var end = new Date(date + 'T00:00:00');
+    end.setDate(end.getDate() + Math.max(1, days || 1) - 1);
+    var endStr = end.getFullYear() + '-' + String(end.getMonth() + 1).padStart(2, '0') + '-' + String(end.getDate()).padStart(2, '0');
+    var hdrs = { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } };
+    var both = await Promise.all([
+      fetch(SURL + '/rest/v1/event_day_off_credits?redeemed_date=gte.' + date + '&redeemed_date=lte.' + endStr + '&select=staff_email,staff_name,redeemed_date', hdrs).then(function (r) { return r.json(); }),
+      fetch(SURL + '/rest/v1/profiles?select=email,full_name,opispro_user_id&limit=500', hdrs).then(function (r) { return r.json(); })
+    ]);
+    var credits = Array.isArray(both[0]) ? both[0] : [];
+    if (!credits.length) return data;
+    var profByEmail = {};
+    (Array.isArray(both[1]) ? both[1] : []).forEach(function (p) { if (p.email) profByEmail[p.email.toLowerCase()] = p; });
+    credits.forEach(function (c) {
+      var prof = profByEmail[(c.staff_email || '').toLowerCase()] || {};
+      var name = prof.full_name || c.staff_name || c.staff_email;
+      var user = data.users.find(function (u) {
+        return (prof.opispro_user_id != null && String(u.user_id) === String(prof.opispro_user_id))
+          || (u.name || '').toLowerCase() === (name || '').toLowerCase();
+      });
+      if (!user) { user = { user_id: prof.opispro_user_id || null, name: name, leaves: [] }; data.users.push(user); }
+      var same = user.leaves.filter(function (lv) { return lv.date === c.redeemed_date; });
+      if (same.length) same.forEach(function (lv) { lv.leave_type = 'EVENT_DAY_OFF'; lv.day_type = 'FULL'; });
+      else user.leaves.push({ date: c.redeemed_date, leave_type: 'EVENT_DAY_OFF', day_type: 'FULL' });
+      user.leaves.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+    });
+    data.users.sort(function (a, b) { return (a.name || '').localeCompare(b.name || ''); });
+  } catch (e) { /* leave data still shows without it */ }
+  return data;
+}
+
+// Purple "Event Day Off · names" line for the Home "Today on Leave" card,
+// or '' when nobody is on one that day. "Event Day Off" goes first so a
+// long name list can only ever cut off names, never the label.
+function eventDayOffLine(users, day) {
+  var edo = users.filter(function (u) { return u.leaves.some(function (lv) { return lv.date === day && lv.leave_type === 'EVENT_DAY_OFF'; }); });
+  if (!edo.length) return '';
+  return '<div style="margin-top:5px;"><span style="display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom;'
+    + 'font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:10px;background:var(--purple-bg);color:var(--purple-text);">'
+    + '🏆 Event Day Off · ' + escHtml(edo.map(function (u) { return u.name; }).join(', ')) + '</span></div>';
 }
 
 // Merges consecutive calendar days with the same leave_type into one run,
@@ -51,6 +102,7 @@ function groupLeaveRuns(leaves) {
 }
 
 function leaveBadgeCls(type) {
+  if (type === 'EVENT_DAY_OFF') return 'badge-purple';
   return (type === 'SICK' || type === 'HOSPITALIZATION') ? 'badge-urgent' : 'badge-amber';
 }
 
@@ -83,7 +135,8 @@ async function loadLeave() {
       homeEl.innerHTML = '<div class="home-summary-card" onclick="switchTabByName(\'leave\')">'
         + '<div class="home-summary-ic" style="background:var(--green-bg);color:var(--green-text);"><i class="ti ti-leaf"></i></div>'
         + '<div style="flex:1;min-width:0;"><div class="home-summary-title">Today on Leave</div>'
-        + '<div class="home-summary-sub" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escHtml(names) + '</div></div>'
+        + '<div class="home-summary-sub" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escHtml(names) + '</div>'
+        + eventDayOffLine(todayUsers, today) + '</div>'
         + '<div class="home-summary-count">' + todayUsers.length + '</div>'
         + '<i class="ti ti-chevron-right home-summary-chev"></i>'
         + '</div>';

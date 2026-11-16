@@ -117,7 +117,7 @@ async function showStaffDayDetail(dateStr, hasLeave, hasEvent, hasEstate) {
             + '<div style="width:30px;height:30px;border-radius:50%;background:#E1F5EE;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#085041;flex-shrink:0;">' + ini + '</div>'
             + '<div style="flex:1;"><div style="font-size:12px;font-weight:500;color:#111C18;">' + escHtml(r.name) + '</div>'
             + '<div style="font-size:11px;color:#6B7A73;">' + escHtml(LEAVE_FULL_NAME[r.leave_type] || r.leave_type) + '</div></div>'
-            + '<span style="font-size:10px;font-weight:600;padding:2px 6px;border-radius:10px;background:#FAEEDA;color:#854F0B;">' + shortType + '</span></div>';
+            + '<span style="font-size:10px;font-weight:600;padding:2px 6px;border-radius:10px;' + (r.leave_type === 'EVENT_DAY_OFF' ? 'background:#EEEDFE;color:#534AB7;' : 'background:#FAEEDA;color:#854F0B;') + '">' + shortType + '</span></div>';
         }).join('');
       }
     }
