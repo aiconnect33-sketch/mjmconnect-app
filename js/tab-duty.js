@@ -51,19 +51,21 @@ async function loadDuty() {
   if (addTrigger) addTrigger.style.display = (canEdit || canManageDutyRoles) ? 'block' : 'none';
   var addBtn = document.getElementById('duty-add-btn');
   if (addBtn) addBtn.style.display = canEdit ? 'flex' : 'none';
+  var planBtn = document.getElementById('duty-plan-btn');
+  if (planBtn) planBtn.style.display = canEdit ? 'flex' : 'none';
   var rolesGearBtn = document.getElementById('duty-roles-gear-btn');
   if (rolesGearBtn) rolesGearBtn.style.display = canManageDutyRoles ? 'flex' : 'none';
 
   if (tabEl) {
     try {
+      // Fill in the next few months from any yearly plans first (see
+      // js/duty-plan.js), then load the plans for the "Show full year" view.
+      if (typeof dutyPlanEnsure === 'function') { await dutyPlanEnsure(); await dutyPlanLoad(); }
       // Sorted by role first so each role's date ranges land together in one section.
-      var url2 = SURL + '/rest/v1/duty_roster?date_to=gte.' + today + '&order=duty_role.asc,date_from.asc&limit=200';
+      var url2 = SURL + '/rest/v1/duty_roster?date_to=gte.' + today + '&order=duty_role.asc,date_from.asc&limit=500';
       var res2 = await fetch(url2, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
       var data2 = await res2.json();
-      if (!data2 || !data2.length) {
-        tabEl.innerHTML = '<div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">No upcoming duty assignments.</div>';
-        return;
-      }
+      if (!Array.isArray(data2)) data2 = [];
       // Two-level grouping: role -> date-range groups within that role.
       var roles = {};
       var roleOrder = [];
@@ -76,51 +78,75 @@ async function loadDuty() {
         rr.groups[key].members.push(r);
         rr.groups[key].ids.push(r.id);
       });
+      // Roles with a yearly plan but nothing saved yet still get a section.
+      if (typeof dutyPlan === 'object') Object.keys(dutyPlan).forEach(function (role) {
+        if (!roles[role] && dutyPlanHas(role)) { roles[role] = { groups: {}, order: [] }; roleOrder.push(role); }
+      });
+      roleOrder.sort(function (a, b) { return a.localeCompare(b); });
+      if (!roleOrder.length) {
+        tabEl.innerHTML = '<div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">No upcoming duty assignments.</div>';
+        return;
+      }
+
+      function renderGroup(role, g, gi, first) {
+        var from = g.date_from ? new Date(g.date_from+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'}) : '';
+        var to   = g.date_to   ? new Date(g.date_to+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'}) : '';
+        var dateLabel  = from === to ? from : from + ' – ' + to;
+        var isActive   = g.date_from <= today && today <= (g.date_to || g.date_from);
+        var badgeCls   = isActive ? 'badge-success' : 'badge-info';
+        var badgeLabel = isActive ? 'On duty now' : 'Upcoming';
+        var memberNames = g.members.map(function(m){ return dutyDisplayName(m); }).join(', ');
+        var delBtn = canEdit
+          ? '<div style="cursor:pointer;color:var(--red-text);" onclick="event.stopPropagation();deleteDutyAssignment(\'' + escJsAttr(g.ids.join(',')) + '\',\'' + escJsAttr(role) + '\',\'' + escJsAttr(dateLabel) + '\',\'' + escJsAttr(memberNames) + '\')"><i class="ti ti-trash"></i></div>'
+          : '';
+        var changedTag = canEdit && typeof dutyPlanChangedTag === 'function' ? dutyPlanChangedTag(g) : '';
+        // Each month starts with a full-width coloured band (green for the
+        // one on duty now, grey for later ones) so months don't run together.
+        return '<div style="' + (first ? '' : 'margin-top:10px;') + '">'
+          + '<div class="duty-month-band' + (isActive ? ' now' : '') + '" style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0 -14px 0 -33px;padding:8px 14px 8px 33px;background:' + (isActive ? 'var(--green-bg)' : '#F1F4F3') + ';">'
+          + '<div style="font-size:11.5px;font-weight:800;letter-spacing:.8px;color:' + (isActive ? 'var(--green-text)' : '#4B5A54') + ';">' + escHtml(dutyMonthLabel(g.date_from, g.date_to)) + '</div>'
+          + '<div style="display:flex;align-items:center;gap:8px;">' + changedTag + '<span class="badge ' + badgeCls + '" style="background:#fff;">' + badgeLabel + '</span>' + delBtn + '</div></div>'
+          + '<div style="font-size:10.5px;color:var(--text-secondary);margin:6px 0 2px;">' + dutyShortRange(g.date_from, g.date_to) + '</div>'
+          + g.members.map(function(r, mi) {
+            var displayName = dutyDisplayName(r);
+            var pIni   = displayName.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
+            var avCls  = avColors[(gi + mi) % avColors.length];
+            var editBtn = canEdit
+              ? '<div style="cursor:pointer;color:var(--text-secondary);margin-left:6px;" onclick="event.stopPropagation();editDutyAssignment(\'' + escJsAttr(r.id) + '\',\'' + escJsAttr(displayName) + '\',\'' + escJsAttr(r.duty_role || '') + '\',\'' + escJsAttr(r.date_from) + '\',\'' + escJsAttr(r.date_to) + '\')"><i class="ti ti-pencil"></i></div>'
+              : '';
+            return '<div class="person-row" style="padding:5px 0;">'
+              + '<div class="avatar ' + avCls + '" style="font-size:10px;">' + pIni + '</div>'
+              + '<div style="flex:1;"><div class="person-name" style="font-size:12px;">' + escHtml(displayName) + '</div></div>'
+              + editBtn
+              + '</div>';
+          }).join('')
+          + '</div>';
+      }
+
+      // This month + the next 2 show straight away; anything later sits
+      // behind "Show full year" (js/duty-plan.js).
+      function renderItems(role, items) {
+        return items.map(function (it, i) {
+          return it.group ? renderGroup(role, it.group, i, i === 0) : dutyPlanCompactHtml(it, i === 0);
+        }).join('');
+      }
 
       tabEl.innerHTML = roleOrder.map(function(role) {
         var rr = roles[role];
         var roleGroups = rr.order.map(function(k) { return rr.groups[k]; });
-
-        var bodyHtml = roleGroups.map(function(g, gi) {
-          var from = g.date_from ? new Date(g.date_from+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'}) : '';
-          var to   = g.date_to   ? new Date(g.date_to+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'}) : '';
-          var dateLabel  = from === to ? from : from + ' – ' + to;
-          var isActive   = g.date_from <= today && today <= (g.date_to || g.date_from);
-          var badgeCls   = isActive ? 'badge-success' : 'badge-info';
-          var badgeLabel = isActive ? 'On duty now' : 'Upcoming';
-          var memberNames = g.members.map(function(m){ return dutyDisplayName(m); }).join(', ');
-          var delBtn = canEdit
-            ? '<div style="cursor:pointer;color:var(--red-text);" onclick="event.stopPropagation();deleteDutyAssignment(\'' + escJsAttr(g.ids.join(',')) + '\',\'' + escJsAttr(role) + '\',\'' + escJsAttr(dateLabel) + '\',\'' + escJsAttr(memberNames) + '\')"><i class="ti ti-trash"></i></div>'
-            : '';
-          // Each month starts with a full-width coloured band (green for the
-          // one on duty now, grey for later ones) so months don't run together.
-          return '<div style="' + (gi > 0 ? 'margin-top:10px;' : '') + '">'
-            + '<div class="duty-month-band' + (isActive ? ' now' : '') + '" style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0 -14px 0 -33px;padding:8px 14px 8px 33px;background:' + (isActive ? 'var(--green-bg)' : '#F1F4F3') + ';">'
-            + '<div style="font-size:11.5px;font-weight:800;letter-spacing:.8px;color:' + (isActive ? 'var(--green-text)' : '#4B5A54') + ';">' + escHtml(dutyMonthLabel(g.date_from, g.date_to)) + '</div>'
-            + '<div style="display:flex;align-items:center;gap:8px;"><span class="badge ' + badgeCls + '" style="background:#fff;">' + badgeLabel + '</span>' + delBtn + '</div></div>'
-            + '<div style="font-size:10.5px;color:var(--text-secondary);margin:6px 0 2px;">' + dutyShortRange(g.date_from, g.date_to) + '</div>'
-            + g.members.map(function(r, mi) {
-              var displayName = dutyDisplayName(r);
-              var pIni   = displayName.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
-              var avCls  = avColors[(gi + mi) % avColors.length];
-              var editBtn = canEdit
-                ? '<div style="cursor:pointer;color:var(--text-secondary);margin-left:6px;" onclick="event.stopPropagation();editDutyAssignment(\'' + escJsAttr(r.id) + '\',\'' + escJsAttr(displayName) + '\',\'' + escJsAttr(r.duty_role || '') + '\',\'' + escJsAttr(r.date_from) + '\',\'' + escJsAttr(r.date_to) + '\')"><i class="ti ti-pencil"></i></div>'
-                : '';
-              return '<div class="person-row" style="padding:5px 0;">'
-                + '<div class="avatar ' + avCls + '" style="font-size:10px;">' + pIni + '</div>'
-                + '<div style="flex:1;"><div class="person-name" style="font-size:12px;">' + escHtml(displayName) + '</div></div>'
-                + editBtn
-                + '</div>';
-            }).join('')
-            + '</div>';
-        }).join('');
+        var split = typeof dutyPlanSplit === 'function'
+          ? dutyPlanSplit(role, roleGroups, function (m) { return dutyDisplayName({ staff_email: m.email, staff_name: m.name }); })
+          : { near: roleGroups.map(function (g) { return { start: g.date_from, group: g }; }), later: [] };
+        var bodyHtml = split.near.length ? renderItems(role, split.near)
+          : '<div style="font-size:11.5px;color:var(--text-secondary);padding:6px 0;">Nobody on duty in the next 3 months.</div>';
+        if (split.later.length) bodyHtml += dutyPlanLaterHtml(renderItems(role, split.later), split.later[split.later.length - 1].start);
 
         return '<div class="card" style="margin-bottom:10px;padding:0;overflow:hidden;">'
           + '<div style="display:flex;align-items:center;gap:8px;padding:12px 14px;cursor:pointer;" onclick="toggleDutySection(this)">'
           + '<i class="ti ti-chevron-right" style="font-size:11px;color:var(--text-secondary);flex-shrink:0;transition:transform .15s ease;"></i>'
           + '<div style="flex:1;font-size:12px;font-weight:600;color:var(--text-primary);">' + escHtml(role) + '</div>'
           + '</div>'
-          + '<div style="display:none;padding:0 14px 12px 33px;">' + bodyHtml + '</div>'
+          + '<div style="display:none;padding:0 14px 12px 33px;">' + (typeof dutyPlanRotLineHtml === 'function' ? dutyPlanRotLineHtml(role).replace('class="dp-rot"', 'class="dp-rot" style="margin:0 0 10px;"') : '') + bodyHtml + '</div>'
           + '</div>';
       }).join('');
     } catch(e) {
@@ -128,6 +154,9 @@ async function loadDuty() {
     }
   }
 }
+
+// Called by js/duty-plan.js after a yearly plan is saved or stopped.
+function dutyPlanAfterChange() { loadDuty(); }
 
 function toggleDutySection(headerEl) {
   var body = headerEl.nextElementSibling;
@@ -211,6 +240,7 @@ async function saveDutyAssignment() {
         if (o.from !== from || o.to !== to) diffs.push({ label: 'Dates', from: o.from + ' – ' + o.to, to: from + ' – ' + to });
       }
       if (diffs.length) logAudit('duty', editingDutyId, 'edited', role, diffs, null);
+      if (diffs.length && typeof dutyPlanMarkChanged === 'function') await dutyPlanMarkChanged([editingDutyId]);
       editingDutyId = null;
       editingDutyOriginal = null;
     } else {
@@ -330,6 +360,7 @@ async function saveDutyRoleRename(id, oldName) {
   try {
     await sbWrite('PATCH', 'duty_roles', { name: newName }, 'id=eq.' + id);
     await sbWrite('PATCH', 'duty_roster', { duty_role: newName }, 'duty_role=eq.' + encodeURIComponent(oldName));
+    if (typeof dutyPlanRenameRole === 'function') await dutyPlanRenameRole(oldName, newName);
     logAudit('duty', String(id), 'edited', newName, [{ label: 'Role name', from: oldName, to: newName }], null);
   } catch(e) { alert('Could not rename duty role. Please try again.'); return; }
   editingDutyRoleId = null;

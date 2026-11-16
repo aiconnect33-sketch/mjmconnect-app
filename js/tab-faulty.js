@@ -289,6 +289,8 @@ async function uploadFcPhoto(file) {
 async function resolveFaultyNotifyEmails() {
   var emails = {};
   try {
+    // Make sure this month is filled in from any yearly duty plan first.
+    if (typeof dutyPlanEnsure === 'function') await dutyPlanEnsure();
     var roles = await sbGet('duty_roles', 'notify_faulty=eq.true&select=name');
     if (!roles || !roles.length) return [];
     var today = localDateStr();
