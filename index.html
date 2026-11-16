@@ -1211,6 +1211,7 @@
       <div id="duty-add-trigger" style="display:none;margin-bottom:10px;">
         <div style="display:flex;gap:8px;">
           <button id="duty-add-btn" class="book-btn-primary" style="flex:1;margin-bottom:0;display:none;" onclick="showDutyForm()"><i class="ti ti-plus"></i> New Duty Assignment</button>
+          <button id="duty-plan-btn" class="book-btn-ghost" style="flex:none;width:auto;padding:0 12px;margin-bottom:0;display:none;align-items:center;justify-content:center;gap:5px;white-space:nowrap;" onclick="dutyPlanOpen()" title="Yearly duty plan"><i class="ti ti-repeat"></i> Yearly plan</button>
           <button id="duty-roles-gear-btn" class="book-btn-ghost" style="flex:none;width:44px;padding:0;margin-bottom:0;display:none;align-items:center;justify-content:center;" onclick="toggleDutyRolesPanel()" title="Manage Duty Roles"><i class="ti ti-settings"></i></button>
         </div>
       </div>
@@ -1225,6 +1226,8 @@
           <button class="book-btn-primary" style="flex:none;width:auto;padding:0 16px;margin-bottom:0;" onclick="addDutyRole()">+ Add</button>
         </div>
       </div>
+      <!-- Yearly duty plan editor (js/duty-plan.js) -->
+      <div id="duty-plan-panel"></div>
       <div id="duty-form" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin-bottom:12px;">
         <div class="book-form-title" id="duty-form-title">New Duty Assignment</div>
         <div class="book-form-group">
@@ -1685,6 +1688,7 @@
 <script src="js/tab-faulty.js"></script>
 <script src="js/push.js"></script>
 <script src="js/faulty-progress.js"></script>
+<script src="js/duty-plan.js"></script>
 
 <!-- Day detail modal -->
 <div id="staff-day-modal" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,0.45);" onclick="closeStaffDayModal()">
