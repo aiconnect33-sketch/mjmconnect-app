@@ -153,7 +153,10 @@ function dutyPlanSplit(role, groups, nameOf) {
   return { near: near, later: later };
 }
 
-// A plan month that isn't saved yet, shown compact (month + names on one line).
+// A plan month that isn't saved yet: same month band, dates and one row
+// per person (initials + name) as the saved months, just without edit
+// buttons -- there's nothing saved to edit yet.
+var DP_AV = [['#E1F5EE', '#085041'], ['#FAEEDA', '#854F0B'], ['#FAECE7', '#993C1D'], ['#E6F1FB', '#185FA5'], ['#EEEDFE', '#534AB7'], ['#FCEBEB', '#A32D2D']];
 function dutyPlanCompactHtml(item, first) {
   var p = item.plan;
   var label = typeof dutyMonthLabel === 'function' ? dutyMonthLabel(p.start, p.end) : p.start;
@@ -163,7 +166,14 @@ function dutyPlanCompactHtml(item, first) {
     + '<div class="duty-month-band' + (now ? ' now' : '') + '" style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0 -14px 0 -33px;padding:8px 14px 8px 33px;background:' + (now ? '#E1F5EE' : '#F1F4F3') + ';">'
     + '<div style="font-size:11.5px;font-weight:800;letter-spacing:.8px;color:' + (now ? '#085041' : '#4B5A54') + ';">' + escHtml(label) + '</div>'
     + '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:#fff;color:' + (now ? '#085041' : '#185FA5') + ';">' + (now ? 'On duty now' : 'Upcoming') + '</span></div>'
-    + '<div class="dp-crow">' + escHtml(p.names.join(', ')) + '</div>'
+    + '<div style="font-size:10.5px;color:#70827D;margin:6px 0 2px;">' + (typeof dutyShortRange === 'function' ? dutyShortRange(p.start, p.end) : '') + '</div>'
+    + p.names.map(function (n, i) {
+      var ini = String(n || '').split(' ').filter(Boolean).slice(0, 2).map(function (w) { return w[0].toUpperCase(); }).join('');
+      var c = DP_AV[i % DP_AV.length];
+      return '<div class="dp-prow" style="display:flex;align-items:center;gap:10px;padding:5px 0;' + (i ? 'border-top:1px solid #EEF2F0;' : '') + '">'
+        + '<div style="width:30px;height:30px;border-radius:50%;background:' + c[0] + ';color:' + c[1] + ';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;">' + escHtml(ini) + '</div>'
+        + '<div style="font-size:12px;color:#111C18;">' + escHtml(n) + '</div></div>';
+    }).join('')
     + '</div>';
 }
 
