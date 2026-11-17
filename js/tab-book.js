@@ -487,8 +487,7 @@ async function loadMyVehicleBookings() {
         + '<span class="badge badge-info">Mine</span></div>'
         + '<div class="book-item-date"><i class="ti ti-clock" style="font-size:11px;"></i> ' + timeStr + '</div>'
         + (b.purpose ? '<div class="book-item-purpose">' + escHtml(b.purpose) + '</div>' : '')
-        + '<button class="book-cancel-btn" onclick="cancelMyVehicleBooking(\'' + b.id + '\')">'
-        + '<i class="ti ti-trash"></i> Cancel this booking</button>'
+        + bkItemFooter('vehicle', b)
         + '</div>';
     }).join('');
   } catch(e) { el.innerHTML = '<div class="book-empty">Could not load bookings.</div>'; }
@@ -562,6 +561,7 @@ function updateRoomCardInfo() {
 }
 
 function showRoomForm() {
+  if (typeof bkRepeatReset === 'function') setTimeout(bkRepeatReset, 0);
   rSelectedDates = [];
   document.getElementById('room-form').style.display = 'block';
   var today = localDateStr();
@@ -580,6 +580,7 @@ function showRoomForm() {
 }
 
 function hideRoomForm() {
+  if (typeof bkRepeatReset === 'function') setTimeout(bkRepeatReset, 0);
   document.getElementById('room-form').style.display = 'none';
   rSelectedDates = [];
   document.getElementById('r-date-tags').innerHTML = '';
@@ -592,6 +593,7 @@ function hideRoomForm() {
 }
 
 function addRoomDate() {
+  if (typeof bkRepeatRefresh === 'function') setTimeout(bkRepeatRefresh, 0);
   var d = document.getElementById('r-date').value;
   if (!d) return;
   rSelectedDates = [d];
@@ -601,6 +603,7 @@ function addRoomDate() {
 }
 
 function removeRoomDate(d) {
+  if (typeof bkRepeatRefresh === 'function') setTimeout(bkRepeatRefresh, 0);
   rSelectedDates = [];
   document.getElementById('r-date-tags').innerHTML = '';
   document.getElementById('r-date').value = '';
@@ -649,6 +652,8 @@ function checkRoomClash() {
 }
 
 async function submitRoomBooking() {
+  // Repeat: Weekly / Monthly goes through the date preview first (js/booking-extras.js).
+  if (typeof bkRepeatIsOn === 'function' && bkRepeatIsOn()) { await bkRepeatCheck(); return; }
   var tfrom   = document.getElementById('r-time-from').value;
   var tto     = document.getElementById('r-time-to').value;
   var purpose = document.getElementById('r-purpose').value.trim();
@@ -778,8 +783,7 @@ async function loadMyRoomBookings() {
         + '<div class="book-item-date"><i class="ti ti-clock" style="font-size:11px;"></i> '
         + fmtTime(b.time_from) + ' – ' + fmtTime(b.time_to) + '</div>'
         + (b.purpose ? '<div class="book-item-purpose">' + escHtml(b.purpose) + '</div>' : '')
-        + '<button class="book-cancel-btn" onclick="cancelMyRoomBooking(\'' + b.id + '\')">'
-        + '<i class="ti ti-trash"></i> Cancel this booking</button>'
+        + bkItemFooter('room', b)
         + '</div>';
     }).join('');
   } catch(e) { el.innerHTML = '<div class="book-empty">Could not load bookings.</div>'; }
@@ -841,7 +845,7 @@ async function showDayDetail(type, dateStr, keepPill) {
         + '<span class="badge ' + (isMine ? 'badge-info' : 'badge-amber') + '">' + (isMine ? 'Mine' : 'Booked') + '</span></div>'
         + '<div class="book-item-date"><i class="ti ti-clock" style="font-size:11px;"></i> ' + timeStr + '</div>'
         + (b.purpose ? '<div class="book-item-purpose">' + escHtml(b.purpose) + '</div>' : '')
-        + (isMine ? '<button class="book-cancel-btn" onclick="' + cancelFn + '"><i class="ti ti-trash"></i> Cancel my booking</button>' : '')
+        + (isMine ? bkItemFooter(type === 'vehicle' ? 'vehicle' : 'room', b) : '')
         + '</div>';
     }).join('');
   } catch(e) { if (body) body.innerHTML = '<div class="book-empty">Could not load bookings.</div>'; }
