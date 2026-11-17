@@ -2562,7 +2562,7 @@ html, body {
           <option value="">All Staff</option>
         </select>
         <div style="flex:1;min-width:140px;">
-          <input class="fr-search" id="tor-wo-search-input" placeholder="Search name or what for…" oninput="renderWorkReport()">
+          <input class="fr-search" id="tor-wo-search-input" placeholder="Search name, where to or what for…" oninput="renderWorkReport()">
         </div>
       </div>
       <div class="fr-table-wrap" id="tor-wo-table"></div>
@@ -6495,7 +6495,7 @@ html, body {
       return;
     }
     var rows = torWoVisibleRows(false);
-    var html = '<table class="fr-table"><thead><tr><th>Date</th><th>Staff Name</th><th>Time Out</th><th>Time In</th><th>Duration</th><th>What For</th><th>Status</th></tr></thead><tbody>';
+    var html = '<table class="fr-table"><thead><tr><th>Date</th><th>Staff Name</th><th>Time Out</th><th>Time In</th><th>Duration</th><th>Where To &amp; What For</th><th>Status</th></tr></thead><tbody>';
     if (!rows.length) html += '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px;">No work outings match.</td></tr>';
     rows.forEach(function (r) {
       var outParts = fcDateTime(r.time_out).split(', ');
@@ -6529,7 +6529,7 @@ html, body {
       return;
     }
     var rows = torWoVisibleRows(false).slice().sort(function (a, b) { return new Date(a.time_out) - new Date(b.time_out); });
-    var lines = [['Date', 'Staff Name', 'Time Out', 'Time In', 'Duration (min)', 'What For', 'Status'].join(',')];
+    var lines = [['Date', 'Staff Name', 'Time Out', 'Time In', 'Duration (min)', 'Where To & What For', 'Status'].join(',')];
     rows.forEach(function (r) {
       var st = torWoStatus(r);
       lines.push([

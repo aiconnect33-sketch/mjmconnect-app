@@ -232,9 +232,9 @@ function woRender() {
       + '</div>';
   } else {
     html += '<div class="wo-card">'
-      + '<div class="wo-lbl">What for</div>'
-      + '<input class="wo-input" id="wo-purpose" maxlength="200" placeholder="e.g. Bank deposit, LHDN, supplier visit">'
-      + '<div class="wo-hint">💼 For company errands only. Doesn\'t use your 4h Time Off, and there\'s no 2h limit.</div>'
+      + '<div class="wo-lbl">Where to &amp; what for</div>'
+      + '<input class="wo-input" id="wo-purpose" maxlength="200" placeholder="e.g. Public Bank — company deposit">'
+      + '<div class="wo-hint">💼 For Company errands only. Doesn\'t use your 4h Time Off.</div>'
       + '<div id="wo-now-row">'
       + '<button class="wo-btn" onclick="woTimeOutNow()">💼 Time Out for Work</button>'
       + '<div class="wo-toggle" onclick="woShowCustomTime()">⏱ Or key in a time instead</div>'
@@ -395,7 +395,7 @@ async function woStart(timeOutDate) {
   if (!me.email) return;
   var el = document.getElementById('wo-purpose');
   var purpose = el ? el.value.trim() : '';
-  if (!purpose) { alert('Please say what this work outing is for.'); return; }
+  if (!purpose) { alert('Please say where you\'re going and what for.'); return; }
   try {
     if (await woHasOpenPersonal(me.email)) {
       alert('You\'re on personal Time Off right now. Tap I\'m Back on the 🚶 Personal side first.');
