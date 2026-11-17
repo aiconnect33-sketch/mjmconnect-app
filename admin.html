@@ -8507,7 +8507,14 @@ html, body {
 
   async function loadInviteLog() {
     try {
-      var data = await sbFetch('GET', '/rest/v1/profiles?order=created_at.desc&select=email,full_name,role,created_at&limit=50');
+      // Everyone, A–Z by name (no 50-row cut-off), so a person is easy to
+      // find; anyone without a name yet sorts by their email.
+      var data = await sbFetch('GET', '/rest/v1/profiles?select=email,full_name,role,created_at&limit=2000');
+      if (data && data.length) {
+        data.sort(function (a, b) {
+          return String(a.full_name || a.email || '').trim().localeCompare(String(b.full_name || b.email || '').trim(), 'en', { sensitivity: 'base' });
+        });
+      }
       var listEl = document.getElementById('invite-log-list');
       var countEl = document.getElementById('invite-log-count');
       if (!data || data.length === 0) {
