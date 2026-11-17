@@ -228,7 +228,9 @@ function woRender() {
       + '<div class="wo-time">Out since ' + woClock(out) + ' · ' + woDur(woMinutes(mine)) + ' so far</div>'
       + '<div class="wo-free">💼 Not charged to your Time Off</div>'
       + '<button class="wo-btn green" onclick="woTimeIn(' + mine.id + ')">✓ I\'m Back — Time In</button>'
-      + '<div><span class="wo-mistake" onclick="woCancel(' + mine.id + ')">✕ Started this by mistake? Cancel it</span></div>'
+      // Only admins / Time Off editors can cancel an outing -- staff just
+      // tap I'm Back (an accidental tap is a few minutes, never charged).
+      + (woCanManage() ? '<div><span class="wo-mistake" onclick="woCancel(' + mine.id + ')">✕ Started this by mistake? Cancel it</span></div>' : '')
       + '</div>';
   } else {
     html += '<div class="wo-card">'
@@ -348,7 +350,7 @@ function woRowHtml(r, isMineList) {
   var acts = '';
   if (!voided) {
     if (canManage && r.time_in) acts += '<span class="wo-act" onclick="woShowFix(' + r.id + ')">✎ Correct Time In</span>';
-    if (isMine || canManage) acts += '<span class="wo-act red" onclick="woCancel(' + r.id + ')">✕ Cancel</span>';
+    if (canManage) acts += '<span class="wo-act red" onclick="woCancel(' + r.id + ')">✕ Cancel</span>';
   }
   return '<div class="wo-row' + (voided ? ' voided' : '') + '" data-wo-id="' + r.id + '">'
     + '<div class="wo-row-top"><div class="wo-row-t">' + title + '</div>' + tag + '</div>'
@@ -430,7 +432,7 @@ async function woTimeIn(id) {
 async function woCancel(id) {
   var r = woState.rows.find(function (x) { return x.id === id; });
   var isMine = r && (r.staff_email || '').toLowerCase() === woState.myEmailLow;
-  if (!isMine && !woCanManage()) return;
+  if (!woCanManage()) return; // staff can't cancel, not even their own
   var who = r && !isMine ? (' for ' + woName(r)) : '';
   if (!confirm('Cancel this work outing' + who + '?\n\nIt will be marked as cancelled and left out of the report.')) return;
   try {
