@@ -597,16 +597,19 @@ function renderTimeOffRow(r, myEmailLow, canManageAll, sectionKey) {
   // could quietly rewrite their own already-taken Time Off. Not offered on
   // a pending-cancellation row -- it's about to be voided, not corrected.
   var canCorrect = canManageAll && !!r.time_in && !isPending;
-  var editIcon = canCorrect
-    ? '<div class="to-edit-icon" onclick="toggleTimeOffCorrection(\'' + key + '\', ' + r.id + ')" title="Correct Time In"><i class="ti ti-pencil"></i></div>'
-    : '';
+  // Admin / Time Off editor actions, same as Out for Work: Edit times and
+  // Cancel. Staff never get these on their own records.
+  var acts = '';
+  if (canCorrect) acts += '<span class="to-act" onclick="toggleTimeOffCorrection(\'' + key + '\', ' + r.id + ')">✎ Edit times</span>';
+  if (canManageAll && !isPending) acts += '<span class="to-act red" onclick="cancelTimeOffAsAdmin(' + r.id + ')">✕ Cancel</span>';
 
   var html = '<div class="to-history-row" data-timeoff-id="' + escHtml(r.id) + '" data-staff-email="' + escHtml(r.staff_email || '') + '">'
     + '<div class="to-history-top">'
     + '<div style="flex:1;min-width:0;display:flex;align-items:center;gap:6px;">'
-    + '<div class="to-history-reason">' + reasonLabel + '</div>' + editIcon
+    + '<div class="to-history-reason">' + reasonLabel + '</div>'
     + '</div>' + badge + '</div>'
-    + '<div class="to-history-time">' + timeLabel + (r.time_in ? ' · ' + formatDuration(r.duration_minutes || 0) + ' actual' : '') + entryNote + '</div>';
+    + '<div class="to-history-time">' + timeLabel + (r.time_in ? ' · ' + formatDuration(r.duration_minutes || 0) + ' actual' : '') + entryNote + '</div>'
+    + (acts ? '<div class="to-acts">' + acts + '</div>' : '');
 
   if (canCorrect) {
     var outHH = String(out.getHours()).padStart(2, '0');
@@ -656,7 +659,7 @@ function renderTimeOffVoidedRow(r, myEmailLow) {
   return '<div class="to-history-row" style="opacity:0.6;">'
     + '<div class="to-history-top"><div class="to-history-reason" style="text-decoration:line-through;">' + reasonLabel + '</div>'
     + '<span class="badge" style="background:var(--bg);color:var(--text-light);">Voided</span></div>'
-    + '<div class="to-history-time">' + timeLabel + ' — moved to Annual Leave</div></div>';
+    + '<div class="to-history-time">' + timeLabel + ' — ' + (r.cancel_requested_at ? 'moved to Annual Leave' : 'cancelled by admin') + '</div></div>';
 }
 
 function renderTimeOffMineSection() {
@@ -914,6 +917,34 @@ function notifyCancellationApprovedPush(email, reason, day) {
     method: 'POST', mode: 'no-cors',
     body: JSON.stringify({ secret: PUSH_SEND_SECRET, email: email, reason: reason, day: day })
   }).catch(function () {});
+}
+
+// Admin / Time Off editor only -- cancels a record outright (e.g. tapped
+// by mistake, or logged twice), the same as Out for Work's Cancel. Unlike
+// an approved cancellation request, it doesn't send the staff member an
+// "apply Annual Leave" reminder: cancel_requested_at stays empty, so the
+// record reads "cancelled by admin" and simply stops counting towards 4h.
+async function cancelTimeOffAsAdmin(id) {
+  if (!canCorrectTimeOff()) { alert('Only admins can cancel a Time Off record.'); return; }
+  var r = (timeoffState.allRecords || []).find(function (x) { return x.id === id; });
+  var who = r && r.staff_email && r.staff_email.toLowerCase() !== timeoffState.myEmailLow ? ' for ' + timeoffDisplayName(r) : '';
+  if (!confirm('Cancel this Time Off' + who + '?\n\nIt will be marked as cancelled and won\'t count towards the 4h limit. No Annual Leave reminder is sent.')) return;
+  try {
+    var rows = await fetch(SURL + '/rest/v1/time_off_records?id=eq.' + id, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } }).then(function (res) { return res.json(); });
+    var record = rows && rows[0];
+    if (!record) return;
+    var patch = { entry_type: 'voided' };
+    if (!record.time_in) {
+      var timeIn = new Date();
+      patch.time_in = timeIn.toISOString();
+      patch.duration_minutes = Math.round((timeIn.getTime() - new Date(record.time_out).getTime()) / 60000);
+    }
+    await sbWrite('PATCH', 'time_off_records', patch, 'id=eq.' + id);
+    loadTimeOff();
+    Object.assign(record, patch);
+    var monthStart = localDateStr().slice(0, 8) + '01';
+    timeOffMonthlyMinutes(record.staff_email, monthStart).then(function (mins) { syncTimeOffToSheet('update', record, mins); });
+  } catch (e) { alert('Could not cancel this Time Off. Please try again.'); }
 }
 
 // HR Admin/permission-only -- approves a pending cancellation request,
