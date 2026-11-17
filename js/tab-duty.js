@@ -127,7 +127,10 @@ async function loadDuty() {
       // behind "Show full year" (js/duty-plan.js).
       function renderItems(role, items) {
         return items.map(function (it, i) {
-          return it.group ? renderGroup(role, it.group, i, i === 0) : dutyPlanCompactHtml(it, i === 0);
+          // "Take turns" plans: a purple "Round 2 starts" line above the month Turn 1 comes back.
+          var round = typeof dutyPlanRoundHtml === 'function' ? dutyPlanRoundHtml(it, i === 0) : '';
+          var first = i === 0 || !!round;
+          return round + (it.group ? renderGroup(role, it.group, i, first) : dutyPlanCompactHtml(it, first));
         }).join('');
       }
 

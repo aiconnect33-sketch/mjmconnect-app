@@ -1652,8 +1652,8 @@ html, body {
         <button class="btn-primary" style="flex:1;" onclick="showDutyForm()">
           <i class="ti ti-plus"></i> Add Duty Assignment
         </button>
-        <button class="btn-icon" style="width:auto;padding:0 12px;gap:5px;white-space:nowrap;" onclick="dutyPlanOpen()" title="Yearly duty plan">
-          <i class="ti ti-repeat"></i> Yearly plan
+        <button class="btn-icon" style="width:auto;padding:0 12px;gap:5px;white-space:nowrap;" onclick="dutyPlanOpen()" title="Duty plan">
+          <i class="ti ti-repeat"></i> Duty plan
         </button>
         <button class="btn-icon" style="width:auto;padding:0 14px;" onclick="toggleDutyRolesPanelAdmin()" title="Manage Duty Roles">
           <i class="ti ti-settings"></i>
@@ -8261,7 +8261,10 @@ html, body {
       // behind "Show full year" (js/duty-plan.js).
       function renderDutyItems(role, items) {
         return items.map(function (it, i) {
-          return it.group ? renderDutyGroup(role, it.group, i, i === 0) : dutyPlanCompactHtml(it, i === 0);
+          // "Take turns" plans: a purple "Round 2 starts" line above the month Turn 1 comes back.
+          var round = typeof dutyPlanRoundHtml === 'function' ? dutyPlanRoundHtml(it, i === 0) : '';
+          var first = i === 0 || !!round;
+          return round + (it.group ? renderDutyGroup(role, it.group, i, first) : dutyPlanCompactHtml(it, first));
         }).join('');
       }
 

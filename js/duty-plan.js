@@ -1,17 +1,24 @@
-// ── duty-plan.js — Duty Roster yearly plan ──
+// ── duty-plan.js — Duty Roster plans ──
 // Shared by index.html (js/tab-duty.js) and admin.html. Each duty role can
-// have a yearly plan: who's on duty in each month, the same every year.
-// The database function ensure_duty_plan() (docs/duty-yearly-plan.sql)
-// keeps duty_roster filled in for this month + the next 2 from the plan,
-// so everything that reads duty_roster keeps working unchanged. This file
-// adds the plan editor, the "🔁 Same every year" line for editors, and the
-// "Show full year" view, which also shows the plan's later months that
-// haven't been filled in yet.
+// have a plan, of one of two kinds:
+//   * "Same month every year" -- who's on duty in each calendar month.
+//   * "Take turns in order"   -- groups take one month each, in order, from
+//     a start month; after the last turn it starts again from Turn 1
+//     (docs/duty-turns-plan.sql; plan rows' month = turn number).
+// The database function ensure_duty_plan() keeps duty_roster filled in for
+// this month + the next 2 from the plan, so everything that reads
+// duty_roster keeps working unchanged. This file adds the plan editor (and
+// its "See all turns" table), the "🔁" line for editors, and the "Show full
+// year" view, which also shows the plan's later months that haven't been
+// filled in yet.
 //
 // Relies on the page's SURL / SKEY / escHtml / localDateStr globals and on
 // each page defining dutyPlanAfterChange() (re-load its duty list).
 
-var dutyPlan = {};           // role -> { 1: [{name, email}], ..., 12: [...] }
+var dutyPlan = {};           // role -> { 1: [{name, email}], ..., 12: [...] } (month, or turn number)
+var dutyPlanSettings = {};   // role -> { type: 'yearly'|'turns', start: 'YYYY-MM-01', turns: n }
+var dutyPlanSettingsOk = false; // duty_plan_settings exists (docs/duty-turns-plan.sql has been run)
+var DUTY_PLAN_MAX_TURNS = 60;
 var dutyPlanGenerated = {};  // role -> { 'YYYY-MM-01': true } months already filled in
 var dutyPlanEnsuredAt = 0;
 var DUTY_PLAN_NEAR_MONTHS = 3;   // this month + next 2 show by default
@@ -49,6 +56,31 @@ var dpRoles = [];
     + '.dp-crow{font-size:11.5px;color:#111C18;padding:6px 0 2px;line-height:1.45}'
     + '.dp-more{display:block;width:calc(100% + 47px);margin:12px -14px -12px -33px;padding:10px;text-align:center;font-size:12px;font-weight:700;color:#0F6E5C;background:#FAFCFB;border:none;border-top:1px solid #EEF2F0;font-family:inherit;cursor:pointer}'
     + '.dp-more span{font-weight:500;color:#70827D}'
+    + '.dp-seg{display:flex;background:#fff;border:1px solid #D5DEDA;border-radius:10px;padding:3px;gap:3px;margin-bottom:12px}'
+    + '.dp-seg button{flex:1;border:none;background:none;border-radius:7px;padding:7px 4px;font-size:11.5px;font-weight:700;font-family:inherit;color:#70827D;cursor:pointer}'
+    + '.dp-seg button.on{background:#0F6E5C;color:#fff}'
+    + '.dp-turn{border:1px solid #E2ECE8;border-radius:10px;padding:6px 8px;background:#FAFCFB}'
+    + '.dp-turn.now{background:#E1F5EE;border-color:#A9DCC9}'
+    + '.dp-th{display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:11px;font-weight:800;color:#4B5A54;margin-bottom:5px}'
+    + '.dp-th small{font-weight:600;color:#70827D;font-size:10.5px}'
+    + '.dp-tb{display:flex;gap:2px;flex-shrink:0}'
+    + '.dp-tb button{border:none;background:#F1F4F3;color:#4B5A54;width:22px;height:22px;border-radius:6px;font-size:11px;line-height:1;cursor:pointer;padding:0;font-family:inherit}'
+    + '.dp-tb button:disabled{opacity:.35;cursor:default}'
+    + '.dp-addturn{display:block;width:100%;border:1.5px dashed #A9C4BA;border-radius:10px;padding:8px;background:#fff;font-size:12px;font-weight:700;font-family:inherit;color:#0F6E5C;cursor:pointer;margin-bottom:10px}'
+    + '.dp-sum{background:#EEEDFE;border-radius:10px;padding:8px 10px;font-size:11.5px;color:#534AB7;margin-bottom:10px;line-height:1.5}'
+    + '.dp-sum b{color:#3C3489}'
+    + '.dp-all{display:block;width:100%;border:1px solid #D5DEDA;border-radius:10px;padding:9px;background:#fff;font-size:12px;font-weight:700;font-family:inherit;color:#0F6E5C;cursor:pointer;margin-bottom:10px}'
+    + '.dp-search{width:100%;box-sizing:border-box;border:1px solid #D5DEDA;border-radius:10px;padding:8px 10px;font-size:13px;font-family:inherit;margin-bottom:8px}'
+    + '.dp-tbl{border:1px solid #E2ECE8;border-radius:12px;overflow:hidden;margin-bottom:10px}'
+    + '.dp-tr{padding:7px 10px;font-size:11.5px}'
+    + '.dp-tr+.dp-tr{border-top:1px solid #EEF2F0}'
+    + '.dp-tr.now{background:#E1F5EE}'
+    + '.dp-trd{display:grid;grid-template-columns:30px 1fr 1fr 1fr;gap:4px;align-items:center}'
+    + '.dp-trd .past{color:#9AABA3}'
+    + '.dp-trn{font-size:11px;color:#4B5A54;margin:3px 0 0 34px;line-height:1.4}'
+    + '.dp-tr.hd{background:#F1F4F3;font-size:9.5px;font-weight:700;color:#70827D;text-transform:uppercase;letter-spacing:.3px}'
+    + '.dp-round{display:flex;align-items:center;gap:6px;margin:10px -14px 0 -33px;padding:7px 14px 7px 33px;background:#EEEDFE;color:#534AB7;font-size:11px;font-weight:800}'
+    + '.dp-round.first{margin-top:0}'
     + '.dp-changed{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:#FAEEDA;color:#854F0B;white-space:nowrap}';
   var s = document.createElement('style');
   s.id = 'dp-styles';
@@ -88,7 +120,25 @@ function dpMonthEnd(monthStart) {
   return monthStart.slice(0, 8) + String(new Date(y, m, 0).getDate()).padStart(2, '0');
 }
 function dpMonthNum(monthStart) { return +monthStart.slice(5, 7); }
+function dpMonthsBetween(a, b) { return (+b.slice(0, 4) - +a.slice(0, 4)) * 12 + (+b.slice(5, 7) - +a.slice(5, 7)); }
 var DP_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+var DP_MONTHS_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+function dpShortMonth(ms) { return DP_MONTHS[dpMonthNum(ms) - 1] + ' ' + ms.slice(0, 4); }
+function dpLongMonth(ms) { return DP_MONTHS_LONG[dpMonthNum(ms) - 1] + ' ' + ms.slice(0, 4); }
+
+// Which plan slot a month uses: the calendar month for a yearly plan, the
+// turn number for a "take turns" plan (null before Turn 1 starts). round
+// is 1 for the first time through the turns, 2 for the second, ...
+function dpSlotFor(role, monthStart) {
+  var s = dutyPlanSettings[role];
+  if (s && s.type === 'turns') {
+    if (!s.start || !s.turns || monthStart < s.start) return null;
+    var diff = dpMonthsBetween(s.start, monthStart);
+    return { slot: diff % s.turns + 1, round: Math.floor(diff / s.turns) + 1 };
+  }
+  return { slot: dpMonthNum(monthStart), round: 0 };
+}
+function dutyPlanIsTurns(role) { var s = dutyPlanSettings[role]; return !!(s && s.type === 'turns'); }
 
 // Asks the database to fill in this month + the next 2 from the plan.
 // At most every 10 minutes unless forced; quietly does nothing if the SQL
@@ -102,13 +152,18 @@ async function dutyPlanEnsure(force) {
 }
 
 async function dutyPlanLoad() {
-  dutyPlan = {}; dutyPlanGenerated = {};
+  dutyPlan = {}; dutyPlanGenerated = {}; dutyPlanSettings = {};
   try {
     var thisMonth = dpMonthStart(localDateStr());
     var both = await Promise.all([
       dpFetch('GET', 'duty_yearly_plan?select=duty_role,month,staff_name,staff_email&order=duty_role.asc,month.asc,staff_name.asc'),
-      dpFetch('GET', 'duty_plan_generated?select=duty_role,month_start&month_start=gte.' + thisMonth)
+      dpFetch('GET', 'duty_plan_generated?select=duty_role,month_start&month_start=gte.' + thisMonth),
+      // Missing until docs/duty-turns-plan.sql is run: then every plan is yearly.
+      dpFetch('GET', 'duty_plan_settings?select=duty_role,plan_type,start_month,turns').then(function (r) { dutyPlanSettingsOk = true; return r; }, function () { dutyPlanSettingsOk = false; return []; })
     ]);
+    (Array.isArray(both[2]) ? both[2] : []).forEach(function (s) {
+      if (s.plan_type === 'turns' && s.start_month && s.turns > 0) dutyPlanSettings[s.duty_role] = { type: 'turns', start: dpMonthStart(s.start_month), turns: +s.turns };
+    });
     (Array.isArray(both[0]) ? both[0] : []).forEach(function (p) {
       var r = dutyPlan[p.duty_role] = dutyPlan[p.duty_role] || {};
       (r[p.month] = r[p.month] || []).push({ name: p.staff_name, email: p.staff_email || null });
@@ -142,7 +197,8 @@ function dutyPlanSplit(role, groups, nameOf) {
       var ms = dpAddMonths(thisMonth, i), me = dpMonthEnd(ms);
       if (gen[ms]) continue;
       if (groups.some(function (g) { return g.date_from <= me && (g.date_to || g.date_from) >= ms; })) continue;
-      var members = (dutyPlan[role] || {})[dpMonthNum(ms)] || [];
+      var at = dpSlotFor(role, ms);
+      var members = at ? ((dutyPlan[role] || {})[at.slot] || []) : [];
       if (!members.length) continue;
       var item = { start: ms, plan: { start: ms, end: me, names: members.map(nameOf || function (m) { return m.name; }) } };
       (ms < nearEnd ? near : later).push(item);
@@ -150,7 +206,18 @@ function dutyPlanSplit(role, groups, nameOf) {
   }
   var byStart = function (a, b) { return a.start < b.start ? -1 : a.start > b.start ? 1 : 0; };
   near.sort(byStart); later.sort(byStart);
+  // "Take turns": mark the month a new round starts (Turn 1 again).
+  if (dutyPlanIsTurns(role)) near.concat(later).forEach(function (it) {
+    var at = dpSlotFor(role, dpMonthStart(it.start));
+    if (at && at.slot === 1 && at.round > 1) it.round = at.round;
+  });
   return { near: near, later: later };
+}
+
+// The purple "Round 2 starts" line shown above such a month, or ''.
+function dutyPlanRoundHtml(item, first) {
+  if (!item || !item.round) return '';
+  return '<div class="dp-round' + (first ? ' first' : '') + '">🔁 Round ' + item.round + ' starts — back to Turn 1</div>';
 }
 
 // A plan month that isn't saved yet: same month band, dates and one row
@@ -195,10 +262,13 @@ function dutyPlanToggleYear(btn) {
   btn.innerHTML = open ? '▴ Show less' : '▾ Show full year' + (upto ? ' <span>· up to ' + escHtml(upto) + '</span>' : '');
 }
 
-// "🔁 Same every year · Edit plan" under a team name -- editors only.
+// "🔁 Same every year · Edit plan" (or "🔁 Takes turns · every 10 months")
+// under a team name -- editors only.
 function dutyPlanRotLineHtml(role) {
   if (!dutyPlanCanEdit() || !dutyPlanHas(role)) return '';
-  return '<div class="dp-rot">🔁 Same every year<button onclick="event.stopPropagation();dutyPlanOpen(\'' + escJsAttr(role) + '\')">Edit plan</button></div>';
+  var s = dutyPlanSettings[role];
+  var what = dutyPlanIsTurns(role) ? 'Takes turns · ' + (s.turns === 1 ? 'every month' : 'every ' + s.turns + ' months') : 'Same every year';
+  return '<div class="dp-rot">🔁 ' + what + '<button onclick="event.stopPropagation();dutyPlanOpen(\'' + escJsAttr(role) + '\')">Edit plan</button></div>';
 }
 
 function dutyPlanChangedTag(group) {
@@ -225,12 +295,52 @@ async function dutyPlanOpen(role) {
   panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+function dpCopy(list) { return (list || []).map(function (p) { return { name: dpCurrentName(p), email: p.email }; }); }
+
 function dpStartDraft(role) {
   var src = dutyPlan[role] || {};
+  var s = dutyPlanSettings[role];
+  var turnsPlan = !!(s && s.type === 'turns');
   var months = {};
-  for (var m = 1; m <= 12; m++) months[m] = (src[m] || []).map(function (p) { return { name: dpCurrentName(p), email: p.email }; });
-  dpDraft = { role: role, months: months, existing: dutyPlanHas(role) };
+  for (var m = 1; m <= 12; m++) months[m] = turnsPlan ? [] : dpCopy(src[m]);
+  var turns, start;
+  if (turnsPlan) {
+    turns = [];
+    for (var t = 1; t <= s.turns; t++) turns.push(dpCopy(src[t]));
+    start = s.start;
+  } else {
+    var conv = dpTurnsFromYearly(months);
+    turns = conv.turns; start = conv.start;
+  }
+  dpDraft = { role: role, type: turnsPlan ? 'turns' : 'yearly', months: months, turns: turns, start: start, existing: dutyPlanHas(role), view: 'edit' };
   dpRender();
+}
+
+// Turns pre-filled from a yearly plan, so switching doesn't mean typing
+// everyone in again: the filled-in months in calendar order, starting
+// after a month with nobody (e.g. Jul..Apr when May and Jun are empty),
+// with Turn 1 in the latest such month up to now -- so this month keeps
+// the same people. Empty months are left out.
+function dpTurnsFromYearly(months) {
+  var thisMs = dpMonthStart(localDateStr()), nowM = dpMonthNum(thisMs), y = +thisMs.slice(0, 4);
+  var filled = [];
+  for (var m = 1; m <= 12; m++) if (months[m].length) filled.push(m);
+  if (!filled.length) return { turns: [[]], start: thisMs };
+  var first = 1;
+  if (filled.length < 12) {
+    first = filled[0];
+    for (var i = 0; i < filled.length; i++) {
+      var prev = filled[i] === 1 ? 12 : filled[i] - 1;
+      if (!months[prev].length) { first = filled[i]; break; }
+    }
+  }
+  var turns = [];
+  for (var k = 0; k < 12; k++) {
+    var mm = (first - 1 + k) % 12 + 1;
+    if (months[mm].length) turns.push(months[mm].map(function (p) { return { name: p.name, email: p.email }; }));
+  }
+  var year = first <= nowM ? y : y - 1;
+  return { turns: turns, start: year + '-' + String(first).padStart(2, '0') + '-01' };
 }
 
 function dpCurrentName(p) {
@@ -239,44 +349,159 @@ function dpCurrentName(p) {
   return hit ? hit.name : p.name;
 }
 
+// Where a "take turns" draft stands this month: index of this month's turn
+// (-1 before Turn 1 starts) and how many full rounds are behind us.
+function dpDraftNow() {
+  var thisMs = dpMonthStart(localDateStr());
+  var n = dpDraft.turns.length || 1;
+  var diff = dpMonthsBetween(dpDraft.start, thisMs);
+  if (diff < 0) return { idx: -1, round: 0, thisMs: thisMs };
+  return { idx: diff % n, round: Math.floor(diff / n), thisMs: thisMs };
+}
+// The month turn i (0-based) falls in, in round r (0-based).
+function dpTurnMonth(i, r) { return dpAddMonths(dpDraft.start, r * dpDraft.turns.length + i); }
+
+function dpPeopleHtml(people, addCall, removeCall) {
+  var chips = people.map(function (p, i) {
+    return '<span class="dp-chip">' + escHtml(p.name) + '<button title="Remove" onclick="' + removeCall + ',' + i + ')">✕</button></span>';
+  }).join('');
+  var taken = people.map(function (p) { return p.name; });
+  var opts = dpStaff.filter(function (s) { return taken.indexOf(s.name) === -1; })
+    .map(function (s) { return '<option value="' + escHtml(s.name) + '">' + escHtml(s.name) + '</option>'; }).join('');
+  return '<div class="dp-chips">' + chips + '<select class="dp-add" onchange="' + addCall + ',this.value)"><option value="">+ Add</option>' + opts + '</select></div>';
+}
+
 function dpRender() {
   var panel = document.getElementById('duty-plan-panel');
   if (!panel || !dpDraft) return;
-  var nowMonth = dpMonthNum(dpMonthStart(localDateStr()));
+  if (dpDraft.view === 'table') { panel.innerHTML = dpTableHtml(); return; }
+  var turnsMode = dpDraft.type === 'turns';
   var roleOpts = dpRoles.slice();
   if (dpDraft.role && roleOpts.indexOf(dpDraft.role) === -1) roleOpts.push(dpDraft.role);
-  var rows = '';
-  for (var m = 1; m <= 12; m++) {
-    var people = dpDraft.months[m];
-    var chips = people.map(function (p, i) {
-      return '<span class="dp-chip">' + escHtml(p.name) + '<button title="Remove" onclick="dpRemove(' + m + ',' + i + ')">✕</button></span>';
-    }).join('');
-    var taken = people.map(function (p) { return p.name; });
-    var opts = dpStaff.filter(function (s) { return taken.indexOf(s.name) === -1; })
-      .map(function (s) { return '<option value="' + escHtml(s.name) + '">' + escHtml(s.name) + '</option>'; }).join('');
-    rows += '<div class="dp-m' + (m === nowMonth ? ' now' : '') + '"><div class="dp-mn">' + DP_MONTHS[m - 1] + '</div><div class="dp-chips">' + chips
-      + '<select class="dp-add" onchange="dpAdd(' + m + ',this.value)"><option value="">+ Add</option>' + opts + '</select></div></div>';
-  }
-  panel.innerHTML = '<div class="dp-title"><span>🔁 Yearly Duty Plan</span><button class="dp-x" onclick="dutyPlanClose()">&times;</button></div>'
+  var html = '<div class="dp-title"><span>🔁 Duty Plan</span><button class="dp-x" onclick="dutyPlanClose()">&times;</button></div>'
     + '<div class="dp-lbl">Duty Role</div>'
     + '<select class="dp-sel" id="dp-role" onchange="dpStartDraft(this.value)">'
     + roleOpts.map(function (r) { return '<option value="' + escHtml(r) + '"' + (r === dpDraft.role ? ' selected' : '') + '>' + escHtml(r) + '</option>'; }).join('')
     + '</select>'
-    + '<div class="dp-help">Who\'s on duty in each month. It repeats every year, and the roster fills itself in for the next few months.</div>'
-    + '<div class="dp-months">' + rows + '</div>'
-    + '<div class="dp-note">🔁 Changes apply from next month — this month and months already changed by hand stay as they are.</div>'
+    + '<div class="dp-lbl">How it repeats</div>'
+    + '<div class="dp-seg" id="dp-type"><button class="' + (turnsMode ? '' : 'on') + '" onclick="dpSetType(\'yearly\')">Same month every year</button>'
+    + '<button class="' + (turnsMode ? 'on' : '') + '" onclick="dpSetType(\'turns\')">Take turns in order</button></div>';
+  html += turnsMode ? dpTurnsEditorHtml() : dpYearlyEditorHtml();
+  html += '<div class="dp-note">🔁 Changes apply from next month — this month and months already changed by hand stay as they are.</div>'
     + '<div class="dp-err" id="dp-err"></div>'
     + '<div class="dp-row"><button class="dp-btn dp-save" id="dp-save" onclick="dutyPlanSave()">Save Plan</button><button class="dp-btn dp-cancel" onclick="dutyPlanClose()">Cancel</button></div>'
     + (dpDraft.existing ? '<button class="dp-stop" onclick="dutyPlanStop()">Stop this plan</button>' : '');
+  panel.innerHTML = html;
 }
 
-function dpAdd(m, name) {
-  if (!name || !dpDraft) return;
-  var s = dpStaff.find(function (x) { return x.name === name; });
-  dpDraft.months[m].push({ name: name, email: s ? s.email : null });
-  dpRender();
+function dpYearlyEditorHtml() {
+  var nowMonth = dpMonthNum(dpMonthStart(localDateStr()));
+  var rows = '';
+  for (var m = 1; m <= 12; m++) {
+    rows += '<div class="dp-m' + (m === nowMonth ? ' now' : '') + '"><div class="dp-mn">' + DP_MONTHS[m - 1] + '</div>'
+      + dpPeopleHtml(dpDraft.months[m], 'dpAdd(' + m, 'dpRemove(' + m) + '</div>';
+  }
+  return '<div class="dp-help">Who\'s on duty in each month. It repeats every year, and the roster fills itself in for the next few months.</div>'
+    + '<div class="dp-months">' + rows + '</div>';
 }
-function dpRemove(m, i) { if (dpDraft) { dpDraft.months[m].splice(i, 1); dpRender(); } }
+
+function dpTurnsEditorHtml() {
+  var n = dpDraft.turns.length;
+  var now = dpDraftNow();
+  var r0 = Math.max(0, now.round);
+  // "Turn 1 starts": 3 years back to 2 years ahead (and the saved month).
+  var opts = [], seen = {};
+  for (var k = -36; k <= 24; k++) { var ms = dpAddMonths(now.thisMs, k); opts.push(ms); seen[ms] = 1; }
+  if (!seen[dpDraft.start]) { opts.push(dpDraft.start); opts.sort(); }
+  var startSel = '<select class="dp-sel" id="dp-start" onchange="dpSetStart(this.value)">'
+    + opts.map(function (ms) { return '<option value="' + ms + '"' + (ms === dpDraft.start ? ' selected' : '') + '>' + dpLongMonth(ms) + '</option>'; }).join('') + '</select>';
+  var rows = dpDraft.turns.map(function (people, i) {
+    var dates = [0, 1, 2].map(function (r) { return dpShortMonth(dpTurnMonth(i, r0 + r)); });
+    return '<div class="dp-turn' + (i === now.idx ? ' now' : '') + '">'
+      + '<div class="dp-th"><span>Turn ' + (i + 1) + ' · ' + dates[0] + ' <small>→ ' + dates[1] + ' → ' + dates[2] + '</small></span>'
+      + '<span class="dp-tb"><button title="Move up" onclick="dpMoveTurn(' + i + ',-1)"' + (i === 0 ? ' disabled' : '') + '>↑</button>'
+      + '<button title="Move down" onclick="dpMoveTurn(' + i + ',1)"' + (i === n - 1 ? ' disabled' : '') + '>↓</button>'
+      + '<button title="Remove this turn" onclick="dpRemoveTurn(' + i + ')"' + (n === 1 ? ' disabled' : '') + '>✕</button></span></div>'
+      + dpPeopleHtml(people, 'dpAddT(' + i, 'dpRemoveT(' + i) + '</div>';
+  }).join('');
+  var sum;
+  if (now.idx === -1) {
+    sum = '🔁 <b>' + n + (n === 1 ? ' turn' : ' turns') + '</b>, one per month. Turn 1 starts <b>' + dpShortMonth(dpDraft.start) + '</b>.';
+  } else if (n === 1) {
+    sum = '🔁 <b>1 turn</b> — the same people every month.';
+  } else {
+    var lead = dpDraft.turns[0][0];
+    sum = '🔁 <b>' + n + ' turns</b>, one per month — everyone\'s on duty <b>once every ' + n + ' months</b>.<br>'
+      + 'Round ' + (now.round + 2) + ' starts <b>' + dpShortMonth(dpTurnMonth(0, now.round + 1)) + '</b>' + (lead ? ' with ' + escHtml(lead.name) + '\'s group' : '') + '.';
+  }
+  return '<div class="dp-help">Each turn is one month, in this order. After the last turn it starts again from Turn 1, round after round.</div>'
+    + '<div class="dp-lbl">Turn 1 starts</div>' + startSel
+    + '<div class="dp-months">' + rows + '</div>'
+    + (n < DUTY_PLAN_MAX_TURNS ? '<button class="dp-addturn" id="dp-addturn" onclick="dpAddTurn()">+ Add a turn</button>' : '')
+    + '<div class="dp-sum" id="dp-sum">' + sum + '</div>'
+    + '<button class="dp-all" id="dp-all" onclick="dpShowTable()">📋 See all turns</button>';
+}
+
+// "See all turns": every turn with its dates for this round and the next
+// two, and who's in it. Uses the draft, so unsaved changes show too.
+function dpTableHtml() {
+  var n = dpDraft.turns.length;
+  var now = dpDraftNow();
+  var r0 = Math.max(0, now.round);
+  var thisMs = now.thisMs;
+  var head = '<div class="dp-tr hd"><div class="dp-trd"><div>Turn</div>'
+    + [0, 1, 2].map(function (r) { return '<div>Round ' + (r0 + r + 1) + '</div>'; }).join('') + '</div></div>';
+  var rows = dpDraft.turns.map(function (people, i) {
+    var names = people.map(function (p) { return p.name; });
+    return '<div class="dp-tr' + (i === now.idx ? ' now' : '') + '" data-names="' + escHtml(names.join(' ').toLowerCase()) + '"><div class="dp-trd"><div><b>' + (i + 1) + '</b></div>'
+      + [0, 1, 2].map(function (r) {
+        var ms = dpTurnMonth(i, r0 + r);
+        return '<div class="' + (ms < thisMs ? 'past' : '') + '">' + dpShortMonth(ms) + '</div>';
+      }).join('') + '</div>'
+      + '<div class="dp-trn">' + (names.length ? escHtml(names.join(', ')) : '<span style="color:#A32D2D;">Nobody yet</span>') + '</div></div>';
+  }).join('');
+  return '<div class="dp-title"><span>📋 When is everyone on duty?</span><button class="dp-x" title="Back to the plan" onclick="dpHideTable()">&times;</button></div>'
+    + '<div class="dp-help" style="margin:0 0 8px;">' + escHtml(dpDraft.role) + ' · ' + n + (n === 1 ? ' turn' : ' turns') + ', one month each'
+    + (dpDraft.dirty ? ' · includes changes not saved yet' : '') + '</div>'
+    + '<input class="dp-search" id="dp-search" type="search" placeholder="Find a name…" oninput="dpFilterTable(this.value)">'
+    + '<div class="dp-tbl" id="dp-tbl">' + head + rows + '</div>'
+    + '<div class="dp-help" id="dp-nomatch" style="display:none;text-align:center;margin:-2px 0 10px;">Nobody by that name in the turns.</div>'
+    + '<button class="dp-btn dp-cancel" style="width:100%;" onclick="dpHideTable()">← Back to the plan</button>';
+}
+function dpFilterTable(q) {
+  q = String(q || '').trim().toLowerCase();
+  var shown = 0;
+  document.querySelectorAll('#dp-tbl .dp-tr[data-names]').forEach(function (row) {
+    var hit = !q || row.getAttribute('data-names').indexOf(q) !== -1;
+    row.style.display = hit ? '' : 'none';
+    if (hit) shown++;
+  });
+  var none = document.getElementById('dp-nomatch');
+  if (none) none.style.display = shown ? 'none' : 'block';
+}
+function dpShowTable() { if (dpDraft) { dpDraft.view = 'table'; dpRender(); } }
+function dpHideTable() { if (dpDraft) { dpDraft.view = 'edit'; dpRender(); } }
+
+function dpTouch() { dpDraft.dirty = true; dpRender(); }
+function dpSetType(t) { if (dpDraft && dpDraft.type !== t) { dpDraft.type = t; dpTouch(); } }
+function dpSetStart(ms) { if (dpDraft && ms) { dpDraft.start = ms; dpTouch(); } }
+function dpStaffEntry(name) { var s = dpStaff.find(function (x) { return x.name === name; }); return { name: name, email: s ? s.email : null }; }
+function dpAdd(m, name) { if (name && dpDraft) { dpDraft.months[m].push(dpStaffEntry(name)); dpTouch(); } }
+function dpRemove(m, i) { if (dpDraft) { dpDraft.months[m].splice(i, 1); dpTouch(); } }
+function dpAddT(t, name) { if (name && dpDraft && dpDraft.turns[t]) { dpDraft.turns[t].push(dpStaffEntry(name)); dpTouch(); } }
+function dpRemoveT(t, i) { if (dpDraft && dpDraft.turns[t]) { dpDraft.turns[t].splice(i, 1); dpTouch(); } }
+function dpAddTurn() { if (dpDraft && dpDraft.turns.length < DUTY_PLAN_MAX_TURNS) { dpDraft.turns.push([]); dpTouch(); } }
+function dpRemoveTurn(t) {
+  if (!dpDraft || dpDraft.turns.length <= 1) return;
+  if (dpDraft.turns[t].length && !confirm('Remove Turn ' + (t + 1) + ' (' + dpDraft.turns[t].map(function (p) { return p.name; }).join(', ') + ')? The turns after it move up a month.')) return;
+  dpDraft.turns.splice(t, 1); dpTouch();
+}
+function dpMoveTurn(t, d) {
+  if (!dpDraft) return;
+  var j = t + d;
+  if (j < 0 || j >= dpDraft.turns.length) return;
+  var x = dpDraft.turns[t]; dpDraft.turns[t] = dpDraft.turns[j]; dpDraft.turns[j] = x; dpTouch();
+}
 
 function dutyPlanClose() {
   var panel = document.getElementById('duty-plan-panel');
@@ -286,15 +511,19 @@ function dutyPlanClose() {
 
 function dpError(msg) { var el = document.getElementById('dp-err'); if (el) { el.textContent = msg; el.style.display = msg ? 'block' : 'none'; } }
 
-// Replaces the role's plan, then clears the months after this one that
-// were filled in from the old plan and left untouched, so they get filled
-// in again from the new one. Months changed or deleted by hand stay as
-// they are (their "already filled in" mark is kept).
-async function dpReplacePlan(role, rows) {
+// Replaces the role's plan (and how it repeats), then clears the months
+// after this one that were filled in from the old plan and left untouched,
+// so they get filled in again from the new one. Months changed or deleted
+// by hand stay as they are (their "already filled in" mark is kept).
+// settings: a duty_plan_settings row to save, 'delete', or null (table
+// not there yet -- leave it).
+async function dpReplacePlan(role, rows, settings) {
   var nextMonth = dpAddMonths(dpMonthStart(localDateStr()), 1);
   var enc = encodeURIComponent(role);
   await dpFetch('DELETE', 'duty_yearly_plan?duty_role=eq.' + enc);
   if (rows.length) await dpFetch('POST', 'duty_yearly_plan', rows);
+  if (settings === 'delete') await dpFetch('DELETE', 'duty_plan_settings?duty_role=eq.' + enc);
+  else if (settings) await dpFetch('POST', 'duty_plan_settings?on_conflict=duty_role', settings, 'resolution=merge-duplicates,return=minimal');
   // Only months where every row is still exactly as the plan filled it in --
   // one swapped person ('changed') or a row added by hand leaves the whole
   // month alone.
@@ -318,14 +547,25 @@ async function dutyPlanSave() {
   if (!dutyPlanCanEdit() || !dpDraft) return;
   var role = dpDraft.role;
   if (!role) { dpError('Please pick a duty role.'); return; }
-  var rows = [];
-  for (var m = 1; m <= 12; m++) dpDraft.months[m].forEach(function (p) { rows.push({ duty_role: role, month: m, staff_name: p.name, staff_email: p.email }); });
-  if (!rows.length) { dpError('Add at least one person to a month, or use "Stop this plan".'); return; }
+  var rows = [], settings = null, summary;
+  if (dpDraft.type === 'turns') {
+    if (!dutyPlanSettingsOk) { dpError('"Take turns in order" needs a one-time database update first: run docs/duty-turns-plan.sql in the Supabase SQL Editor, then try again.'); return; }
+    var n = dpDraft.turns.length;
+    for (var t = 0; t < n; t++) if (!dpDraft.turns[t].length) { dpError('Turn ' + (t + 1) + ' has nobody yet — add someone or remove that turn.'); return; }
+    dpDraft.turns.forEach(function (people, i) { people.forEach(function (p) { rows.push({ duty_role: role, month: i + 1, staff_name: p.name, staff_email: p.email }); }); });
+    settings = { duty_role: role, plan_type: 'turns', start_month: dpDraft.start, turns: n, updated_at: new Date().toISOString() };
+    summary = n + ' turns from ' + dpShortMonth(dpDraft.start) + ', ' + rows.length + ' people';
+  } else {
+    for (var m = 1; m <= 12; m++) dpDraft.months[m].forEach(function (p) { rows.push({ duty_role: role, month: m, staff_name: p.name, staff_email: p.email }); });
+    if (!rows.length) { dpError('Add at least one person to a month, or use "Stop this plan".'); return; }
+    if (dutyPlanSettingsOk) settings = { duty_role: role, plan_type: 'yearly', start_month: null, turns: null, updated_at: new Date().toISOString() };
+    summary = rows.length + ' people across the year';
+  }
   dpError('');
   var btn = document.getElementById('dp-save'); if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
   try {
-    await dpReplacePlan(role, rows);
-    if (typeof logAudit === 'function') logAudit('duty', null, dpDraft.existing ? 'edited' : 'added', role, { yearlyPlan: rows.length + ' people across the year' }, null);
+    await dpReplacePlan(role, rows, settings);
+    if (typeof logAudit === 'function') logAudit('duty', null, dpDraft.existing ? 'edited' : 'added', role, { dutyPlan: summary }, null);
     dutyPlanClose();
     if (typeof dutyPlanAfterChange === 'function') dutyPlanAfterChange();
   } catch (e) {
@@ -337,10 +577,10 @@ async function dutyPlanSave() {
 async function dutyPlanStop() {
   if (!dutyPlanCanEdit() || !dpDraft) return;
   var role = dpDraft.role;
-  if (!confirm('Stop the yearly plan for ' + role + '? This month stays as it is; later months filled in from the plan are removed.')) return;
+  if (!confirm('Stop the duty plan for ' + role + '? This month stays as it is; later months filled in from the plan are removed.')) return;
   try {
-    await dpReplacePlan(role, []);
-    if (typeof logAudit === 'function') logAudit('duty', null, 'deleted', role, { yearlyPlan: 'stopped' }, null);
+    await dpReplacePlan(role, [], dutyPlanSettingsOk ? 'delete' : null);
+    if (typeof logAudit === 'function') logAudit('duty', null, 'deleted', role, { dutyPlan: 'stopped' }, null);
     dutyPlanClose();
     if (typeof dutyPlanAfterChange === 'function') dutyPlanAfterChange();
   } catch (e) { dpError('Could not stop the plan: ' + e.message); }
@@ -359,4 +599,5 @@ async function dutyPlanRenameRole(oldName, newName) {
     await dpFetch('PATCH', 'duty_yearly_plan?duty_role=eq.' + encodeURIComponent(oldName), { duty_role: newName });
     await dpFetch('PATCH', 'duty_plan_generated?duty_role=eq.' + encodeURIComponent(oldName), { duty_role: newName });
   } catch (e) {}
+  if (dutyPlanSettingsOk) try { await dpFetch('PATCH', 'duty_plan_settings?duty_role=eq.' + encodeURIComponent(oldName), { duty_role: newName }); } catch (e) {}
 }

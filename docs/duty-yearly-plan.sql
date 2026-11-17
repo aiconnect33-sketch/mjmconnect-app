@@ -9,7 +9,9 @@
 -- duty_roster (the Duty Roster screen, faulty-report emails and push
 -- notifications) keeps working unchanged.
 --
--- Safe to run more than once.
+-- Safe to run more than once. If docs/duty-turns-plan.sql has been run
+-- ("Take turns in order" plans), run it again after this file -- this one
+-- puts back the older ensure_duty_plan() that only knows yearly plans.
 
 -- 1. The plan: one row per person per month per duty role.
 create table if not exists duty_yearly_plan (
