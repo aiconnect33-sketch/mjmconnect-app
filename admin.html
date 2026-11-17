@@ -438,6 +438,10 @@ html, body {
 .to-correct-field label { display: block; font-size: 9px; font-weight: 600; color: var(--text3); text-transform: uppercase; margin-bottom: 4px; }
 .to-correct-row input { width: 100%; box-sizing: border-box; border: 1px solid var(--blue-text); border-radius: 8px; padding: 8px 10px; font-size: 13px; font-family: inherit; }
 .to-edit-icon { flex-shrink: 0; cursor: pointer; color: var(--text3); font-size: 14px; padding: 4px 6px; margin: -4px -6px; }
+/* Admin / Time Off editor actions on a Time Off record -- same look as Out for Work's */
+.to-acts { display: flex; gap: 14px; margin-top: 6px; }
+.to-act { font-size: 10.5px; font-weight: 700; cursor: pointer; color: var(--green); }
+.to-act.red { color: var(--red-text); }
 .to-pill-wrap { display: flex; background: var(--surface); border-radius: var(--r-lg); border: 0.5px solid var(--border); padding: 4px; gap: 4px; margin: 16px 0 10px; }
 .to-pill { flex: 1; min-width: 0; padding: 7px 4px; border-radius: var(--r-md); border: none; font-family: inherit; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
@@ -7260,7 +7264,7 @@ html, body {
     return '<div class="to-history-row" style="opacity:0.6;">'
       + '<div class="to-history-top"><div class="to-history-reason" style="text-decoration:line-through;">' + label + '</div>'
       + '<span class="badge" style="background:var(--bg);color:var(--text3);">Voided</span></div>'
-      + '<div class="to-history-time">' + timeLabel + ' — moved to Annual Leave</div></div>';
+      + '<div class="to-history-time">' + timeLabel + ' — ' + (r.cancel_requested_at ? 'moved to Annual Leave' : 'cancelled by admin') + '</div></div>';
   }
   function timeoffRenderAllRow(r) {
     var isPending = r.entry_type === 'cancel_pending';
@@ -7279,13 +7283,16 @@ html, body {
     if (isPending) reasonLabel = '<span style="text-decoration:line-through;">' + reasonLabel + '</span>';
     var canCorrect = !!r.time_in && !isPending;
     var key = 'all-' + r.id;
-    var editIcon = canCorrect ? '<div class="to-edit-icon" onclick="adminToggleTimeOffCorrection(\'' + key + '\')" title="Correct Time In"><i class="ti ti-pencil"></i></div>' : '';
+    // Edit times + Cancel, same as Out for Work (every admin can).
+    var acts = (canCorrect ? '<span class="to-act" onclick="adminToggleTimeOffCorrection(\'' + key + '\')">✎ Edit times</span>' : '')
+      + (!isPending ? '<span class="to-act red" onclick="adminCancelTimeOff(' + r.id + ')">✕ Cancel</span>' : '');
     var html = '<div class="to-history-row">'
       + '<div class="to-history-top">'
       + '<div style="flex:1;min-width:0;display:flex;align-items:center;gap:6px;">'
-      + '<div class="to-history-reason">' + reasonLabel + '</div>' + editIcon
+      + '<div class="to-history-reason">' + reasonLabel + '</div>'
       + '</div>' + badge + '</div>'
-      + '<div class="to-history-time">' + timeLabel + (r.time_in ? ' · ' + fmtTimeOffDuration(r.duration_minutes || 0) + ' actual' : '') + entryNote + '</div>';
+      + '<div class="to-history-time">' + timeLabel + (r.time_in ? ' · ' + fmtTimeOffDuration(r.duration_minutes || 0) + ' actual' : '') + entryNote + '</div>'
+      + (acts ? '<div class="to-acts">' + acts + '</div>' : '');
     if (canCorrect) html += timeoffCorrectionRowHtml(key, r);
     if (isPending) {
       html += '<div class="to-warn amber">'
@@ -7785,13 +7792,16 @@ html, body {
     var reasonLabel = isPending ? '<span style="text-decoration:line-through;">' + escHtml(r.reason) + '</span>' : escHtml(r.reason);
     var canCorrect = !!r.time_in && !isPending;
     var key = 'mine-' + r.id;
-    var editIcon = canCorrect ? '<div class="to-edit-icon" onclick="adminToggleTimeOffCorrection(\'' + key + '\')" title="Correct Time In"><i class="ti ti-pencil"></i></div>' : '';
+    // Edit times + Cancel, same as Out for Work (every admin can).
+    var acts = (canCorrect ? '<span class="to-act" onclick="adminToggleTimeOffCorrection(\'' + key + '\')">✎ Edit times</span>' : '')
+      + (!isPending ? '<span class="to-act red" onclick="adminCancelTimeOff(' + r.id + ')">✕ Cancel</span>' : '');
     var html = '<div class="to-history-row">'
       + '<div class="to-history-top">'
       + '<div style="flex:1;min-width:0;display:flex;align-items:center;gap:6px;">'
-      + '<div class="to-history-reason">' + reasonLabel + '</div>' + editIcon
+      + '<div class="to-history-reason">' + reasonLabel + '</div>'
       + '</div>' + badge + '</div>'
-      + '<div class="to-history-time">' + timeLabel + (r.time_in ? ' · ' + fmtTimeOffDuration(r.duration_minutes || 0) + ' actual' : '') + entryNote + '</div>';
+      + '<div class="to-history-time">' + timeLabel + (r.time_in ? ' · ' + fmtTimeOffDuration(r.duration_minutes || 0) + ' actual' : '') + entryNote + '</div>'
+      + (acts ? '<div class="to-acts">' + acts + '</div>' : '');
     if (canCorrect) html += timeoffCorrectionRowHtml(key, r);
     if (isPending) {
       html += '<div class="to-warn amber"><b>⏳ Waiting on HR approval.</b>Once approved, you\'ll be reminded to apply Annual Leave to cover this day.</div>';
@@ -8011,6 +8021,31 @@ html, body {
       method: 'POST', mode: 'no-cors',
       body: JSON.stringify({ secret: PUSH_SEND_SECRET, email: email, reason: reason, day: day })
     }).catch(function () {});
+  }
+
+  // Cancels a record outright -- mirrors cancelTimeOffAsAdmin() in
+  // js/tab-timeoff.js. No "apply Annual Leave" reminder (cancel_requested_at
+  // stays empty), it just stops counting towards the 4h limit.
+  async function adminCancelTimeOff(id) {
+    if (!confirm('Cancel this Time Off?\n\nIt will be marked as cancelled and won\'t count towards the 4h limit. No Annual Leave reminder is sent.')) return;
+    try {
+      var rows = await sbFetch('GET', '/rest/v1/time_off_records?id=eq.' + id);
+      var record = rows && rows[0];
+      if (!record) return;
+      var patch = { entry_type: 'voided' };
+      if (!record.time_in) {
+        var timeIn = new Date();
+        patch.time_in = timeIn.toISOString();
+        patch.duration_minutes = Math.round((timeIn.getTime() - new Date(record.time_out).getTime()) / 60000);
+      }
+      await sbFetch('PATCH', '/rest/v1/time_off_records?id=eq.' + id, patch, { 'Prefer': '' });
+      loadAdminTimeOffSelf();
+      if (typeof loadDbTimeOff === 'function') loadDbTimeOff();
+      if (typeof loadAdminLeaveDuty === 'function') loadAdminLeaveDuty();
+      Object.assign(record, patch);
+      var monthStartC = localDateStr().slice(0, 8) + '01';
+      adminTimeOffMonthlyMinutes(record.staff_email, monthStartC).then(function (mins) { adminSyncTimeOffToSheet('update', record, mins); });
+    } catch (e) { alert('Could not cancel this Time Off. Please try again.'); }
   }
 
   async function adminApproveCancelTimeOff(id) {

@@ -676,6 +676,10 @@
   .to-history-reason { font-size: 12.5px; font-weight: 700; color: var(--text-primary); }
   .to-history-time { font-size: 10.5px; color: var(--text-secondary); }
   .to-edit-icon { flex-shrink: 0; cursor: pointer; color: var(--text-secondary); font-size: 14px; padding: 4px 6px; margin: -4px -6px; }
+  /* Admin / Time Off editor actions on a Time Off record -- same look as Out for Work's */
+  .to-acts { display: flex; gap: 14px; margin-top: 6px; }
+  .to-act { font-size: 10.5px; font-weight: 700; cursor: pointer; color: var(--green-dark); }
+  .to-act.red { color: var(--red-text); }
   /* Stacked (not side-by-side) so the two time fields never have to share a
      cramped row -- a side-by-side layout depended on a precise pixel gap
      between two native time-picker widgets, which some mobile browsers
