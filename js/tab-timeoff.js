@@ -175,14 +175,18 @@ async function loadTimeOff() {
     try {
       var url = SURL + '/rest/v1/time_off_records?time_in=is.null&entry_type=neq.voided&entry_type=neq.cancel_pending&order=time_out.asc&limit=20';
       var res = await fetch(url, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } });
-      var data = await res.json();
-      if (data && data.length) {
-        var names = data.map(function (r) { return timeoffDisplayName(r); }).join(', ');
+      var data = (await res.json()) || [];
+      // Out for Work (js/work-outings.js) -- listed on the same card, with
+      // its own purple line so colleagues can tell who's on company business.
+      var work = typeof woFetchOpen === 'function' ? await woFetchOpen() : [];
+      if (data.length || work.length) {
+        var names = data.concat(work).map(function (r) { return timeoffDisplayName(r); }).join(', ');
         homeEl.innerHTML = '<div class="home-summary-card" onclick="switchNav(\'timeoff\');loadTimeOff()">'
           + '<div class="home-summary-ic" style="background:var(--blue-bg);color:var(--blue-text);"><i class="ti ti-clock"></i></div>'
           + '<div style="flex:1;min-width:0;"><div class="home-summary-title">Currently Out</div>'
-          + '<div class="home-summary-sub" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escHtml(names) + '</div></div>'
-          + '<div class="home-summary-count">' + data.length + '</div>'
+          + '<div class="home-summary-sub" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escHtml(names) + '</div>'
+          + (typeof woHomeLineHtml === 'function' ? woHomeLineHtml(work) : '') + '</div>'
+          + '<div class="home-summary-count">' + (data.length + work.length) + '</div>'
           + '<i class="ti ti-chevron-right home-summary-chev"></i>'
           + '</div>';
       } else {
@@ -240,6 +244,9 @@ async function loadTimeOff() {
     if (overviewEl) overviewEl.innerHTML = '';
     if (allEl) allEl.innerHTML = '';
   }
+
+  // 💼 Work side of this tab -- see js/work-outings.js.
+  if (typeof woLoad === 'function') woLoad();
 
   // Event Day Off credits -- a separate table from time_off_records, so a
   // failure here is kept independent of the rest of the tab above. The note
@@ -826,6 +833,10 @@ async function startTimeOff(timeOutDate) {
     var existing = await fetch(SURL + '/rest/v1/time_off_records?staff_email=eq.' + encodeURIComponent(me.email) + '&time_in=is.null&entry_type=neq.cancel_pending&limit=1',
       { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } }).then(function (r) { return r.json(); });
     if (existing && existing.length) { alert('You already have an open Time Off. Time In on that one first.'); return; }
+    if (typeof woMyOpenOuting === 'function' && await woMyOpenOuting(me.email)) {
+      alert('You\'re out for work right now. Tap I\'m Back on the 💼 Work side first.');
+      return;
+    }
 
     var monthStart = localDateStr().slice(0, 8) + '01';
     var monthlyMinutes = await timeOffMonthlyMinutes(me.email, monthStart);
@@ -945,6 +956,10 @@ async function convertReminder(id) {
     var existing = await fetch(SURL + '/rest/v1/time_off_records?staff_email=eq.' + encodeURIComponent(me.email) + '&time_in=is.null&entry_type=neq.cancel_pending&limit=1',
       { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } }).then(function (r) { return r.json(); });
     if (existing && existing.length) { alert('You already have an open Time Off. Time In on that one first.'); return; }
+    if (typeof woMyOpenOuting === 'function' && await woMyOpenOuting(me.email)) {
+      alert('You\'re out for work right now. Tap I\'m Back on the 💼 Work side first.');
+      return;
+    }
 
     var monthStart = localDateStr().slice(0, 8) + '01';
     var monthlyMinutes = await timeOffMonthlyMinutes(me.email, monthStart);

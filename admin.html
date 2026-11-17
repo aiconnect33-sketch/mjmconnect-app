@@ -680,6 +680,21 @@ html, body {
 .rpt-toggle { font-size: 12.5px; font-weight: 700; padding: 8px 16px; border-radius: 9px; color: var(--text2); cursor: pointer; }
 .rpt-toggle.active { background: var(--surface); color: var(--green); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
 .view-staff-link { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 700; color: var(--green); cursor: pointer; }
+/* Time Off Report: By trip | By staff + month range picker */
+.tor-view-switch { display: inline-flex; background: var(--surface); border: 1px solid #C3D2CB; border-radius: 10px; padding: 3px; gap: 3px; }
+.tor-view-switch button { font-size: 11.5px; font-weight: 700; padding: 6px 12px; border-radius: 7px; border: none; background: transparent; color: var(--text2); font-family: inherit; cursor: pointer; white-space: nowrap; }
+.tor-view-switch button.active { background: var(--green); color: #fff; }
+.tor-range-panel { position: absolute; top: 40px; left: 0; z-index: 20; background: var(--surface); border: 1px solid #C3D2CB; border-radius: 12px; box-shadow: 0 12px 30px rgba(0,0,0,.14); padding: 14px; }
+.tor-range-lbl { font-size: 10px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
+.tor-meter { width: 110px; height: 7px; background: #EEF2F0; border-radius: 7px; overflow: hidden; display: inline-block; vertical-align: middle; margin-right: 8px; }
+.tor-meter i { display: block; height: 100%; border-radius: 7px; }
+.tor-staff-row { cursor: pointer; }
+.tor-staff-row:hover td { background: #F7FAF9; }
+.tor-staff-row.open td { background: #EEF7F3; }
+.tor-staff-trips td { background: #F7FAF9; font-size: 11.5px; color: var(--text2); padding: 6px 12px 6px 28px; border-top: 1px dashed #E2ECE8; }
+.tor-av { width: 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; margin-right: 8px; vertical-align: middle; background: var(--green-bg); color: var(--green-text); }
+.tor-av.wo { background: #EEEDFE; color: #534AB7; }
+.b-work { background: #EEEDFE; color: #534AB7; }
 
 /* ── CALENDAR CARD (Booking availability) ── */
 .cal-card {
@@ -1211,6 +1226,7 @@ html, body {
 <script src="js/push.js"></script>
 <script src="js/faulty-progress.js"></script>
 <script src="js/duty-plan.js"></script>
+<script src="js/work-outings.js"></script>
 <script>
   // Auth guard — require a logged-in session with an admin role
   (function() {
@@ -1810,6 +1826,15 @@ html, body {
       <div class="sec-hdr">
         <div class="sec-title">My Time Off</div>
       </div>
+      <!-- 🚶 Personal | 💼 Work -- same switch as the staff app; Work is
+           "Out for Work" (js/work-outings.js), never charged to Time Off. -->
+      <div class="to-pill-wrap wo-kind-wrap">
+        <button id="to-kind-personal" class="to-pill" onclick="woSwitchKind('personal')"
+          style="background:var(--green);color:#fff;">🚶 Personal</button>
+        <button id="to-kind-work" class="to-pill" onclick="woSwitchKind('work')"
+          style="background:transparent;color:var(--text2);">💼 Work</button>
+      </div>
+      <div id="to-personal-panel">
       <div id="admin-timeoff-status">
         <div class="card"><div style="font-size:12px;color:var(--text3);text-align:center;padding:14px 0;">Loading...</div></div>
       </div>
@@ -1907,6 +1932,8 @@ html, body {
       <div id="timeoff-list" style="display:none;">
       </div>
       <div id="edo-list" style="display:none;"></div>
+      </div><!-- /to-personal-panel -->
+      <div id="to-work-panel" style="display:none;"></div>
 
     </div><!-- /timeoff -->
 
@@ -2378,10 +2405,10 @@ html, body {
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap;">
         <div>
           <div class="sec-title" style="margin-bottom:4px;">Time Off Report</div>
-          <div style="font-size:11.5px;color:var(--text3);">Every Time Off trip and Event Day Off credit, pulled live — no need to check the Google Sheet.</div>
+          <div style="font-size:11.5px;color:var(--text3);">Every Time Off trip, Event Day Off credit and work outing, pulled live — no need to check the Google Sheet.</div>
         </div>
         <button class="book-btn-primary" style="width:auto;margin-bottom:0;padding:9px 16px;" id="tor-download-btn" onclick="downloadTimeOffReportCsv()">
-          <i class="ti ti-download"></i> Download CSV
+          <i class="ti ti-download"></i> <span id="tor-download-label">Download CSV</span>
         </button>
       </div>
 
@@ -2391,6 +2418,31 @@ html, body {
       <div class="rpt-toggle-wrap">
         <div class="rpt-toggle active" id="tor-mode-timeoff" onclick="setTimeOffReportMode('timeoff')">Time Off</div>
         <div class="rpt-toggle" id="tor-mode-edo" onclick="setTimeOffReportMode('edo')">Event Day Off</div>
+        <div class="rpt-toggle" id="tor-mode-work" onclick="setTimeOffReportMode('work')">💼 Work</div>
+      </div>
+
+      <!-- Shared by the Time Off and 💼 Work tabs (Event Day Off keeps its
+           own all-time view): By trip | By staff, and the period -- a
+           month range picked From / To (one month = From and To the same).
+           The table and Download CSV always cover exactly this period. -->
+      <div id="tor-shared-toolbar" style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;position:relative;">
+        <div class="tor-view-switch">
+          <button id="tor-view-trip" class="active" onclick="setTorView('trip')">📋 By trip</button>
+          <button id="tor-view-staff" onclick="setTorView('staff')">👥 By staff</button>
+        </div>
+        <button class="fr-select" id="tor-range-btn" onclick="torOpenRange()">📅 This month ▾</button>
+        <div id="tor-range-panel" class="tor-range-panel" style="display:none;">
+          <div style="font-size:12.5px;font-weight:700;margin-bottom:10px;">Month range</div>
+          <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:12px;">
+            <div><div class="tor-range-lbl">From</div><select class="fr-select" id="tor-range-from"></select></div>
+            <div style="padding-bottom:7px;color:var(--text3);">→</div>
+            <div><div class="tor-range-lbl">To</div><select class="fr-select" id="tor-range-to"></select></div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:8px;">
+            <button class="fr-pill" onclick="torCancelRange()">Cancel</button>
+            <button class="fr-pill active" onclick="torApplyRange()">Apply</button>
+          </div>
+        </div>
       </div>
 
       <div id="tor-view-timeoff">
@@ -2406,25 +2458,22 @@ html, body {
       <div id="tor-al-reminder-banner" style="display:none;"></div>
 
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+        <span class="tor-trip-only" style="display:contents;">
         <button class="fr-pill active" id="tor-filter-all" onclick="setTimeOffReportFilter('all')">All</button>
         <button class="fr-pill" id="tor-filter-out" onclick="setTimeOffReportFilter('out')">Currently Out</button>
         <button class="fr-pill" id="tor-filter-completed" onclick="setTimeOffReportFilter('completed')">Completed</button>
         <button class="fr-pill" id="tor-filter-pending_cancel" onclick="setTimeOffReportFilter('pending_cancel')">Pending Cancellation</button>
         <button class="fr-pill" id="tor-filter-voided" onclick="setTimeOffReportFilter('voided')">Voided</button>
+        </span>
         <select class="fr-select" id="tor-staff-select" onchange="setTimeOffReportStaff(this.value)">
           <option value="">All Staff</option>
         </select>
-        <select class="fr-select" id="tor-range-select" onchange="loadTimeOffReport()">
-          <option value="30">Last 30 days</option>
-          <option value="90">Last 90 days</option>
-          <option value="0">All time</option>
-        </select>
         <div style="flex:1;min-width:140px;">
-          <input class="fr-search" id="tor-search-input" placeholder="Search reason…" oninput="renderTimeOffReportTable()">
+          <input class="fr-search" id="tor-search-input" placeholder="Search name or reason…" oninput="renderTimeOffReportTable()">
         </div>
       </div>
 
-      <div class="fr-table-wrap">
+      <div class="fr-table-wrap" id="tor-trip-table">
         <table class="fr-table">
           <thead>
             <tr>
@@ -2433,15 +2482,19 @@ html, body {
               <th>Time Out</th>
               <th>Time In</th>
               <th>Duration</th>
+              <th>Charged</th>
               <th>Reason</th>
               <th>Status</th>
             </tr>
           </thead>
           <tbody id="tor-table-body">
-            <tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px;">Loading…</td></tr>
+            <tr><td colspan="8" style="text-align:center;color:var(--text3);padding:20px;">Loading…</td></tr>
           </tbody>
         </table>
       </div>
+      <!-- By staff: one row per person per month (the 4h limit is monthly),
+           click a row to see that person's trips. -->
+      <div class="fr-table-wrap" id="tor-staff-table" style="display:none;"></div>
 
       </div><!-- /tor-view-timeoff -->
 
@@ -2494,6 +2547,27 @@ html, body {
       <div style="font-size:11px;color:var(--text3);margin-top:10px;">"Awaiting" = still valid, staff just hasn't picked a date yet.</div>
 
       </div><!-- /tor-view-edo -->
+
+      <!-- 💼 Work -- every "Out for Work" outing (js/work-outings.js,
+           table work_outings). Never charged, no 4h/2h checks, no approvals. -->
+      <div id="tor-view-work" style="display:none;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+        <span class="tor-trip-only" style="display:contents;">
+        <button class="fr-pill active" id="tor-wo-filter-all" onclick="setWorkReportFilter('all')">All</button>
+        <button class="fr-pill" id="tor-wo-filter-out" onclick="setWorkReportFilter('out')">Currently Out</button>
+        <button class="fr-pill" id="tor-wo-filter-completed" onclick="setWorkReportFilter('completed')">Completed</button>
+        <button class="fr-pill" id="tor-wo-filter-voided" onclick="setWorkReportFilter('voided')">Cancelled</button>
+        </span>
+        <select class="fr-select" id="tor-wo-staff-select" onchange="setWorkReportStaff(this.value)">
+          <option value="">All Staff</option>
+        </select>
+        <div style="flex:1;min-width:140px;">
+          <input class="fr-search" id="tor-wo-search-input" placeholder="Search name, where to or what for…" oninput="renderWorkReport()">
+        </div>
+      </div>
+      <div class="fr-table-wrap" id="tor-wo-table"></div>
+      <div style="font-size:11px;color:var(--text3);margin-top:10px;">Work outings never count towards Time Off — no charged hours, no 4h / 2h checks, no approvals.</div>
+      </div><!-- /tor-view-work -->
 
     </div><!-- /timeoffreport -->
 
@@ -2788,7 +2862,7 @@ html, body {
     if (name === 'book')     initBookTab();
     if (name === 'faulty')   initFaultyTab();
     if (name === 'faultyreport') loadFaultyReport();
-    if (name === 'timeoffreport') { loadTimeOffReport(); loadEventDayOffReport(); }
+    if (name === 'timeoffreport') { loadTimeOffReport(); loadEventDayOffReport(); loadWorkOutingsReport(); }
     recordScreenChange(name);
     rememberTab(name);
   }
@@ -5807,15 +5881,10 @@ html, body {
   async function loadTimeOffReport() {
     var tbody = document.getElementById('tor-table-body');
     if (!tbody) return;
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px;">Loading…</td></tr>';
+    torEnsurePeriodOptions();
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:20px;">Loading…</td></tr>';
     try {
-      var days = Number(document.getElementById('tor-range-select').value) || 0;
-      var filter = 'order=time_out.desc&limit=1000';
-      if (days > 0) {
-        var cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
-        filter = 'time_out=gte.' + cutoff + '&' + filter;
-      }
-      torReportData = (await sbGet('time_off_records', filter)) || [];
+      torReportData = (await sbGet('time_off_records', torPeriodFilter() + 'order=time_out.desc&limit=5000')) || [];
       // Report has its own separately-loaded data, independent of whatever
       // the main Time Off tab has in timeoffNameMap -- resolve it here too
       // rather than assume that tab was already visited this session.
@@ -5827,7 +5896,7 @@ html, body {
       renderTimeOffReportTable();
     } catch (e) {
       torReportData = [];
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px;">Could not load report.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:20px;">Could not load report.</td></tr>';
     }
   }
 
@@ -5974,16 +6043,18 @@ html, body {
       return !torStaffFilter || torStaffKey(r) === torStaffFilter;
     }).filter(function (r) {
       if (!q) return true;
-      return (r.staff_name || '').toLowerCase().indexOf(q) !== -1 || (r.reason || '').toLowerCase().indexOf(q) !== -1;
+      return (r.staff_name || '').toLowerCase().indexOf(q) !== -1 || timeoffDisplayName(r).toLowerCase().indexOf(q) !== -1
+        || (r.reason || '').toLowerCase().indexOf(q) !== -1;
     });
   }
 
   function renderTimeOffReportTable() {
     var tbody = document.getElementById('tor-table-body');
     if (!tbody) return;
+    if (torView === 'staff') { renderTimeOffStaffTable(); return; }
     var rows = torVisibleRows();
     if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px;">No Time Off trips match.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:20px;">No Time Off trips match.</td></tr>';
       return;
     }
     tbody.innerHTML = rows.map(function (r) {
@@ -5995,6 +6066,7 @@ html, body {
         + '<td>' + outParts[1] + '</td>'
         + '<td>' + (inParts ? inParts[1] : '<span style="color:var(--text3);">—</span>') + '</td>'
         + '<td>' + (r.duration_minutes != null ? fmtTimeOffDuration(r.duration_minutes) : '<span style="color:var(--text3);">—</span>') + '</td>'
+        + '<td style="font-weight:700;">' + (torTripCounts(r) ? fmtTimeOffChargedHours(timeoffRecordChargedMinutes(r)) : '<span style="color:var(--text3);font-weight:400;">—</span>') + '</td>'
         + '<td>' + escHtml(r.reason || '') + '</td>'
         + '<td>' + torStatusBadge(r) + '</td>'
         + '</tr>';
@@ -6003,31 +6075,431 @@ html, body {
 
   // Exports exactly what's currently filtered/searched, same convention as
   // the Faulty Complaint Report's CSV above.
-  function downloadTimeOffReportCsv() {
-    var rows = torVisibleRows();
-    var headers = ['Date', 'Staff Name', 'Time Out', 'Time In', 'Duration (min)', 'Reason', 'Status'];
-    function csvEscape(v) {
-      v = String(v == null ? '' : v);
-      if (/[",\n]/.test(v)) v = '"' + v.replace(/"/g, '""') + '"';
-      return v;
-    }
-    var lines = [headers.join(',')];
-    rows.forEach(function (r) {
-      lines.push([
-        fcDateTime(r.time_out).split(',')[0], timeoffDisplayName(r), fcDateTime(r.time_out),
-        r.time_in ? fcDateTime(r.time_in) : '', r.duration_minutes != null ? r.duration_minutes : '',
-        r.reason, torStatus(r)
-      ].map(csvEscape).join(','));
-    });
-    var blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  function torCsvEscape(v) {
+    v = String(v == null ? '' : v);
+    if (/[",\n]/.test(v)) v = '"' + v.replace(/"/g, '""') + '"';
+    return v;
+  }
+  function torSaveCsv(lines, fileName) {
+    // BOM so Excel reads names with accents or emoji correctly.
+    var blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
     a.href = url;
-    a.download = 'time-off-' + localDateStr() + '.csv';
+    a.download = fileName;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  }
+
+  // Exports exactly what's on screen for the chosen period -- every trip
+  // (By trip, oldest first, with a per-staff monthly total at the bottom)
+  // or the one-row-per-person-per-month summary (By staff).
+  function downloadTimeOffReportCsv() {
+    if (torView === 'staff') { downloadTimeOffStaffCsv(); return; }
+    var rows = torVisibleRows().slice().sort(function (a, b) { return new Date(a.time_out) - new Date(b.time_out); });
+    var lines = [['Date', 'Staff Name', 'Time Out', 'Time In', 'Duration (min)', 'Charged (h)', 'Reason', 'Status'].join(',')];
+    rows.forEach(function (r) {
+      lines.push([
+        fcDateTime(r.time_out).split(',')[0], timeoffDisplayName(r), fcDateTime(r.time_out),
+        r.time_in ? fcDateTime(r.time_in) : '', r.duration_minutes != null ? r.duration_minutes : '',
+        torTripCounts(r) ? timeoffRecordChargedMinutes(r) / 60 : 0,
+        r.reason, torStatus(r)
+      ].map(torCsvEscape).join(','));
+    });
+    var groups = torStaffMonthGroups(rows);
+    if (groups.length) {
+      lines.push('');
+      lines.push(torCsvEscape('Total per staff — ' + torPeriodLabel()));
+      lines.push(['Month', 'Staff Name', 'Trips', 'Charged (h)', 'Status'].join(','));
+      groups.forEach(function (g) {
+        lines.push([torMonthLabel(g.month), g.name, g.trips, g.charged / 60, torStaffStatus(g.charged).label].map(torCsvEscape).join(','));
+      });
+    }
+    torSaveCsv(lines, 'Time-Off-Report-' + torPeriodFileTag() + '.csv');
+  }
+
+  function downloadTimeOffStaffCsv() {
+    var groups = torStaffMonthGroups(torVisibleRows());
+    var lines = [['Month', 'Staff Name', 'Trips', 'Actual (min)', 'Charged (h)', 'Trips over 2h', 'Pending cancellation', 'Status'].join(',')];
+    var tot = { trips: 0, actual: 0, charged: 0, over2: 0, pending: 0 };
+    groups.forEach(function (g) {
+      lines.push([torMonthLabel(g.month), g.name, g.trips, Math.round(g.actual), g.charged / 60, g.over2, g.pending, torStaffStatus(g.charged).label].map(torCsvEscape).join(','));
+      tot.trips += g.trips; tot.actual += g.actual; tot.charged += g.charged; tot.over2 += g.over2; tot.pending += g.pending;
+    });
+    lines.push(['Total', '', tot.trips, Math.round(tot.actual), tot.charged / 60, tot.over2, tot.pending, ''].map(torCsvEscape).join(','));
+    torSaveCsv(lines, 'Time-Off-By-Staff-' + torPeriodFileTag() + '.csv');
+  }
+
+  // ── Period: always a month range (From / To, then Apply). One month is
+  // simply From = To, e.g. Oct 2026 → Oct 2026. Starts on this month. ──
+  var TOR_MONTHS_BACK = 36;
+
+  function torYm(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
+  function torMonthStartDate(ym) { var p = ym.split('-'); return new Date(Number(p[0]), Number(p[1]) - 1, 1); }
+  function torMonthLabel(ym, short) {
+    return torMonthStartDate(ym).toLocaleDateString('en-MY', short ? { month: 'short', year: 'numeric' } : { month: 'long', year: 'numeric' });
+  }
+  function torMonthList() {
+    var now = new Date(), out = [];
+    for (var i = 0; i < TOR_MONTHS_BACK; i++) out.push(torYm(new Date(now.getFullYear(), now.getMonth() - i, 1)));
+    return out;
+  }
+
+  var torPeriod = { type: 'month', ym: torYm(new Date()) };
+
+  function torEnsurePeriodOptions() {
+    var from = document.getElementById('tor-range-from');
+    if (!from || from.options.length) return;
+    var monthOpts = torMonthList().map(function (ym) { return '<option value="' + ym + '">' + torMonthLabel(ym) + '</option>'; }).join('');
+    from.innerHTML = monthOpts;
+    document.getElementById('tor-range-to').innerHTML = monthOpts;
+    torUpdatePeriodButton();
+    torUpdateDownloadLabel();
+  }
+
+  function torUpdatePeriodButton() {
+    var btn = document.getElementById('tor-range-btn');
+    if (btn) btn.textContent = '📅 ' + torPeriodLabel() + ' ▾';
+  }
+
+  function torOpenRange() {
+    torEnsurePeriodOptions();
+    var panel = document.getElementById('tor-range-panel');
+    if (panel.style.display === 'block') { panel.style.display = 'none'; return; }
+    document.getElementById('tor-range-from').value = torPeriod.type === 'range' ? torPeriod.from : torPeriod.ym;
+    document.getElementById('tor-range-to').value = torPeriod.type === 'range' ? torPeriod.to : torPeriod.ym;
+    panel.style.display = 'block';
+  }
+
+  function torApplyRange() {
+    var from = document.getElementById('tor-range-from').value;
+    var to = document.getElementById('tor-range-to').value;
+    if (from > to) { var t = from; from = to; to = t; }
+    torPeriod = from === to ? { type: 'month', ym: from } : { type: 'range', from: from, to: to };
+    document.getElementById('tor-range-panel').style.display = 'none';
+    torUpdatePeriodButton();
+    torReloadPeriod();
+  }
+
+  function torCancelRange() {
+    document.getElementById('tor-range-panel').style.display = 'none';
+  }
+
+  function torReloadPeriod() {
+    torUpdateDownloadLabel();
+    loadTimeOffReport();
+    loadWorkOutingsReport();
+  }
+
+  // PostgREST filter (with a trailing &) for the chosen months, using the
+  // admin's local calendar: from the 1st of From up to the 1st after To.
+  function torPeriodFilter() {
+    var fromYm = torPeriod.type === 'range' ? torPeriod.from : torPeriod.ym;
+    var toYm = torPeriod.type === 'range' ? torPeriod.to : torPeriod.ym;
+    var start = torMonthStartDate(fromYm), last = torMonthStartDate(toYm);
+    var end = new Date(last.getFullYear(), last.getMonth() + 1, 1);
+    return 'time_out=gte.' + start.toISOString() + '&time_out=lt.' + end.toISOString() + '&';
+  }
+
+  function torPeriodLabel() {
+    if (torPeriod.type === 'month') return torMonthLabel(torPeriod.ym);
+    var a = torMonthStartDate(torPeriod.from), b = torMonthStartDate(torPeriod.to);
+    return a.getFullYear() === b.getFullYear()
+      ? a.toLocaleDateString('en-MY', { month: 'short' }) + ' – ' + torMonthLabel(torPeriod.to, true)
+      : torMonthLabel(torPeriod.from, true) + ' – ' + torMonthLabel(torPeriod.to, true);
+  }
+
+  function torPeriodFileTag() {
+    return torPeriod.type === 'month' ? torPeriod.ym : torPeriod.from + '-to-' + torPeriod.to;
+  }
+
+  function torUpdateDownloadLabel() {
+    var el = document.getElementById('tor-download-label');
+    if (!el) return;
+    if (torReportMode === 'edo') el.textContent = 'Download CSV';
+    else el.textContent = 'Download ' + torPeriodLabel();
+  }
+
+  // ── By trip | By staff ──
+  var torView = 'trip';
+  var torOpenStaff = {};
+
+  function setTorView(v) {
+    torView = v;
+    document.getElementById('tor-view-trip').classList.toggle('active', v === 'trip');
+    document.getElementById('tor-view-staff').classList.toggle('active', v === 'staff');
+    // Status pills only make sense trip by trip.
+    document.querySelectorAll('.tor-trip-only').forEach(function (el) { el.style.display = v === 'trip' ? 'contents' : 'none'; });
+    var tt = document.getElementById('tor-trip-table'), st = document.getElementById('tor-staff-table');
+    if (tt) tt.style.display = v === 'trip' ? '' : 'none';
+    if (st) st.style.display = v === 'staff' ? '' : 'none';
+    renderTimeOffReportTable();
+    renderWorkReport();
+  }
+
+  // A trip that counts towards the monthly allowance (not voided, not
+  // waiting on a cancellation).
+  function torTripCounts(r) { return r.entry_type !== 'voided' && r.entry_type !== 'cancel_pending'; }
+
+  function torStaffStatus(charged) {
+    if (charged > TIMEOFF_MONTHLY_CAP_MIN) return { label: 'Over 4h', cls: 'b-red', color: 'var(--red-text)' };
+    if (charged === TIMEOFF_MONTHLY_CAP_MIN) return { label: 'At 4h limit', cls: 'b-amber', color: '#D79A1F' };
+    if (charged >= TIMEOFF_NEAR_LIMIT_MIN) return { label: 'Near limit', cls: 'b-amber', color: '#D79A1F' };
+    return { label: 'Within', cls: 'b-blue', color: 'var(--blue-text)' };
+  }
+
+  // One group per person per calendar month -- the 4h limit is monthly, so
+  // a multi-month period is never added up across months.
+  function torStaffMonthGroups(rows) {
+    var map = {}, list = [];
+    rows.forEach(function (r) {
+      var month = torYm(new Date(r.time_out));
+      var key = torStaffKey(r) + '|' + month;
+      if (!map[key]) {
+        map[key] = { key: key, month: month, name: timeoffDisplayName(r), trips: 0, actual: 0, charged: 0, over2: 0, pending: 0, rows: [] };
+        list.push(map[key]);
+      }
+      var g = map[key];
+      g.rows.push(r);
+      if (r.entry_type === 'cancel_pending') { g.pending++; return; }
+      if (!torTripCounts(r)) return;
+      var actual = r.time_in ? (r.duration_minutes || 0) : (Date.now() - new Date(r.time_out).getTime()) / 60000;
+      g.trips++;
+      g.actual += actual;
+      g.charged += timeoffRecordChargedMinutes(r);
+      if (actual > TIMEOFF_PER_TRIP_CAP_MIN) g.over2++;
+    });
+    return list.filter(function (g) { return g.trips || g.pending; }).sort(function (a, b) {
+      if (a.month !== b.month) return a.month < b.month ? 1 : -1;
+      return b.charged - a.charged || a.name.localeCompare(b.name);
+    });
+  }
+
+  // Two letters: first letters of the first two words, or for a one-word
+  // name like "ShirleyT" its capitals ("ST"), else its first two letters.
+  function torInitials(name) {
+    var words = String(name || '?').split(' ').filter(Boolean);
+    if (words.length > 1) return words.slice(0, 2).map(function (p) { return p[0].toUpperCase(); }).join('');
+    var w = words[0] || '?', caps = w.replace(/[^A-Z]/g, '');
+    return (caps.length >= 2 ? caps.slice(0, 2) : w.slice(0, 2)).toUpperCase();
+  }
+
+  // Keys contain emails, so pass them by index rather than inline in onclick.
+  var torStaffKeys = [];
+  function torKeyIndex(list, key) {
+    var i = list.indexOf(key);
+    if (i === -1) { list.push(key); i = list.length - 1; }
+    return i;
+  }
+
+  function renderTimeOffStaffTable() {
+    var wrap = document.getElementById('tor-staff-table');
+    if (!wrap) return;
+    var groups = torStaffMonthGroups(torVisibleRows());
+    var multiMonth = groups.some(function (g) { return g.month !== groups[0].month; });
+    var cols = multiMonth ? 9 : 8;
+    var html = '<table class="fr-table"><thead><tr><th>Staff</th>' + (multiMonth ? '<th>Month</th>' : '')
+      + '<th>Trips</th><th>Actual time</th><th>Charged that month</th><th>Trips over 2h</th><th>Pending cancel</th><th>Status</th><th></th></tr></thead><tbody>';
+    if (!groups.length) {
+      html += '<tr><td colspan="' + cols + '" style="text-align:center;color:var(--text3);padding:20px;">No Time Off in this period.</td></tr>';
+    }
+    groups.forEach(function (g) {
+      var st = torStaffStatus(g.charged);
+      var pct = Math.min(100, Math.round(g.charged / TIMEOFF_MONTHLY_CAP_MIN * 100));
+      var open = !!torOpenStaff[g.key];
+      html += '<tr class="tor-staff-row' + (open ? ' open' : '') + '" onclick="torToggleStaff(' + torKeyIndex(torStaffKeys, g.key) + ')">'
+        + '<td style="white-space:nowrap;"><span class="tor-av">' + escHtml(torInitials(g.name)) + '</span><b>' + escHtml(g.name) + '</b></td>'
+        + (multiMonth ? '<td style="white-space:nowrap;">' + torMonthLabel(g.month, true) + '</td>' : '')
+        + '<td>' + g.trips + '</td>'
+        + '<td style="white-space:nowrap;">' + fmtTimeOffDuration(g.actual) + '</td>'
+        + '<td style="white-space:nowrap;"><span class="tor-meter"><i style="width:' + pct + '%;background:' + st.color + ';"></i></span><b>' + fmtTimeOffChargedHours(g.charged) + '</b><span style="color:var(--text3);"> / 4h</span></td>'
+        + '<td>' + (g.over2 || '<span style="color:var(--text3);">—</span>') + '</td>'
+        + '<td>' + (g.pending || '<span style="color:var(--text3);">—</span>') + '</td>'
+        + '<td><span class="badge ' + st.cls + '">' + st.label + '</span></td>'
+        + '<td style="color:var(--green);font-weight:700;">' + (open ? '▾' : '›') + '</td></tr>';
+      if (open) {
+        g.rows.slice().sort(function (a, b) { return new Date(a.time_out) - new Date(b.time_out); }).forEach(function (r) {
+          var when = new Date(r.time_out).toLocaleDateString('en-MY', { day: 'numeric', month: 'short' }) + ' · ' + fcDateTime(r.time_out).split(', ')[1]
+            + ' → ' + (r.time_in ? fcDateTime(r.time_in).split(', ')[1] : 'still out');
+          var charge = torTripCounts(r) ? ' · <b>' + fmtTimeOffChargedHours(timeoffRecordChargedMinutes(r)) + ' charged</b>' : '';
+          html += '<tr class="tor-staff-trips"><td colspan="' + cols + '">' + when + ' · ' + escHtml(r.reason || '') + charge + ' ' + torStatusBadge(r) + '</td></tr>';
+        });
+      }
+    });
+    wrap.innerHTML = html + '</tbody></table>';
+  }
+
+  function torToggleStaff(i) {
+    var key = torStaffKeys[i];
+    torOpenStaff[key] = !torOpenStaff[key];
+    renderTimeOffStaffTable();
+  }
+
+  // ── 💼 WORK TAB — "Out for Work" outings (table work_outings, see
+  // js/work-outings.js). Same period and By trip | By staff as Time Off;
+  // nothing here is charged, capped or approved. ──
+  var torWoData = [];
+  var torWoFilter = 'all';
+  var torWoStaff = '';
+  var torWoMissing = false;
+  var torWoOpenStaff = {};
+  var torWoStaffKeys = [];
+
+  async function loadWorkOutingsReport() {
+    var wrap = document.getElementById('tor-wo-table');
+    if (!wrap) return;
+    torEnsurePeriodOptions();
+    wrap.innerHTML = '<div style="text-align:center;color:var(--text3);padding:20px;font-size:12px;">Loading…</div>';
+    try {
+      torWoData = (await sbFetch('GET', '/rest/v1/work_outings?' + torPeriodFilter() + 'order=time_out.desc&limit=5000')) || [];
+      torWoMissing = false;
+    } catch (e) {
+      torWoData = [];
+      torWoMissing = /404|42P01|PGRST205/.test(String(e && e.message));
+    }
+    torPopulateWorkStaffSelect();
+    renderWorkReport();
+  }
+
+  function torPopulateWorkStaffSelect() {
+    var sel = document.getElementById('tor-wo-staff-select');
+    if (!sel) return;
+    var byKey = {};
+    torWoData.forEach(function (r) { var k = torStaffKey(r); if (k && !byKey[k]) byKey[k] = timeoffDisplayName(r); });
+    var keys = Object.keys(byKey).sort(function (a, b) { return byKey[a].localeCompare(byKey[b]); });
+    sel.innerHTML = '<option value="">All Staff</option>' + keys.map(function (k) {
+      return '<option value="' + escHtml(k) + '"' + (k === torWoStaff ? ' selected' : '') + '>' + escHtml(byKey[k]) + '</option>';
+    }).join('');
+  }
+
+  function setWorkReportFilter(f) {
+    torWoFilter = f;
+    ['all', 'out', 'completed', 'voided'].forEach(function (k) {
+      var el = document.getElementById('tor-wo-filter-' + k);
+      if (el) el.classList.toggle('active', k === f);
+    });
+    renderWorkReport();
+  }
+  function setWorkReportStaff(k) { torWoStaff = k; renderWorkReport(); }
+
+  function torWoStatus(r) {
+    if (r.entry_type === 'voided') return 'voided';
+    if (!r.time_in) return 'out';
+    return 'completed';
+  }
+  function torWoMinutes(r) {
+    if (r.time_in) return r.duration_minutes != null ? r.duration_minutes : (new Date(r.time_in) - new Date(r.time_out)) / 60000;
+    return (Date.now() - new Date(r.time_out).getTime()) / 60000;
+  }
+  function torWoBadge(r) {
+    var st = torWoStatus(r);
+    var b = st === 'voided' ? '<span class="badge b-red">Cancelled</span>'
+      : st === 'out' ? '<span class="badge b-work">● Out now</span>'
+      : '<span class="badge b-green">Completed</span>';
+    if (r.entry_type === 'edited') b += ' <span style="color:var(--amber-text);font-weight:700;font-size:10px;">(edited)</span>';
+    return b;
+  }
+
+  function torWoVisibleRows(forStaffView) {
+    var q = ((document.getElementById('tor-wo-search-input') || {}).value || '').trim().toLowerCase();
+    return torWoData.filter(function (r) {
+      if (!forStaffView && torWoFilter !== 'all' && torWoStatus(r) !== torWoFilter) return false;
+      if (torWoStaff && torStaffKey(r) !== torWoStaff) return false;
+      if (!q) return true;
+      return (r.staff_name || '').toLowerCase().indexOf(q) !== -1 || timeoffDisplayName(r).toLowerCase().indexOf(q) !== -1
+        || (r.purpose || '').toLowerCase().indexOf(q) !== -1;
+    });
+  }
+
+  function torWoStaffGroups(rows) {
+    var map = {}, list = [];
+    rows.forEach(function (r) {
+      if (r.entry_type === 'voided') return;
+      var key = torStaffKey(r);
+      if (!map[key]) { map[key] = { key: key, name: timeoffDisplayName(r), outings: 0, total: 0, longest: 0, out: false, rows: [] }; list.push(map[key]); }
+      var g = map[key], m = torWoMinutes(r);
+      g.outings++; g.total += m; g.longest = Math.max(g.longest, m); g.rows.push(r);
+      if (!r.time_in) g.out = true;
+    });
+    return list.sort(function (a, b) { return b.total - a.total || a.name.localeCompare(b.name); });
+  }
+
+  function renderWorkReport() {
+    var wrap = document.getElementById('tor-wo-table');
+    if (!wrap) return;
+    if (torWoMissing) {
+      wrap.innerHTML = '<div style="text-align:center;color:var(--text3);padding:20px;font-size:12px;">Out for Work isn\'t switched on yet — run docs/work-outings-schema.sql in Supabase once.</div>';
+      return;
+    }
+    if (torView === 'staff') {
+      var groups = torWoStaffGroups(torWoVisibleRows(true));
+      var h = '<table class="fr-table"><thead><tr><th>Staff</th><th>Outings</th><th>Total time out for work</th><th>Longest</th><th>Right now</th><th></th></tr></thead><tbody>';
+      if (!groups.length) h += '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px;">No work outings in this period.</td></tr>';
+      groups.forEach(function (g) {
+        var open = !!torWoOpenStaff[g.key];
+        h += '<tr class="tor-staff-row' + (open ? ' open' : '') + '" onclick="torToggleWoStaff(' + torKeyIndex(torWoStaffKeys, g.key) + ')">'
+          + '<td style="white-space:nowrap;"><span class="tor-av wo">' + escHtml(torInitials(g.name)) + '</span><b>' + escHtml(g.name) + '</b></td>'
+          + '<td>' + g.outings + '</td><td style="font-weight:700;">' + fmtTimeOffDuration(g.total) + '</td><td>' + fmtTimeOffDuration(g.longest) + '</td>'
+          + '<td>' + (g.out ? '<span class="badge b-work">● Out now</span>' : '<span style="color:var(--text3);">—</span>') + '</td>'
+          + '<td style="color:var(--green);font-weight:700;">' + (open ? '▾' : '›') + '</td></tr>';
+        if (open) {
+          g.rows.slice().sort(function (a, b) { return new Date(a.time_out) - new Date(b.time_out); }).forEach(function (r) {
+            var when = new Date(r.time_out).toLocaleDateString('en-MY', { day: 'numeric', month: 'short' }) + ' · ' + fcDateTime(r.time_out).split(', ')[1]
+              + ' → ' + (r.time_in ? fcDateTime(r.time_in).split(', ')[1] : 'still out');
+            h += '<tr class="tor-staff-trips"><td colspan="6">' + when + ' · ' + escHtml(r.purpose || '') + ' · <b>' + fmtTimeOffDuration(torWoMinutes(r)) + '</b> ' + torWoBadge(r) + '</td></tr>';
+          });
+        }
+      });
+      wrap.innerHTML = h + '</tbody></table>';
+      return;
+    }
+    var rows = torWoVisibleRows(false);
+    var html = '<table class="fr-table"><thead><tr><th>Date</th><th>Staff Name</th><th>Time Out</th><th>Time In</th><th>Duration</th><th>Where To &amp; What For</th><th>Status</th></tr></thead><tbody>';
+    if (!rows.length) html += '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px;">No work outings match.</td></tr>';
+    rows.forEach(function (r) {
+      var outParts = fcDateTime(r.time_out).split(', ');
+      var inParts = r.time_in ? fcDateTime(r.time_in).split(', ') : null;
+      html += '<tr' + (r.entry_type === 'voided' ? ' style="opacity:.6;"' : '') + '>'
+        + '<td style="white-space:nowrap;">' + outParts[0] + '</td>'
+        + '<td>' + escHtml(timeoffDisplayName(r)) + '</td>'
+        + '<td style="white-space:nowrap;">' + outParts[1] + '</td>'
+        + '<td style="white-space:nowrap;">' + (inParts ? inParts[1] : '<span style="color:var(--text3);">—</span>') + '</td>'
+        + '<td style="white-space:nowrap;font-weight:700;">' + fmtTimeOffDuration(torWoMinutes(r)) + (r.time_in ? '' : ' <span style="font-weight:400;color:var(--text3);">so far</span>') + '</td>'
+        + '<td>' + escHtml(r.purpose || '') + '</td>'
+        + '<td style="white-space:nowrap;">' + torWoBadge(r) + '</td></tr>';
+    });
+    wrap.innerHTML = html + '</tbody></table>';
+  }
+
+  function torToggleWoStaff(i) {
+    var key = torWoStaffKeys[i];
+    torWoOpenStaff[key] = !torWoOpenStaff[key];
+    renderWorkReport();
+  }
+
+  function downloadWorkOutingsCsv() {
+    if (torView === 'staff') {
+      var groups = torWoStaffGroups(torWoVisibleRows(true));
+      var sl = [['Staff Name', 'Outings', 'Total (min)', 'Total (h:mm)', 'Longest (min)', 'Out right now'].join(',')];
+      groups.forEach(function (g) {
+        sl.push([g.name, g.outings, Math.round(g.total), fmtTimeOffDuration(g.total), Math.round(g.longest), g.out ? 'Yes' : ''].map(torCsvEscape).join(','));
+      });
+      torSaveCsv(sl, 'Work-Outings-By-Staff-' + torPeriodFileTag() + '.csv');
+      return;
+    }
+    var rows = torWoVisibleRows(false).slice().sort(function (a, b) { return new Date(a.time_out) - new Date(b.time_out); });
+    var lines = [['Date', 'Staff Name', 'Time Out', 'Time In', 'Duration (min)', 'Where To & What For', 'Status'].join(',')];
+    rows.forEach(function (r) {
+      var st = torWoStatus(r);
+      lines.push([
+        fcDateTime(r.time_out).split(',')[0], timeoffDisplayName(r), fcDateTime(r.time_out),
+        r.time_in ? fcDateTime(r.time_in) : '', Math.round(torWoMinutes(r)),
+        r.purpose, (st === 'voided' ? 'cancelled' : st) + (r.entry_type === 'edited' ? ' (edited)' : '')
+      ].map(torCsvEscape).join(','));
+    });
+    torSaveCsv(lines, 'Work-Outings-' + torPeriodFileTag() + '.csv');
   }
 
   // ── TIME OFF REPORT — EVENT DAY OFF TAB (admin-only) ──
@@ -6042,12 +6514,16 @@ html, body {
 
   function setTimeOffReportMode(mode) {
     torReportMode = mode;
-    document.getElementById('tor-mode-timeoff').classList.toggle('active', mode === 'timeoff');
-    document.getElementById('tor-mode-edo').classList.toggle('active', mode === 'edo');
-    document.getElementById('tor-view-timeoff').style.display = mode === 'timeoff' ? '' : 'none';
-    document.getElementById('tor-view-edo').style.display = mode === 'edo' ? '' : 'none';
+    ['timeoff', 'edo', 'work'].forEach(function (m) {
+      document.getElementById('tor-mode-' + m).classList.toggle('active', mode === m);
+      document.getElementById('tor-view-' + m).style.display = mode === m ? '' : 'none';
+    });
+    // Event Day Off has its own all-time view; the shared By trip | By
+    // staff + period bar belongs to Time Off and 💼 Work.
+    document.getElementById('tor-shared-toolbar').style.display = mode === 'edo' ? 'none' : 'flex';
     var btn = document.getElementById('tor-download-btn');
-    if (btn) btn.onclick = mode === 'edo' ? downloadEventDayOffReportCsv : downloadTimeOffReportCsv;
+    if (btn) btn.onclick = mode === 'edo' ? downloadEventDayOffReportCsv : mode === 'work' ? downloadWorkOutingsCsv : downloadTimeOffReportCsv;
+    torUpdateDownloadLabel();
   }
 
   async function loadEventDayOffReport() {
@@ -6645,6 +7121,7 @@ html, body {
   // per-trip cap (informational only); it's now 120min/2h and a hard block.
   var TIMEOFF_PER_TRIP_CAP_MIN = 120;
   var TIMEOFF_MONTHLY_CAP_MIN = 240; // 4h -- mirrors TIMEOFF_MONTHLY_CAP_MIN in js/tab-timeoff.js
+  var TIMEOFF_NEAR_LIMIT_MIN = 180; // 3h -- mirrors js/tab-timeoff.js; "Near limit" in the report's By staff view
   function timeOffChargedMinutes(durationMinutes) {
     var m = Math.max(0, durationMinutes || 0);
     return Math.max(60, Math.ceil(m / 60) * 60);
@@ -7173,6 +7650,8 @@ html, body {
       if (statusEl) statusEl.innerHTML = '<div class="card"><div style="font-size:12px;color:var(--text3);text-align:center;padding:14px 0;">Could not load your Time Off status.</div></div>';
       if (recordsEl) recordsEl.innerHTML = '';
     }
+    // 💼 Work side of the Time Off screen -- see js/work-outings.js.
+    if (typeof woLoad === 'function') woLoad();
   }
 
   // Mirrors timeoffApprovalToastHtml() in js/tab-timeoff.js -- shown the
@@ -7422,6 +7901,10 @@ html, body {
     try {
       var existing = await sbFetch('GET', '/rest/v1/time_off_records?staff_email=eq.' + encodeURIComponent(me.email) + '&time_in=is.null&entry_type=neq.cancel_pending&limit=1');
       if (existing && existing.length) { alert('You already have an open Time Off. Time In on that one first.'); return; }
+      if (typeof woMyOpenOuting === 'function' && await woMyOpenOuting(me.email)) {
+        alert('You\'re out for work right now. Tap I\'m Back on the 💼 Work side first.');
+        return;
+      }
 
       var monthStart2 = localDateStr().slice(0, 8) + '01';
       var monthlyMinutes2 = await adminTimeOffMonthlyMinutes(me.email, monthStart2);
@@ -7565,6 +8048,10 @@ html, body {
     try {
       var existing = await sbFetch('GET', '/rest/v1/time_off_records?staff_email=eq.' + encodeURIComponent(me.email) + '&time_in=is.null&entry_type=neq.cancel_pending&limit=1');
       if (existing && existing.length) { alert('You already have an open Time Off. Time In on that one first.'); return; }
+      if (typeof woMyOpenOuting === 'function' && await woMyOpenOuting(me.email)) {
+        alert('You\'re out for work right now. Tap I\'m Back on the 💼 Work side first.');
+        return;
+      }
 
       var monthStart3 = localDateStr().slice(0, 8) + '01';
       var monthlyMinutes3 = await adminTimeOffMonthlyMinutes(me.email, monthStart3);
@@ -8268,14 +8755,17 @@ html, body {
     try {
       var toEl = document.getElementById('admin-timeoff-today');
       if (toEl && window.location.protocol !== 'file:') {
-        var out = await sbFetch('GET', '/rest/v1/time_off_records?time_in=is.null&entry_type=neq.voided&order=time_out.asc&limit=20');
-        if (out && out.length) {
-          var onames = out.map(function(r){ return timeoffDisplayName(r); }).join(', ');
+        var out = (await sbFetch('GET', '/rest/v1/time_off_records?time_in=is.null&entry_type=neq.voided&entry_type=neq.cancel_pending&order=time_out.asc&limit=20')) || [];
+        // Out for Work (js/work-outings.js) shares this card, tagged purple.
+        var woOut = typeof woFetchOpen === 'function' ? await woFetchOpen() : [];
+        if (out.length || woOut.length) {
+          var onames = out.concat(woOut).map(function(r){ return timeoffDisplayName(r); }).join(', ');
           toEl.innerHTML = '<div class="home-summary-card" onclick="switchTabByName(\'timeoff\')">'
             + '<div class="home-summary-ic" style="background:var(--blue-bg);color:var(--blue-text);"><i class="ti ti-clock"></i></div>'
             + '<div style="flex:1;min-width:0;"><div class="home-summary-title">Currently Out</div>'
-            + '<div class="home-summary-sub">' + escHtml(onames) + '</div></div>'
-            + '<div class="home-summary-count">' + out.length + '</div>'
+            + '<div class="home-summary-sub">' + escHtml(onames) + '</div>'
+            + (typeof woHomeLineHtml === 'function' ? woHomeLineHtml(woOut) : '') + '</div>'
+            + '<div class="home-summary-count">' + (out.length + woOut.length) + '</div>'
             + '<i class="ti ti-chevron-right home-summary-chev"></i>'
             + '</div>';
         } else {
