@@ -408,7 +408,6 @@ function dpYearlyEditorHtml() {
 function dpTurnsEditorHtml() {
   var n = dpDraft.turns.length;
   var now = dpDraftNow();
-  var r0 = Math.max(0, now.round);
   // "Turn 1 starts": 3 years back to 2 years ahead (and the saved month).
   var opts = [], seen = {};
   for (var k = -36; k <= 24; k++) { var ms = dpAddMonths(now.thisMs, k); opts.push(ms); seen[ms] = 1; }
@@ -416,9 +415,17 @@ function dpTurnsEditorHtml() {
   var startSel = '<select class="dp-sel" id="dp-start" onchange="dpSetStart(this.value)">'
     + opts.map(function (ms) { return '<option value="' + ms + '"' + (ms === dpDraft.start ? ' selected' : '') + '>' + dpLongMonth(ms) + '</option>'; }).join('') + '</select>';
   var rows = dpDraft.turns.map(function (people, i) {
-    var dates = [0, 1, 2].map(function (r) { return dpShortMonth(dpTurnMonth(i, r0 + r)); });
+    // Each turn is labelled with its first month (Turn 1 = the start month,
+    // Turn 2 the month after, ...), so the labels don't move while turns
+    // are being added; then when it's next on duty.
+    var firstMs = dpTurnMonth(i, 0), when = '';
+    if (firstMs === now.thisMs) when = 'on duty now';
+    else if (firstMs < now.thisMs) {
+      var nextMs = dpAddMonths(firstMs, Math.ceil(dpMonthsBetween(firstMs, now.thisMs) / n) * n);
+      when = nextMs === now.thisMs ? 'on duty now' : 'next ' + dpShortMonth(nextMs);
+    }
     return '<div class="dp-turn' + (i === now.idx ? ' now' : '') + '">'
-      + '<div class="dp-th"><span>Turn ' + (i + 1) + ' · ' + dates[0] + ' <small>→ ' + dates[1] + ' → ' + dates[2] + '</small></span>'
+      + '<div class="dp-th"><span>Turn ' + (i + 1) + ' · ' + dpShortMonth(firstMs) + (when ? ' <small>· ' + when + '</small>' : '') + '</span>'
       + '<span class="dp-tb"><button title="Move up" onclick="dpMoveTurn(' + i + ',-1)"' + (i === 0 ? ' disabled' : '') + '>↑</button>'
       + '<button title="Move down" onclick="dpMoveTurn(' + i + ',1)"' + (i === n - 1 ? ' disabled' : '') + '>↓</button>'
       + '<button title="Remove this turn" onclick="dpRemoveTurn(' + i + ')"' + (n === 1 ? ' disabled' : '') + '>✕</button></span></div>'
