@@ -1289,6 +1289,16 @@
 
     <!-- ── TIME OFF ── -->
     <div class="screen-section" id="screen-timeoff">
+      <!-- 🚶 Personal | 💼 Work -- Personal is the Time Off below, unchanged;
+           Work is "Out for Work" (js/work-outings.js), which never counts
+           towards the 4h/month or 2h/trip limits. -->
+      <div class="to-pill-wrap wo-kind-wrap">
+        <button id="to-kind-personal" class="to-pill" onclick="woSwitchKind('personal')"
+          style="background:var(--green-dark);color:#fff;">🚶 Personal</button>
+        <button id="to-kind-work" class="to-pill" onclick="woSwitchKind('work')"
+          style="background:transparent;color:var(--text-secondary);">💼 Work</button>
+      </div>
+      <div id="to-personal-panel">
       <div id="timeoff-status">
         <div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:14px 0;">Loading...</div>
       </div>
@@ -1345,6 +1355,8 @@
       </div>
       <div id="timeoff-all" style="display:none;"></div>
       <div id="timeoff-edo" style="display:none;"></div>
+      </div><!-- /to-personal-panel -->
+      <div id="to-work-panel" style="display:none;"></div>
     </div><!-- /timeoff -->
 
     <!-- ── BOOK ── -->
@@ -1689,6 +1701,7 @@
 <script src="js/push.js"></script>
 <script src="js/faulty-progress.js"></script>
 <script src="js/duty-plan.js"></script>
+<script src="js/work-outings.js"></script>
 
 <!-- Day detail modal -->
 <div id="staff-day-modal" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,0.45);" onclick="closeStaffDayModal()">
