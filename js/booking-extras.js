@@ -19,6 +19,8 @@
 var BK_PURPLE = '#534AB7', BK_PURPLE_BG = '#EEEDFE';
 var bkCache = {};       // 'room:<id>' / 'vehicle:<id>' -> booking row as rendered
 var bkRep = { mode: 'once', wkend: 'next', preview: null };
+var BK_REPEAT_MAX_MONTHS = 60; // 5 years -- weekly for 5 years is ~260 bookings
+var BK_REPEAT_MAX_DATES = 270;
 
 function bkInjectStyles() {
   if (document.getElementById('bk-styles')) return;
@@ -213,7 +215,7 @@ function bkReadChange(type, id) {
 // one in its series.
 async function bkTargets(type, v) {
   if (v.scope !== 'after') return [{ id: v.b.id, booking_date: v.date }];
-  var rows = await bkReq('GET', 'room_bookings?series_id=eq.' + encodeURIComponent(v.b.series_id) + '&booking_date=gte.' + v.b.booking_date + '&order=booking_date.asc&limit=200');
+  var rows = await bkReq('GET', 'room_bookings?series_id=eq.' + encodeURIComponent(v.b.series_id) + '&booking_date=gte.' + v.b.booking_date + '&order=booking_date.asc&limit=1000');
   return (rows || []).map(function (r) { return { id: r.id, booking_date: r.booking_date }; });
 }
 
@@ -432,13 +434,14 @@ function bkRepeatRefresh() {
   else if (bkRep.mode === 'weekly') hint.innerHTML = '🔁 Every <b>' + bkWeekday(base.getDay()) + '</b>';
   else hint.innerHTML = '🔁 On the <b>' + bkOrdinal(base.getDate()) + '</b> of every month'
     + (base.getDate() > 28 ? ' (shorter months use their last day)' : '');
-  // Until = the last month to repeat in, picked on a small month grid: any
-  // month after the first booking, up to the same month next year (e.g.
-  // Dec 2026 → Dec 2027). Default: 12 bookings for Monthly (→ Nov 2027),
-  // 3 months for Weekly. A month the person tapped is kept.
+  // Until = the last month to repeat in, picked on a small month grid (‹ ›
+  // to change year): any month after the first booking, up to 5 years
+  // ahead -- a safety limit against a mistaken tap, not a rule. Default:
+  // 12 bookings for Monthly (Dec 2026 → Nov 2027), 3 months for Weekly.
+  // A month the person tapped is kept.
   var startYm = bkYmOf(base);
   bkRep.minYm = bkYmAdd(startYm, 1);
-  bkRep.maxYm = bkYmAdd(startYm, 12);
+  bkRep.maxYm = bkYmAdd(startYm, BK_REPEAT_MAX_MONTHS);
   if (!bkRep.untilPicked || !until.value || until.value < bkRep.minYm || until.value > bkRep.maxYm) {
     until.value = bkYmAdd(startYm, bkRep.mode === 'weekly' ? 2 : 11);
   }
@@ -501,11 +504,11 @@ function bkRepeatDates(start, mode, untilYm, wkend) {
   var u = untilYm.split('-');
   var end = new Date(Number(u[0]), Number(u[1]), 0); // last day of the Until month
   if (mode === 'weekly') {
-    for (var d = new Date(s); d <= end && out.length < 60; d.setDate(d.getDate() + 7)) out.push({ date: bkYmd(d) });
+    for (var d = new Date(s); d <= end && out.length < BK_REPEAT_MAX_DATES; d.setDate(d.getDate() + 7)) out.push({ date: bkYmd(d) });
     return out;
   }
   var day = s.getDate();
-  for (var k = 0; out.length < 60; k++) {
+  for (var k = 0; out.length < BK_REPEAT_MAX_DATES; k++) {
     var last = new Date(s.getFullYear(), s.getMonth() + k + 1, 0).getDate();
     var t = new Date(s.getFullYear(), s.getMonth() + k, Math.min(day, last));
     if (t > end) break;
