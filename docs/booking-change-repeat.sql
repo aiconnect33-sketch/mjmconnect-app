@@ -3,7 +3,7 @@
 --
 -- * "✎ Change date / time" works without this, but the "Changed from
 --   18 Nov" note needs changed_from.
--- * "Repeat: Weekly / Monthly" on the room booking form needs series_id and
+-- * "Repeat: Weekly / Monthly" (up to 5 years ahead) on the room booking form needs series_id and
 --   repeat_rule -- until they exist, booking a repeat says so and nothing
 --   is saved. One-off bookings are not affected either way.
 

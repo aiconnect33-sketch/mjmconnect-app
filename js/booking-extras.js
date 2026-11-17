@@ -19,6 +19,8 @@
 var BK_PURPLE = '#534AB7', BK_PURPLE_BG = '#EEEDFE';
 var bkCache = {};       // 'room:<id>' / 'vehicle:<id>' -> booking row as rendered
 var bkRep = { mode: 'once', wkend: 'next', preview: null };
+var BK_REPEAT_MAX_MONTHS = 60; // 5 years -- weekly for 5 years is ~260 bookings
+var BK_REPEAT_MAX_DATES = 270;
 
 function bkInjectStyles() {
   if (document.getElementById('bk-styles')) return;
@@ -49,6 +51,17 @@ function bkInjectStyles() {
     + '.bk-dt{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:11.5px;padding:7px 0;color:#111C18}'
     + '.bk-dt+.bk-dt{border-top:1px solid #EEF2F0}'
     + '.bk-s{font-size:10px;font-weight:700;padding:1px 8px;border-radius:9px;white-space:nowrap;text-align:right}'
+    + '.bk-mgrid{background:#fff;border:1px solid #D5E7DF;border-radius:12px;padding:8px;margin-bottom:9px}'
+    + '.bk-mgh{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;font-weight:800;color:#0E3B33;padding:2px 4px 8px}'
+    + '.bk-mgh button{border:none;background:none;font-size:16px;font-weight:700;color:#0F6E5C;cursor:pointer;padding:2px 10px;font-family:inherit}'
+    + '.bk-mgh button:disabled{color:#D5DEDA;cursor:default}'
+    + '.bk-mg{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}'
+    + '.bk-mg button{border:none;font-family:inherit;font-size:11.5px;font-weight:700;padding:9px 0;border-radius:9px;background:#fff;color:#111C18;cursor:pointer}'
+    + '.bk-mg button.in{background:#E1F5EE;color:#085041}'
+    + '.bk-mg button.end{background:#0F6E5C;color:#fff}'
+    + '.bk-mg button:disabled{color:#C5D1CC;background:#fff;cursor:default}'
+    + '.bk-mg button.in:disabled{background:#E1F5EE;color:#085041}'
+    + '.bk-sum{background:#fff;border:1px solid #BFE3D5;border-radius:10px;padding:8px 10px;font-size:11px;color:#085041;margin-bottom:9px}'
     + '.bk-s.free{background:#E1F5EE;color:#085041}.bk-s.moved{background:#E6F1FB;color:#185FA5}.bk-s.taken{background:#FCEBEB;color:#A32D2D}';
   var el = document.createElement('style');
   el.id = 'bk-styles';
@@ -202,7 +215,7 @@ function bkReadChange(type, id) {
 // one in its series.
 async function bkTargets(type, v) {
   if (v.scope !== 'after') return [{ id: v.b.id, booking_date: v.date }];
-  var rows = await bkReq('GET', 'room_bookings?series_id=eq.' + encodeURIComponent(v.b.series_id) + '&booking_date=gte.' + v.b.booking_date + '&order=booking_date.asc&limit=200');
+  var rows = await bkReq('GET', 'room_bookings?series_id=eq.' + encodeURIComponent(v.b.series_id) + '&booking_date=gte.' + v.b.booking_date + '&order=booking_date.asc&limit=1000');
   return (rows || []).map(function (r) { return { id: r.id, booking_date: r.booking_date }; });
 }
 
@@ -357,7 +370,8 @@ function bkRepeatEnsure() {
     + '<button data-v="monthly" onclick="bkRepeatSet(\'monthly\')">Monthly</button></div>'
     + '<div id="bk-rep-opts" style="display:none;">'
     + '<div class="bk-hint" id="bk-rep-hint"></div>'
-    + '<div class="bk-lbl">Until</div><select class="bk-in" id="bk-rep-until" onchange="bkRep.untilPicked = true; bkRepeatClearPreview()"></select>'
+    + '<div class="bk-lbl">Until</div><input type="hidden" id="bk-rep-until">'
+    + '<div class="bk-mgrid" id="bk-rep-grid"></div><div class="bk-sum" id="bk-rep-sum"></div>'
     + '<div id="bk-rep-wk"><div class="bk-lbl">If that day is a Saturday or Sunday</div>'
     + '<div class="bk-seg" id="bk-rep-wkend">'
     + '<button class="on" data-v="next" onclick="bkRepeatWkend(\'next\')">Next working day</button>'
@@ -404,6 +418,7 @@ function bkRepeatWkend(v) {
   bkRep.wkend = v;
   document.querySelectorAll('#bk-rep-wkend button').forEach(function (x) { x.classList.toggle('on', x.getAttribute('data-v') === v); });
   bkRepeatClearPreview();
+  bkRepeatSummary();
 }
 
 // Re-labels the hint and the Until list for the chosen start date.
@@ -419,19 +434,60 @@ function bkRepeatRefresh() {
   else if (bkRep.mode === 'weekly') hint.innerHTML = '🔁 Every <b>' + bkWeekday(base.getDay()) + '</b>';
   else hint.innerHTML = '🔁 On the <b>' + bkOrdinal(base.getDate()) + '</b> of every month'
     + (base.getDate() > 28 ? ' (shorter months use their last day)' : '');
-  // Keep the Until month only if the person picked one themselves.
-  var prev = bkRep.untilPicked ? until.value : '';
-  // Last month to repeat in. Default: 12 months in a row for Monthly (e.g.
-  // Dec 2026 → Nov 2027), 3 months for Weekly.
-  var defIdx = bkRep.mode === 'weekly' ? 2 : 11, opts = '';
-  for (var i = 1; i <= 12; i++) {
-    var m = new Date(base.getFullYear(), base.getMonth() + i, 1);
-    var ym = m.getFullYear() + '-' + String(m.getMonth() + 1).padStart(2, '0');
-    opts += '<option value="' + ym + '"' + ((prev ? prev === ym : i === defIdx) ? ' selected' : '') + '>'
-      + m.toLocaleDateString('en-MY', { month: 'long', year: 'numeric' }) + '</option>';
+  // Until = the last month to repeat in, picked on a small month grid (‹ ›
+  // to change year): any month after the first booking, up to 5 years
+  // ahead -- a safety limit against a mistaken tap, not a rule. Default:
+  // 12 bookings for Monthly (Dec 2026 → Nov 2027), 3 months for Weekly.
+  // A month the person tapped is kept.
+  var startYm = bkYmOf(base);
+  bkRep.minYm = bkYmAdd(startYm, 1);
+  bkRep.maxYm = bkYmAdd(startYm, BK_REPEAT_MAX_MONTHS);
+  if (!bkRep.untilPicked || !until.value || until.value < bkRep.minYm || until.value > bkRep.maxYm) {
+    until.value = bkYmAdd(startYm, bkRep.mode === 'weekly' ? 2 : 11);
   }
-  until.innerHTML = opts;
-  if (prev && until.value !== prev) until.selectedIndex = defIdx - 1;
+  bkRep.gridYear = Number(until.value.slice(0, 4));
+  bkRep.startYm = startYm;
+  bkRepeatGrid();
+}
+
+function bkYmOf(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
+function bkYmAdd(ym, n) { var p = ym.split('-'); return bkYmOf(new Date(Number(p[0]), Number(p[1]) - 1 + n, 1)); }
+
+function bkRepeatGrid() {
+  var grid = document.getElementById('bk-rep-grid'), until = document.getElementById('bk-rep-until');
+  if (!grid || !until) return;
+  var y = bkRep.gridYear, html = '<div class="bk-mgh">'
+    + '<button onclick="bkRepeatYear(-1)"' + (String(y) <= bkRep.minYm.slice(0, 4) ? ' disabled' : '') + '>‹</button>' + y
+    + '<button onclick="bkRepeatYear(1)"' + (String(y) >= bkRep.maxYm.slice(0, 4) ? ' disabled' : '') + '>›</button></div><div class="bk-mg">';
+  for (var m = 1; m <= 12; m++) {
+    var ym = y + '-' + String(m).padStart(2, '0');
+    var cls = ym === until.value ? 'end' : (ym >= bkRep.startYm && ym < until.value ? 'in' : '');
+    var off = ym < bkRep.minYm || ym > bkRep.maxYm;
+    html += '<button data-ym="' + ym + '" class="' + cls + '"' + (off ? ' disabled' : ' onclick="bkRepeatPick(\'' + ym + '\')"') + '>'
+      + new Date(y, m - 1, 1).toLocaleDateString('en-MY', { month: 'short' }).replace('Sept', 'Sep') + '</button>';
+  }
+  grid.innerHTML = html + '</div>';
+  bkRepeatSummary();
+}
+
+function bkRepeatYear(dir) { bkRep.gridYear += dir; bkRepeatGrid(); }
+
+function bkRepeatPick(ym) {
+  document.getElementById('bk-rep-until').value = ym;
+  bkRep.untilPicked = true;
+  bkRepeatClearPreview();
+  bkRepeatGrid();
+}
+
+// "🗓 12 bookings · Dec 2026 → Nov 2027"
+function bkRepeatSummary() {
+  var el = document.getElementById('bk-rep-sum'), until = document.getElementById('bk-rep-until');
+  if (!el || !until || !until.value) return;
+  var start = bkRepeatStartDate();
+  if (!start) { el.innerHTML = ''; return; }
+  var n = bkRepeatDates(start, bkRep.mode, until.value, bkRep.wkend).filter(function (x) { return !x.skip; }).length;
+  var lbl = function (ym) { return new Date(Number(ym.slice(0, 4)), Number(ym.slice(5, 7)) - 1, 1).toLocaleDateString('en-MY', { month: 'short', year: 'numeric' }).replace('Sept', 'Sep'); };
+  el.innerHTML = '🗓 <b>' + n + (n === 1 ? ' booking' : ' bookings') + '</b> · ' + lbl(bkRep.startYm) + ' → <b>' + lbl(until.value) + '</b>';
 }
 
 function bkRepeatClearPreview() {
@@ -448,11 +504,11 @@ function bkRepeatDates(start, mode, untilYm, wkend) {
   var u = untilYm.split('-');
   var end = new Date(Number(u[0]), Number(u[1]), 0); // last day of the Until month
   if (mode === 'weekly') {
-    for (var d = new Date(s); d <= end && out.length < 60; d.setDate(d.getDate() + 7)) out.push({ date: bkYmd(d) });
+    for (var d = new Date(s); d <= end && out.length < BK_REPEAT_MAX_DATES; d.setDate(d.getDate() + 7)) out.push({ date: bkYmd(d) });
     return out;
   }
   var day = s.getDate();
-  for (var k = 0; out.length < 60; k++) {
+  for (var k = 0; out.length < BK_REPEAT_MAX_DATES; k++) {
     var last = new Date(s.getFullYear(), s.getMonth() + k + 1, 0).getDate();
     var t = new Date(s.getFullYear(), s.getMonth() + k, Math.min(day, last));
     if (t > end) break;
