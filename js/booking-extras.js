@@ -130,21 +130,42 @@ function bkItemFooter(type, b) {
   var idArg = '\'' + type + '\',\'' + escHtml(String(b.id)).replace(/'/g, '&#39;') + '\'';
   return info
     + '<div class="bk-acts">'
-    + '<button class="bk-act" onclick="bkOpenChange(' + idArg + ')">✎ Change date / time</button>'
-    + '<button class="bk-act red" onclick="bkCancel(' + idArg + ')">✕ Cancel</button>'
+    + '<button class="bk-act" onclick="bkOpenChange(' + idArg + ',this)">✎ Change date / time</button>'
+    + '<button class="bk-act red" onclick="bkCancel(' + idArg + ',this)">✕ Cancel</button>'
     + '</div>'
-    + '<div id="bk-panel-' + bkKey(type, b.id) + '"></div>';
+    + '<div class="bk-panel" data-key="' + bkKey(type, b.id) + '"></div>';
 }
 
-function bkPanel(type, id) { return document.getElementById('bk-panel-' + bkKey(type, id)); }
-function bkClosePanel(type, id) { var p = bkPanel(type, id); if (p) p.innerHTML = ''; }
+// The same booking can be on screen twice -- in the Selected Date list and
+// in My Bookings (one of them hidden). So a form always opens in the card
+// whose button was tapped, and only one form is open at a time (its inputs
+// use ids, which must stay unique).
+function bkPanel(type, id, btn) {
+  var item = btn && btn.closest ? btn.closest('.book-item') : null;
+  if (item) return item.querySelector('.bk-panel');
+  var key = bkKey(type, id);
+  return document.querySelector('.bk-panel[data-key="' + key + '"][data-open]')
+    || Array.prototype.find.call(document.querySelectorAll('.bk-panel[data-key="' + key + '"]'), function (p) { return p.offsetParent !== null; })
+    || document.querySelector('.bk-panel[data-key="' + key + '"]');
+}
+function bkCloseAllPanels(except) {
+  document.querySelectorAll('.bk-panel').forEach(function (p) {
+    if (p === except) return;
+    p.innerHTML = '';
+    p.removeAttribute('data-open');
+  });
+}
+function bkClosePanel(type, id) {
+  document.querySelectorAll('.bk-panel[data-key="' + bkKey(type, id) + '"]').forEach(function (p) { p.innerHTML = ''; p.removeAttribute('data-open'); });
+}
 
 // ── Change ──
-function bkOpenChange(type, id) {
+function bkOpenChange(type, id, btn) {
   var b = bkCache[type + ':' + id];
-  var panel = bkPanel(type, id);
+  var panel = bkPanel(type, id, btn);
   if (!b || !panel) return;
   if (panel.getAttribute('data-open') === 'change' && panel.innerHTML) { panel.innerHTML = ''; panel.removeAttribute('data-open'); return; }
+  bkCloseAllPanels(panel);
   panel.setAttribute('data-open', 'change');
   var k = bkKey(type, id);
   var today = localDateStr();
@@ -313,7 +334,7 @@ async function bkSaveChange(type, id) {
 }
 
 // ── Cancel (asks "just this one / this and after" for a repeat) ──
-async function bkCancel(type, id) {
+async function bkCancel(type, id, btn) {
   var b = bkCache[type + ':' + id];
   if (!b) return;
   if (!(type === 'room' && b.series_id)) {
@@ -322,8 +343,9 @@ async function bkCancel(type, id) {
     bkRefresh(type);
     return;
   }
-  var panel = bkPanel(type, id);
+  var panel = bkPanel(type, id, btn);
   if (!panel) return;
+  bkCloseAllPanels(panel);
   panel.setAttribute('data-open', 'cancel');
   var k = bkKey(type, id);
   panel.innerHTML = '<div class="bk-form" style="background:#fff;border-color:#F0C4C4;">'
