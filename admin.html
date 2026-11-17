@@ -2422,15 +2422,15 @@ html, body {
       </div>
 
       <!-- Shared by the Time Off and 💼 Work tabs (Event Day Off keeps its
-           own all-time view): By trip | By staff, and the period -- last
-           30/90 days, any single month, a month range, or all time. The
-           table and Download CSV always cover exactly this period. -->
+           own all-time view): By trip | By staff, and the period -- a
+           month range picked From / To (one month = From and To the same).
+           The table and Download CSV always cover exactly this period. -->
       <div id="tor-shared-toolbar" style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;position:relative;">
         <div class="tor-view-switch">
           <button id="tor-view-trip" class="active" onclick="setTorView('trip')">📋 By trip</button>
           <button id="tor-view-staff" onclick="setTorView('staff')">👥 By staff</button>
         </div>
-        <select class="fr-select" id="tor-range-select" onchange="torOnPeriodChange()"></select>
+        <button class="fr-select" id="tor-range-btn" onclick="torOpenRange()">📅 This month ▾</button>
         <div id="tor-range-panel" class="tor-range-panel" style="display:none;">
           <div style="font-size:12.5px;font-weight:700;margin-bottom:10px;">Month range</div>
           <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:12px;">
@@ -6132,9 +6132,8 @@ html, body {
     torSaveCsv(lines, 'Time-Off-By-Staff-' + torPeriodFileTag() + '.csv');
   }
 
-  // ── Period: last 30/90 days, one month, a month range, or all time ──
-  var torPeriod = { type: 'days', days: 30 };
-  var torPrevPeriodValue = '30';
+  // ── Period: always a month range (From / To, then Apply). One month is
+  // simply From = To, e.g. Oct 2026 → Oct 2026. Starts on this month. ──
   var TOR_MONTHS_BACK = 36;
 
   function torYm(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
@@ -6148,40 +6147,30 @@ html, body {
     return out;
   }
 
+  var torPeriod = { type: 'month', ym: torYm(new Date()) };
+
   function torEnsurePeriodOptions() {
-    var sel = document.getElementById('tor-range-select');
-    if (!sel || sel.options.length) return;
-    var months = torMonthList();
-    sel.innerHTML = '<optgroup label="Quick"><option value="30">📅 Last 30 days</option><option value="90">📅 Last 90 days</option></optgroup>'
-      + '<optgroup label="By month">' + months.map(function (ym, i) {
-        return '<option value="m:' + ym + '">📅 ' + (i === 0 ? 'This month — ' : '') + torMonthLabel(ym) + '</option>';
-      }).join('') + '</optgroup>'
-      + '<optgroup label="More"><option value="range">📅 Month range…</option><option value="0">📅 All time</option></optgroup>';
-    sel.value = '30';
-    var monthOpts = months.map(function (ym) { return '<option value="' + ym + '">' + torMonthLabel(ym) + '</option>'; }).join('');
-    document.getElementById('tor-range-from').innerHTML = monthOpts;
+    var from = document.getElementById('tor-range-from');
+    if (!from || from.options.length) return;
+    var monthOpts = torMonthList().map(function (ym) { return '<option value="' + ym + '">' + torMonthLabel(ym) + '</option>'; }).join('');
+    from.innerHTML = monthOpts;
     document.getElementById('tor-range-to').innerHTML = monthOpts;
+    torUpdatePeriodButton();
     torUpdateDownloadLabel();
   }
 
-  function torOnPeriodChange() {
-    var sel = document.getElementById('tor-range-select');
-    var v = sel.value;
-    if (v === 'range') {
-      // Pre-fill with the current range, or the last three full months.
-      var months = torMonthList();
-      document.getElementById('tor-range-from').value = torPeriod.type === 'range' ? torPeriod.from : months[3];
-      document.getElementById('tor-range-to').value = torPeriod.type === 'range' ? torPeriod.to : months[1];
-      document.getElementById('tor-range-panel').style.display = 'block';
-      return;
-    }
-    document.getElementById('tor-range-panel').style.display = 'none';
-    if (v.indexOf('r:') === 0) return; // the range already applied
-    if (v.indexOf('m:') === 0) torPeriod = { type: 'month', ym: v.slice(2) };
-    else if (v === '0') torPeriod = { type: 'all' };
-    else torPeriod = { type: 'days', days: Number(v) || 30 };
-    torPrevPeriodValue = v;
-    torReloadPeriod();
+  function torUpdatePeriodButton() {
+    var btn = document.getElementById('tor-range-btn');
+    if (btn) btn.textContent = '📅 ' + torPeriodLabel() + ' ▾';
+  }
+
+  function torOpenRange() {
+    torEnsurePeriodOptions();
+    var panel = document.getElementById('tor-range-panel');
+    if (panel.style.display === 'block') { panel.style.display = 'none'; return; }
+    document.getElementById('tor-range-from').value = torPeriod.type === 'range' ? torPeriod.from : torPeriod.ym;
+    document.getElementById('tor-range-to').value = torPeriod.type === 'range' ? torPeriod.to : torPeriod.ym;
+    panel.style.display = 'block';
   }
 
   function torApplyRange() {
@@ -6189,28 +6178,13 @@ html, body {
     var to = document.getElementById('tor-range-to').value;
     if (from > to) { var t = from; from = to; to = t; }
     torPeriod = from === to ? { type: 'month', ym: from } : { type: 'range', from: from, to: to };
-    var sel = document.getElementById('tor-range-select');
-    var old = sel.querySelector('option[data-range]');
-    if (old) old.parentNode.removeChild(old);
-    if (torPeriod.type === 'range') {
-      var opt = document.createElement('option');
-      opt.value = 'r:' + from + ':' + to;
-      opt.setAttribute('data-range', '1');
-      opt.textContent = '📅 ' + torPeriodLabel();
-      var rangeOpt = sel.querySelector('option[value="range"]');
-      rangeOpt.parentNode.insertBefore(opt, rangeOpt);
-      sel.value = opt.value;
-    } else {
-      sel.value = 'm:' + from;
-    }
-    torPrevPeriodValue = sel.value;
     document.getElementById('tor-range-panel').style.display = 'none';
+    torUpdatePeriodButton();
     torReloadPeriod();
   }
 
   function torCancelRange() {
     document.getElementById('tor-range-panel').style.display = 'none';
-    document.getElementById('tor-range-select').value = torPrevPeriodValue;
   }
 
   function torReloadPeriod() {
@@ -6219,45 +6193,32 @@ html, body {
     loadWorkOutingsReport();
   }
 
-  // PostgREST filter (with a trailing &) for the chosen period, using the
-  // admin's local calendar months.
+  // PostgREST filter (with a trailing &) for the chosen months, using the
+  // admin's local calendar: from the 1st of From up to the 1st after To.
   function torPeriodFilter() {
-    var start = null, end = null;
-    if (torPeriod.type === 'days') start = new Date(Date.now() - torPeriod.days * 24 * 60 * 60 * 1000);
-    else if (torPeriod.type === 'month') {
-      start = torMonthStartDate(torPeriod.ym);
-      end = new Date(start.getFullYear(), start.getMonth() + 1, 1);
-    } else if (torPeriod.type === 'range') {
-      start = torMonthStartDate(torPeriod.from);
-      var last = torMonthStartDate(torPeriod.to);
-      end = new Date(last.getFullYear(), last.getMonth() + 1, 1);
-    }
-    return (start ? 'time_out=gte.' + start.toISOString() + '&' : '') + (end ? 'time_out=lt.' + end.toISOString() + '&' : '');
+    var fromYm = torPeriod.type === 'range' ? torPeriod.from : torPeriod.ym;
+    var toYm = torPeriod.type === 'range' ? torPeriod.to : torPeriod.ym;
+    var start = torMonthStartDate(fromYm), last = torMonthStartDate(toYm);
+    var end = new Date(last.getFullYear(), last.getMonth() + 1, 1);
+    return 'time_out=gte.' + start.toISOString() + '&time_out=lt.' + end.toISOString() + '&';
   }
 
   function torPeriodLabel() {
-    if (torPeriod.type === 'days') return 'Last ' + torPeriod.days + ' days';
     if (torPeriod.type === 'month') return torMonthLabel(torPeriod.ym);
-    if (torPeriod.type === 'range') {
-      var a = torMonthStartDate(torPeriod.from), b = torMonthStartDate(torPeriod.to);
-      return a.getFullYear() === b.getFullYear()
-        ? a.toLocaleDateString('en-MY', { month: 'short' }) + ' – ' + torMonthLabel(torPeriod.to, true)
-        : torMonthLabel(torPeriod.from, true) + ' – ' + torMonthLabel(torPeriod.to, true);
-    }
-    return 'All time';
+    var a = torMonthStartDate(torPeriod.from), b = torMonthStartDate(torPeriod.to);
+    return a.getFullYear() === b.getFullYear()
+      ? a.toLocaleDateString('en-MY', { month: 'short' }) + ' – ' + torMonthLabel(torPeriod.to, true)
+      : torMonthLabel(torPeriod.from, true) + ' – ' + torMonthLabel(torPeriod.to, true);
   }
 
   function torPeriodFileTag() {
-    if (torPeriod.type === 'days') return 'last-' + torPeriod.days + '-days-to-' + localDateStr();
-    if (torPeriod.type === 'month') return torPeriod.ym;
-    if (torPeriod.type === 'range') return torPeriod.from + '-to-' + torPeriod.to;
-    return 'all-time-to-' + localDateStr();
+    return torPeriod.type === 'month' ? torPeriod.ym : torPeriod.from + '-to-' + torPeriod.to;
   }
 
   function torUpdateDownloadLabel() {
     var el = document.getElementById('tor-download-label');
     if (!el) return;
-    if (torReportMode === 'edo' || torPeriod.type === 'days' || torPeriod.type === 'all') el.textContent = 'Download CSV';
+    if (torReportMode === 'edo') el.textContent = 'Download CSV';
     else el.textContent = 'Download ' + torPeriodLabel();
   }
 
