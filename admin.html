@@ -852,6 +852,7 @@ html, body {
 .set-who { flex: 1; min-width: 0; }
 .set-who .p-name, .set-who .p-sub { overflow-wrap: anywhere; }
 .set-acts { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.set-nomatch { display: none; text-align: center; padding: 14px 0; font-size: 12px; color: var(--text3); }
 @media (max-width: 480px) {
   /* the section is already titled "All Staff" -- room for the buttons */
   .set-staff-badge { display: none; }
@@ -2667,6 +2668,12 @@ html, body {
         </button>
       </div>
 
+      <!-- Search both lists below by name or email -->
+      <div class="input-wrap" style="margin-bottom:10px;">
+        <i class="ti ti-search input-icon"></i>
+        <input class="form-input" type="search" id="settings-search" placeholder="Search name or email" autocomplete="off" oninput="settingsFilter()">
+      </div>
+
       <!-- Current admins list -->
       <div class="sec-hdr">
         <div class="sec-title">Current Admins</div>
@@ -2678,6 +2685,7 @@ html, body {
         <div id="admins-empty" style="text-align:center;padding:14px 0;font-size:12px;color:var(--text3);display:none;">
           No HR admins assigned yet.
         </div>
+        <div class="set-nomatch" id="admins-nomatch">No admin matches your search.</div>
       </div>
 
       <!-- All staff list -->
@@ -2691,6 +2699,7 @@ html, body {
         <div id="all-staff-empty" style="text-align:center;padding:14px 0;font-size:12px;color:var(--text3);display:none;">
           No staff registered yet. Invite staff first.
         </div>
+        <div class="set-nomatch" id="all-staff-nomatch">No staff matches your search.</div>
       </div>
 
       <!-- Danger zone -->
@@ -3778,7 +3787,7 @@ html, body {
             ? '<div class="btn-icon danger" onclick="demoteToStaff(\'' + escJsAttr(u.email) + '\')" title="Remove admin access"><i class="ti ti-user-minus"></i></div>'
             : '';
           var selfTag = isSelf ? ' <span style="font-size:10px;color:var(--text3);">(you)</span>' : '';
-          return '<div class="person-row set-row">'
+          return '<div class="person-row set-row" data-q="' + escHtml(((u.name || '') + ' ' + (u.email || '')).toLowerCase()) + '">'
             + '<div class="av ' + avCls + '">' + ini + '</div>'
             + '<div class="set-who">'
             + '<div class="p-name">' + escHtml(u.name || u.email) + selfTag + '</div>'
@@ -3816,7 +3825,7 @@ html, body {
             ? '<div class="btn-icon" onclick="openPermissionsModal(\'' + escJsAttr(u.email) + '\')" title="Manage Permissions" style="color:var(--blue-text);border-color:var(--blue-bg);background:var(--blue-bg);"><i class="ti ti-adjustments-horizontal"></i></div>'
             : '';
           var deleteBtn = '<div class="btn-icon" onclick="deleteStaff(\'' + escJsAttr(u.id) + '\',\'' + escJsAttr(u.name) + '\',\'' + escJsAttr(u.email) + '\')" title="Remove staff" style="color:#c0392b;border-color:#fde8e8;background:#fde8e8;"><i class="ti ti-trash"></i></div>';
-          return '<div class="person-row set-row">'
+          return '<div class="person-row set-row" data-q="' + escHtml(((u.name || '') + ' ' + (u.email || '')).toLowerCase()) + '">'
             + '<div class="av ' + avCls + '">' + ini + '</div>'
             + '<div class="set-who">'
             + '<div class="p-name">' + escHtml(u.name || u.email) + '</div>'
@@ -3832,6 +3841,29 @@ html, body {
         }).join('');
       }
     }
+    settingsFilter(); // keep any search typed before a re-render
+  }
+
+  // Search box above Current Admins / All Staff: hides rows whose name or
+  // email doesn't contain what's typed (any case), on both lists.
+  function settingsFilter() {
+    var box = document.getElementById('settings-search');
+    var q = box ? box.value.trim().toLowerCase() : '';
+    [['admins-list', 'admins-nomatch', null], ['all-staff-list', 'all-staff-nomatch', 'all-staff-count']].forEach(function (cfg) {
+      var listEl = document.getElementById(cfg[0]);
+      if (!listEl) return;
+      var rows = listEl.querySelectorAll('.set-row');
+      var shown = 0;
+      rows.forEach(function (row) {
+        var hit = !q || (row.getAttribute('data-q') || '').indexOf(q) !== -1;
+        row.style.display = hit ? '' : 'none';
+        if (hit) shown++;
+      });
+      var none = document.getElementById(cfg[1]);
+      if (none) none.style.display = q && rows.length && !shown ? 'block' : 'none';
+      var cnt = cfg[2] && document.getElementById(cfg[2]);
+      if (cnt) cnt.textContent = q ? '(' + shown + ' of ' + rows.length + ')' : '(' + rows.length + ')';
+    });
   }
 
   // ── MANAGE PERMISSIONS ──
