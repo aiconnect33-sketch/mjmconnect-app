@@ -1232,6 +1232,7 @@ html, body {
 <script src="js/duty-plan.js"></script>
 <script src="js/work-outings.js"></script>
 <script src="js/booking-extras.js"></script>
+<script src="js/time-in-remark.js"></script>
 <script>
   // Auth guard — require a logged-in session with an admin role
   (function() {
@@ -6076,7 +6077,7 @@ html, body {
         + '<td>' + (inParts ? inParts[1] : '<span style="color:var(--text3);">—</span>') + '</td>'
         + '<td>' + (r.duration_minutes != null ? fmtTimeOffDuration(r.duration_minutes) : '<span style="color:var(--text3);">—</span>') + '</td>'
         + '<td style="font-weight:700;">' + (torTripCounts(r) ? fmtTimeOffChargedHours(timeoffRecordChargedMinutes(r)) : '<span style="color:var(--text3);font-weight:400;">—</span>') + '</td>'
-        + '<td>' + escHtml(r.reason || '') + '</td>'
+        + '<td>' + escHtml(r.reason || '') + (typeof tiRemarkLineHtml === 'function' ? tiRemarkLineHtml(r) : '') + '</td>'
         + '<td>' + torStatusBadge(r) + '</td>'
         + '</tr>';
     }).join('');
@@ -6108,13 +6109,13 @@ html, body {
   function downloadTimeOffReportCsv() {
     if (torView === 'staff') { downloadTimeOffStaffCsv(); return; }
     var rows = torVisibleRows().slice().sort(function (a, b) { return new Date(a.time_out) - new Date(b.time_out); });
-    var lines = [['Date', 'Staff Name', 'Time Out', 'Time In', 'Duration (min)', 'Charged (h)', 'Reason', 'Status'].join(',')];
+    var lines = [['Date', 'Staff Name', 'Time Out', 'Time In', 'Duration (min)', 'Charged (h)', 'Reason', 'Status', 'Remark at Time In'].join(',')];
     rows.forEach(function (r) {
       lines.push([
         fcDateTime(r.time_out).split(',')[0], timeoffDisplayName(r), fcDateTime(r.time_out),
         r.time_in ? fcDateTime(r.time_in) : '', r.duration_minutes != null ? r.duration_minutes : '',
         torTripCounts(r) ? timeoffRecordChargedMinutes(r) / 60 : 0,
-        r.reason, torStatus(r)
+        r.reason, torStatus(r), r.time_in_remark || ''
       ].map(torCsvEscape).join(','));
     });
     var groups = torStaffMonthGroups(rows);
@@ -6333,7 +6334,8 @@ html, body {
           var when = new Date(r.time_out).toLocaleDateString('en-MY', { day: 'numeric', month: 'short' }) + ' · ' + fcDateTime(r.time_out).split(', ')[1]
             + ' → ' + (r.time_in ? fcDateTime(r.time_in).split(', ')[1] : 'still out');
           var charge = torTripCounts(r) ? ' · <b>' + fmtTimeOffChargedHours(timeoffRecordChargedMinutes(r)) + ' charged</b>' : '';
-          html += '<tr class="tor-staff-trips"><td colspan="' + cols + '">' + when + ' · ' + escHtml(r.reason || '') + charge + ' ' + torStatusBadge(r) + '</td></tr>';
+          html += '<tr class="tor-staff-trips"><td colspan="' + cols + '">' + when + ' · ' + escHtml(r.reason || '') + charge + ' ' + torStatusBadge(r)
+            + (r.time_in_remark ? ' <span style="color:#854F0B;font-weight:600;">· 📝 ' + escHtml(r.time_in_remark) + '</span>' : '') + '</td></tr>';
         });
       }
     });
@@ -6457,7 +6459,8 @@ html, body {
           g.rows.slice().sort(function (a, b) { return new Date(a.time_out) - new Date(b.time_out); }).forEach(function (r) {
             var when = new Date(r.time_out).toLocaleDateString('en-MY', { day: 'numeric', month: 'short' }) + ' · ' + fcDateTime(r.time_out).split(', ')[1]
               + ' → ' + (r.time_in ? fcDateTime(r.time_in).split(', ')[1] : 'still out');
-            h += '<tr class="tor-staff-trips"><td colspan="6">' + when + ' · ' + escHtml(r.purpose || '') + ' · <b>' + fmtTimeOffDuration(torWoMinutes(r)) + '</b> ' + torWoBadge(r) + '</td></tr>';
+            h += '<tr class="tor-staff-trips"><td colspan="6">' + when + ' · ' + escHtml(r.purpose || '') + ' · <b>' + fmtTimeOffDuration(torWoMinutes(r)) + '</b> ' + torWoBadge(r)
+              + (r.time_in_remark ? ' <span style="color:#854F0B;font-weight:600;">· 📝 ' + escHtml(r.time_in_remark) + '</span>' : '') + '</td></tr>';
           });
         }
       });
@@ -6476,7 +6479,7 @@ html, body {
         + '<td style="white-space:nowrap;">' + outParts[1] + '</td>'
         + '<td style="white-space:nowrap;">' + (inParts ? inParts[1] : '<span style="color:var(--text3);">—</span>') + '</td>'
         + '<td style="white-space:nowrap;font-weight:700;">' + fmtTimeOffDuration(torWoMinutes(r)) + (r.time_in ? '' : ' <span style="font-weight:400;color:var(--text3);">so far</span>') + '</td>'
-        + '<td>' + escHtml(r.purpose || '') + '</td>'
+        + '<td>' + escHtml(r.purpose || '') + (typeof tiRemarkLineHtml === 'function' ? tiRemarkLineHtml(r) : '') + '</td>'
         + '<td style="white-space:nowrap;">' + torWoBadge(r) + '</td></tr>';
     });
     wrap.innerHTML = html + '</tbody></table>';
@@ -6499,13 +6502,13 @@ html, body {
       return;
     }
     var rows = torWoVisibleRows(false).slice().sort(function (a, b) { return new Date(a.time_out) - new Date(b.time_out); });
-    var lines = [['Date', 'Staff Name', 'Time Out', 'Time In', 'Duration (min)', 'Where To & What For', 'Status'].join(',')];
+    var lines = [['Date', 'Staff Name', 'Time Out', 'Time In', 'Duration (min)', 'Where To & What For', 'Status', 'Remark at Time In'].join(',')];
     rows.forEach(function (r) {
       var st = torWoStatus(r);
       lines.push([
         fcDateTime(r.time_out).split(',')[0], timeoffDisplayName(r), fcDateTime(r.time_out),
         r.time_in ? fcDateTime(r.time_in) : '', Math.round(torWoMinutes(r)),
-        r.purpose, (st === 'voided' ? 'cancelled' : st) + (r.entry_type === 'edited' ? ' (edited)' : '')
+        r.purpose, (st === 'voided' ? 'cancelled' : st) + (r.entry_type === 'edited' ? ' (edited)' : ''), r.time_in_remark || ''
       ].map(torCsvEscape).join(','));
     });
     torSaveCsv(lines, 'Work-Outings-' + torPeriodFileTag() + '.csv');
@@ -7297,6 +7300,7 @@ html, body {
       + '<div class="to-history-reason">' + reasonLabel + '</div>'
       + '</div>' + badge + '</div>'
       + '<div class="to-history-time">' + timeLabel + (r.time_in ? ' · ' + fmtTimeOffDuration(r.duration_minutes || 0) + ' actual' : '') + entryNote + '</div>'
+      + (typeof tiRemarkLineHtml === 'function' ? tiRemarkLineHtml(r) : '')
       + (acts ? '<div class="to-acts">' + acts + '</div>' : '');
     if (canCorrect) html += timeoffCorrectionRowHtml(key, r);
     if (isPending) {
@@ -7806,6 +7810,7 @@ html, body {
       + '<div class="to-history-reason">' + reasonLabel + '</div>'
       + '</div>' + badge + '</div>'
       + '<div class="to-history-time">' + timeLabel + (r.time_in ? ' · ' + fmtTimeOffDuration(r.duration_minutes || 0) + ' actual' : '') + entryNote + '</div>'
+      + (typeof tiRemarkLineHtml === 'function' ? tiRemarkLineHtml(r) : '')
       + (acts ? '<div class="to-acts">' + acts + '</div>' : '');
     if (canCorrect) html += timeoffCorrectionRowHtml(key, r);
     if (isPending) {
@@ -7940,6 +7945,9 @@ html, body {
   }
 
   async function adminTimeInNow(id) {
+    // Optional remark first (js/time-in-remark.js) -- null means Cancel.
+    var remark = typeof tiAskRemark === 'function' ? await tiAskRemark() : '';
+    if (remark === null) return;
     try {
       var rows = await sbFetch('GET', '/rest/v1/time_off_records?id=eq.' + id);
       var record = rows && rows[0];
@@ -7965,7 +7973,9 @@ html, body {
         loadAdminTimeOffSelf();
         return;
       }
-      await sbFetch('PATCH', '/rest/v1/time_off_records?id=eq.' + id, { time_in: timeIn.toISOString(), duration_minutes: duration }, { 'Prefer': '' });
+      var tiPatch = { time_in: timeIn.toISOString(), duration_minutes: duration };
+      if (typeof tiPatchWithRemark === 'function') await tiPatchWithRemark(function (p) { return sbFetch('PATCH', '/rest/v1/time_off_records?id=eq.' + id, p, { 'Prefer': '' }); }, tiPatch, remark);
+      else await sbFetch('PATCH', '/rest/v1/time_off_records?id=eq.' + id, tiPatch, { 'Prefer': '' });
       loadAdminTimeOffSelf();
       if (typeof loadDbTimeOff === 'function') loadDbTimeOff();
       if (typeof loadAdminLeaveDuty === 'function') loadAdminLeaveDuty();
@@ -8808,14 +8818,25 @@ html, body {
         var out = (await sbFetch('GET', '/rest/v1/time_off_records?time_in=is.null&entry_type=neq.voided&entry_type=neq.cancel_pending&order=time_out.asc&limit=20')) || [];
         // Out for Work (js/work-outings.js) shares this card, tagged purple.
         var woOut = typeof woFetchOpen === 'function' ? await woFetchOpen() : [];
+        // Remarks typed at Time In in the last 1h 30m (js/time-in-remark.js).
+        var tiNotes = typeof tiFetchRecentNotes === 'function' ? await tiFetchRecentNotes(out.concat(woOut)) : [];
+        var tiNotesHtml = tiNotes.length ? tiHomeNotesHtml(tiNotes, timeoffDisplayName) : '';
         if (out.length || woOut.length) {
           var onames = out.concat(woOut).map(function(r){ return timeoffDisplayName(r); }).join(', ');
           toEl.innerHTML = '<div class="home-summary-card" onclick="switchTabByName(\'timeoff\')">'
             + '<div class="home-summary-ic" style="background:var(--blue-bg);color:var(--blue-text);"><i class="ti ti-clock"></i></div>'
             + '<div style="flex:1;min-width:0;"><div class="home-summary-title">Currently Out</div>'
             + '<div class="home-summary-sub">' + escHtml(onames) + '</div>'
-            + (typeof woHomeLineHtml === 'function' ? woHomeLineHtml(woOut) : '') + '</div>'
+            + (typeof woHomeLineHtml === 'function' ? woHomeLineHtml(woOut) : '') + tiNotesHtml + '</div>'
             + '<div class="home-summary-count">' + (out.length + woOut.length) + '</div>'
+            + '<i class="ti ti-chevron-right home-summary-chev"></i>'
+            + '</div>';
+        } else if (tiNotesHtml) {
+          toEl.innerHTML = '<div class="home-summary-card" onclick="switchTabByName(\'timeoff\')">'
+            + '<div class="home-summary-ic" style="background:var(--blue-bg);color:var(--blue-text);"><i class="ti ti-clock"></i></div>'
+            + '<div style="flex:1;min-width:0;"><div class="home-summary-title">Currently Out</div>'
+            + '<div class="home-summary-sub">No one out right now.</div>' + tiNotesHtml + '</div>'
+            + '<div class="home-summary-count">0</div>'
             + '<i class="ti ti-chevron-right home-summary-chev"></i>'
             + '</div>';
         } else {
