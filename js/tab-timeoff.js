@@ -609,6 +609,7 @@ function renderTimeOffRow(r, myEmailLow, canManageAll, sectionKey) {
     + '<div class="to-history-reason">' + reasonLabel + '</div>'
     + '</div>' + badge + '</div>'
     + '<div class="to-history-time">' + timeLabel + (r.time_in ? ' · ' + formatDuration(r.duration_minutes || 0) + ' actual' : '') + entryNote + '</div>'
+    + (typeof tiRemarkLineHtml === 'function' ? tiRemarkLineHtml(r) : '')
     + (acts ? '<div class="to-acts">' + acts + '</div>' : '');
 
   if (canCorrect) {
@@ -861,6 +862,9 @@ async function startTimeOff(timeOutDate) {
 }
 
 async function timeInNow(id) {
+  // Optional remark first (js/time-in-remark.js) -- null means Cancel.
+  var remark = typeof tiAskRemark === 'function' ? await tiAskRemark() : '';
+  if (remark === null) return;
   try {
     var rows = await fetch(SURL + '/rest/v1/time_off_records?id=eq.' + id, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } }).then(function (r) { return r.json(); });
     var record = rows && rows[0];
@@ -887,7 +891,9 @@ async function timeInNow(id) {
       loadTimeOff();
       return;
     }
-    await sbWrite('PATCH', 'time_off_records', { time_in: timeIn.toISOString(), duration_minutes: duration }, 'id=eq.' + id);
+    var tiPatch = { time_in: timeIn.toISOString(), duration_minutes: duration };
+    if (typeof tiPatchWithRemark === 'function') await tiPatchWithRemark(function (p) { return sbWrite('PATCH', 'time_off_records', p, 'id=eq.' + id); }, tiPatch, remark);
+    else await sbWrite('PATCH', 'time_off_records', tiPatch, 'id=eq.' + id);
     loadTimeOff();
     record.time_in = timeIn.toISOString(); record.duration_minutes = duration;
     timeOffMonthlyMinutes(record.staff_email, monthStart).then(function (mins) { syncTimeOffToSheet('create', record, mins); });

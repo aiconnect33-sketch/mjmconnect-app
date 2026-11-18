@@ -355,6 +355,7 @@ function woRowHtml(r, isMineList) {
   return '<div class="wo-row' + (voided ? ' voided' : '') + '" data-wo-id="' + r.id + '">'
     + '<div class="wo-row-top"><div class="wo-row-t">' + title + '</div>' + tag + '</div>'
     + '<div class="wo-row-s">' + sub + '</div>'
+    + (typeof tiRemarkLineHtml === 'function' ? tiRemarkLineHtml(r) : '')
     + (acts ? '<div class="wo-acts">' + acts + '</div>' : '')
     + '<div id="wo-fix-' + r.id + '"></div>'
     + '</div>';
@@ -415,6 +416,9 @@ async function woStart(timeOutDate) {
 }
 
 async function woTimeIn(id) {
+  // Optional remark first (js/time-in-remark.js) -- null means Cancel.
+  var remark = typeof tiAskRemark === 'function' ? await tiAskRemark() : '';
+  if (remark === null) return;
   try {
     var rows = await woReq('GET', 'work_outings?id=eq.' + id);
     var r = rows && rows[0];
@@ -424,7 +428,9 @@ async function woTimeIn(id) {
     var mins = Math.max(0, Math.round((timeIn - new Date(r.time_out)) / 60000));
     // time_in=is.null guard: a second tap (or another device) can't
     // overwrite the first Time In.
-    await woReq('PATCH', 'work_outings?id=eq.' + id + '&time_in=is.null', { time_in: timeIn.toISOString(), duration_minutes: mins });
+    var tiPatch = { time_in: timeIn.toISOString(), duration_minutes: mins };
+    if (typeof tiPatchWithRemark === 'function') await tiPatchWithRemark(function (p) { return woReq('PATCH', 'work_outings?id=eq.' + id + '&time_in=is.null', p); }, tiPatch, remark);
+    else await woReq('PATCH', 'work_outings?id=eq.' + id + '&time_in=is.null', tiPatch);
     woAfterChange();
   } catch (e) { alert('Could not record your Time In. Please try again.'); }
 }
