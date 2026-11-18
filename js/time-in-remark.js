@@ -51,8 +51,39 @@ function tiClock(d) { return d.toLocaleTimeString('en-MY', { hour: 'numeric', mi
 // In, but never later than 2pm. Null if it isn't about lunch, or if Time
 // In is already 2pm or later (lunch time is over).
 var TI_LUNCH_END_HOUR = 14;
+// Does the remark mean lunch? Forgiving of slips: punctuation or a space
+// inside the word ("lun.ch", "lun ch"), "lunchtime", and one wrong,
+// missing, extra or swapped letter ("luch", "lunhc", "lumch") -- but not
+// real words that happen to be one letter off ("launch", "punch", ...).
+var TI_LUNCH_WORDS = ['lunch', 'makan'];
+var TI_NOT_LUNCH = { launch: 1, bunch: 1, punch: 1, hunch: 1, munch: 1, lynch: 1, lunar: 1, makin: 1, makna: 1, maka: 1, mana: 1, malam: 1 };
+function tiOneSlip(a, b) {
+  // true when a and b differ by at most one insert / delete / change / swap
+  if (a === b) return true;
+  var la = a.length, lb = b.length;
+  if (Math.abs(la - lb) > 1) return false;
+  var i = 0;
+  while (i < la && i < lb && a[i] === b[i]) i++;
+  if (la === lb) {
+    if (a.slice(i + 1) === b.slice(i + 1)) return true;                                   // one change
+    return a[i] === b[i + 1] && a[i + 1] === b[i] && a.slice(i + 2) === b.slice(i + 2);    // one swap
+  }
+  return la > lb ? a.slice(i + 1) === b.slice(i) : a.slice(i) === b.slice(i + 1);          // one extra / missing
+}
+function tiIsLunch(remark) {
+  var words = String(remark || '').toLowerCase().replace(/[^a-z\s]/g, '').split(/\s+/).filter(Boolean);
+  var cands = words.slice();
+  for (var i = 0; i + 1 < words.length; i++) cands.push(words[i] + words[i + 1]); // "lun ch"
+  return cands.some(function (w) {
+    if (TI_NOT_LUNCH[w]) return false;
+    return TI_LUNCH_WORDS.some(function (t) {
+      return w.indexOf(t) === 0 || (w.length >= 4 && tiOneSlip(w, t)); // "lunchtime", or one slip
+    });
+  });
+}
+
 function tiLunchBackBy(remark, timeIn) {
-  if (!remark || !/\b(lunch|makan)\b/i.test(remark)) return null;
+  if (!remark || !tiIsLunch(remark)) return null;
   var t = new Date(timeIn);
   var end = new Date(t); end.setHours(TI_LUNCH_END_HOUR, 0, 0, 0);
   if (t >= end) return null;
