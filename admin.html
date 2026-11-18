@@ -8818,25 +8818,14 @@ html, body {
         var out = (await sbFetch('GET', '/rest/v1/time_off_records?time_in=is.null&entry_type=neq.voided&entry_type=neq.cancel_pending&order=time_out.asc&limit=20')) || [];
         // Out for Work (js/work-outings.js) shares this card, tagged purple.
         var woOut = typeof woFetchOpen === 'function' ? await woFetchOpen() : [];
-        // Remarks typed at Time In in the last 1h 30m (js/time-in-remark.js).
-        var tiNotes = typeof tiFetchRecentNotes === 'function' ? await tiFetchRecentNotes(out.concat(woOut)) : [];
-        var tiNotesHtml = tiNotes.length ? tiHomeNotesHtml(tiNotes, timeoffDisplayName) : '';
         if (out.length || woOut.length) {
           var onames = out.concat(woOut).map(function(r){ return timeoffDisplayName(r); }).join(', ');
           toEl.innerHTML = '<div class="home-summary-card" onclick="switchTabByName(\'timeoff\')">'
             + '<div class="home-summary-ic" style="background:var(--blue-bg);color:var(--blue-text);"><i class="ti ti-clock"></i></div>'
             + '<div style="flex:1;min-width:0;"><div class="home-summary-title">Currently Out</div>'
             + '<div class="home-summary-sub">' + escHtml(onames) + '</div>'
-            + (typeof woHomeLineHtml === 'function' ? woHomeLineHtml(woOut) : '') + tiNotesHtml + '</div>'
+            + (typeof woHomeLineHtml === 'function' ? woHomeLineHtml(woOut) : '') + '</div>'
             + '<div class="home-summary-count">' + (out.length + woOut.length) + '</div>'
-            + '<i class="ti ti-chevron-right home-summary-chev"></i>'
-            + '</div>';
-        } else if (tiNotesHtml) {
-          toEl.innerHTML = '<div class="home-summary-card" onclick="switchTabByName(\'timeoff\')">'
-            + '<div class="home-summary-ic" style="background:var(--blue-bg);color:var(--blue-text);"><i class="ti ti-clock"></i></div>'
-            + '<div style="flex:1;min-width:0;"><div class="home-summary-title">Currently Out</div>'
-            + '<div class="home-summary-sub">No one out right now.</div>' + tiNotesHtml + '</div>'
-            + '<div class="home-summary-count">0</div>'
             + '<i class="ti ti-chevron-right home-summary-chev"></i>'
             + '</div>';
         } else {

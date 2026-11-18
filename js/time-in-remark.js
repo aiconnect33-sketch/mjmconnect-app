@@ -1,19 +1,18 @@
 // ── time-in-remark.js — optional remark when tapping "I'm Back" ──
 // Shared by index.html and admin.html, for personal Time Off and Out for
 // Work alike. Tapping I'm Back asks for an optional remark (e.g. "Going
-// straight to lunch, back 12:30") before Time In; leaving it empty is the
-// normal case. The remark is saved as time_in_remark
-// (docs/time-in-remark.sql), shown on the record, in the admin report and
-// CSVs, and for TI_NOTE_SHOW_MIN after Time In on Home's Currently Out card,
-// so colleagues know the person isn't necessarily back at their desk.
-// It never changes the hours charged.
+// straight to lunch") before Time In; leaving it empty is the normal case.
+// The remark is saved as time_in_remark (docs/time-in-remark.sql) and shown
+// on the record -- My / All Records, My / All Work Outings -- and in the
+// admin report and CSVs, so colleagues know the person isn't necessarily
+// back at their desk. A remark about lunch also says when they're due back
+// (see tiLunchBackBy). It never changes the hours charged, and nothing is
+// shown on Home.
 //
-// Relies on the page's SURL / SKEY / escHtml globals.
+// Relies on the page's escHtml global.
 
-// Lunch is flexible (any time 11am-2pm) but at most 1h 30m, so a remark
-// stays on Home for 1h 30m after Time In; one about lunch only until
-// they're due back (see tiLunchBackBy).
-var TI_NOTE_SHOW_MIN = 90;    // how long a remark shows on Home after Time In
+// Lunch is flexible (any time 11am-2pm) but at most 1h 30m.
+var TI_LUNCH_MAX_MIN = 90;
 var TI_REMARK_MAX = 100;
 
 (function tiInjectStyles() {
@@ -35,9 +34,7 @@ var TI_REMARK_MAX = 100;
     + '.ti-go{background:#0F6E5C;color:#fff;border:none}'
     + '.ti-no{background:#fff;color:#70827D;border:1px solid #D5DEDA;flex:0 0 32%}'
     + '.ti-remark-line{font-size:11px;font-weight:600;color:#854F0B;margin-top:4px;line-height:1.4;word-break:break-word}'
-    + '.ti-home{display:block;margin-top:5px}'
-    + '.ti-home-line{display:block;font-size:10.5px;font-weight:600;color:#854F0B;background:#FAEEDA;border-radius:8px;padding:4px 8px;margin-top:4px;line-height:1.35;word-break:break-word}'
-    + '.ti-home-line b{font-weight:800}';
+    + '.ti-remark-line b{font-weight:800}';
   var s = document.createElement('style');
   s.id = 'ti-styles';
   s.textContent = css;
@@ -87,7 +84,7 @@ function tiLunchBackBy(remark, timeIn) {
   var t = new Date(timeIn);
   var end = new Date(t); end.setHours(TI_LUNCH_END_HOUR, 0, 0, 0);
   if (t >= end) return null;
-  var back = new Date(t.getTime() + TI_NOTE_SHOW_MIN * 60000);
+  var back = new Date(t.getTime() + TI_LUNCH_MAX_MIN * 60000);
   return back > end ? end : back;
 }
 
@@ -161,42 +158,4 @@ async function tiPatchWithRemark(patchFn, patch, remark) {
 function tiRemarkLineHtml(r) {
   if (!r || !r.time_in_remark) return '';
   return '<div class="ti-remark-line">📝 ' + tiNoteHtml(r) + '</div>';
-}
-
-// Remarks from the last TI_NOTE_SHOW_MIN minutes, newest per person,
-// leaving out anyone who's out again now. Never throws.
-async function tiFetchRecentNotes(outRows) {
-  var since = new Date(Date.now() - TI_NOTE_SHOW_MIN * 60000).toISOString();
-  var q = '?time_in=gte.' + encodeURIComponent(since) + '&time_in_remark=not.is.null&entry_type=neq.voided&order=time_in.desc&limit=30';
-  var get = function (table) {
-    return fetch(SURL + '/rest/v1/' + table + q, { headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY } })
-      .then(function (res) { return res.ok ? res.json() : []; })
-      .catch(function () { return []; });
-  };
-  var both = await Promise.all([get('time_off_records'), get('work_outings')]);
-  var outNow = {};
-  (outRows || []).forEach(function (r) { if (r.staff_email) outNow[r.staff_email.toLowerCase()] = true; });
-  var seen = {}, notes = [];
-  (Array.isArray(both[0]) ? both[0] : []).concat(Array.isArray(both[1]) ? both[1] : [])
-    .filter(function (r) { return r.time_in_remark && r.entry_type !== 'cancel_pending'; })
-    .sort(function (a, b) { return new Date(b.time_in) - new Date(a.time_in); })
-    .forEach(function (r) {
-      var key = (r.staff_email || r.staff_name || '').toLowerCase();
-      if (seen[key] || outNow[key]) return;
-      // A lunch note goes once they're due back (2pm at the latest).
-      var back = tiLunchBackBy(r.time_in_remark, r.time_in);
-      if (back && Date.now() > back.getTime()) return;
-      seen[key] = true;
-      notes.push(r);
-    });
-  return notes;
-}
-
-// Lines for Home's Currently Out card. nameOf(record) gives the display name.
-function tiHomeNotesHtml(notes, nameOf) {
-  if (!notes || !notes.length) return '';
-  return '<span class="ti-home">' + notes.map(function (r) {
-    var name = nameOf ? nameOf(r) : (r.staff_name || '');
-    return '<span class="ti-home-line">📝 <b>' + escHtml(name) + '</b> · in ' + escHtml(tiClock(new Date(r.time_in))) + ' · ' + tiNoteHtml(r) + '</span>';
-  }).join('') + '</span>';
 }
