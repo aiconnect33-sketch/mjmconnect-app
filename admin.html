@@ -846,6 +846,17 @@ html, body {
 .person-row:last-child  { border-bottom: none; padding-bottom: 0; }
 .p-name { font-size: 13px; font-weight: 500; color: var(--text); }
 .p-sub  { font-size: 11px; color: var(--text2); margin-top: 1px; }
+/* Manage Admins rows: name/email take what's left and wrap, buttons never
+   get pushed off the right edge of a phone screen. */
+.set-row .av { flex-shrink: 0; }
+.set-who { flex: 1; min-width: 0; }
+.set-who .p-name, .set-who .p-sub { overflow-wrap: anywhere; }
+.set-acts { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.set-nomatch { display: none; text-align: center; padding: 14px 0; font-size: 12px; color: var(--text3); }
+@media (max-width: 480px) {
+  /* the section is already titled "All Staff" -- room for the buttons */
+  .set-staff-badge { display: none; }
+}
 
 /* ── AVATARS ── */
 .av {
@@ -2657,6 +2668,12 @@ html, body {
         </button>
       </div>
 
+      <!-- Search both lists below by name or email -->
+      <div class="input-wrap" style="margin-bottom:10px;">
+        <i class="ti ti-search input-icon"></i>
+        <input class="form-input" type="search" id="settings-search" placeholder="Search name or email" autocomplete="off" oninput="settingsFilter()">
+      </div>
+
       <!-- Current admins list -->
       <div class="sec-hdr">
         <div class="sec-title">Current Admins</div>
@@ -2668,6 +2685,7 @@ html, body {
         <div id="admins-empty" style="text-align:center;padding:14px 0;font-size:12px;color:var(--text3);display:none;">
           No HR admins assigned yet.
         </div>
+        <div class="set-nomatch" id="admins-nomatch">No admin matches your search.</div>
       </div>
 
       <!-- All staff list -->
@@ -2681,6 +2699,7 @@ html, body {
         <div id="all-staff-empty" style="text-align:center;padding:14px 0;font-size:12px;color:var(--text3);display:none;">
           No staff registered yet. Invite staff first.
         </div>
+        <div class="set-nomatch" id="all-staff-nomatch">No staff matches your search.</div>
       </div>
 
       <!-- Danger zone -->
@@ -3741,8 +3760,16 @@ html, body {
       if (auditIconBtn) auditIconBtn.style.display = 'none';
     }
 
+    // Both lists run A-Z by name (case-insensitive), like the Account Log.
+    var byName = function (a, b) {
+      return String(a.name || a.email || '').localeCompare(String(b.name || b.email || ''), 'en', { sensitivity: 'base' });
+    };
+    var initialsOf = function (u) {
+      return String(u.name || u.email || '?').split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
+    };
+
     // Render admins list (superadmin + hradmin)
-    var admins = list.filter(u => u.role === 'superadmin' || u.role === 'hradmin');
+    var admins = list.filter(u => u.role === 'superadmin' || u.role === 'hradmin').sort(byName);
     var adminsEl = document.getElementById('admins-list');
     var adminsEmpty = document.getElementById('admins-empty');
     if (adminsEl) {
@@ -3752,7 +3779,7 @@ html, body {
       } else {
         if (adminsEmpty) adminsEmpty.style.display = 'none';
         adminsEl.innerHTML = admins.map(function(u, i) {
-          var ini = u.name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
+          var ini = initialsOf(u);
           var avCls = AV_COLORS[i % AV_COLORS.length];
           var isSelf = u.email === user.email;
           var canRemove = user.role === 'superadmin' && !isSelf && u.role !== 'superadmin';
@@ -3760,13 +3787,13 @@ html, body {
             ? '<div class="btn-icon danger" onclick="demoteToStaff(\'' + escJsAttr(u.email) + '\')" title="Remove admin access"><i class="ti ti-user-minus"></i></div>'
             : '';
           var selfTag = isSelf ? ' <span style="font-size:10px;color:var(--text3);">(you)</span>' : '';
-          return '<div class="person-row">'
+          return '<div class="person-row set-row" data-q="' + escHtml(((u.name || '') + ' ' + (u.email || '')).toLowerCase()) + '">'
             + '<div class="av ' + avCls + '">' + ini + '</div>'
-            + '<div style="flex:1;">'
-            + '<div class="p-name">' + escHtml(u.name) + selfTag + '</div>'
+            + '<div class="set-who">'
+            + '<div class="p-name">' + escHtml(u.name || u.email) + selfTag + '</div>'
             + '<div class="p-sub">' + escHtml(u.email) + '</div>'
             + '</div>'
-            + '<div style="display:flex;align-items:center;gap:6px;">'
+            + '<div class="set-acts">'
             + '<span class="badge ' + (ROLE_BADGE[u.role] || 'b-green') + '">' + (ROLE_LABELS[u.role] || u.role) + '</span>'
             + removeBtn
             + '</div>'
@@ -3776,7 +3803,7 @@ html, body {
     }
 
     // Render all staff list
-    var staffOnly = list.filter(u => u.role === 'staff');
+    var staffOnly = list.filter(u => u.role === 'staff').sort(byName);
     var staffEl   = document.getElementById('all-staff-list');
     var staffEmpty= document.getElementById('all-staff-empty');
     var staffCount= document.getElementById('all-staff-count');
@@ -3788,7 +3815,7 @@ html, body {
       } else {
         if (staffEmpty) staffEmpty.style.display = 'none';
         staffEl.innerHTML = staffOnly.map(function(u, i) {
-          var ini = u.name.split(' ').filter(Boolean).slice(0,2).map(function(p){ return p[0].toUpperCase(); }).join('');
+          var ini = initialsOf(u);
           var avCls = AV_COLORS[i % AV_COLORS.length];
           var canPromote = user.role === 'superadmin';
           var promoteBtn = canPromote
@@ -3798,14 +3825,14 @@ html, body {
             ? '<div class="btn-icon" onclick="openPermissionsModal(\'' + escJsAttr(u.email) + '\')" title="Manage Permissions" style="color:var(--blue-text);border-color:var(--blue-bg);background:var(--blue-bg);"><i class="ti ti-adjustments-horizontal"></i></div>'
             : '';
           var deleteBtn = '<div class="btn-icon" onclick="deleteStaff(\'' + escJsAttr(u.id) + '\',\'' + escJsAttr(u.name) + '\',\'' + escJsAttr(u.email) + '\')" title="Remove staff" style="color:#c0392b;border-color:#fde8e8;background:#fde8e8;"><i class="ti ti-trash"></i></div>';
-          return '<div class="person-row">'
+          return '<div class="person-row set-row" data-q="' + escHtml(((u.name || '') + ' ' + (u.email || '')).toLowerCase()) + '">'
             + '<div class="av ' + avCls + '">' + ini + '</div>'
-            + '<div style="flex:1;">'
-            + '<div class="p-name">' + escHtml(u.name) + '</div>'
+            + '<div class="set-who">'
+            + '<div class="p-name">' + escHtml(u.name || u.email) + '</div>'
             + '<div class="p-sub">' + escHtml(u.email) + '</div>'
             + '</div>'
-            + '<div style="display:flex;align-items:center;gap:6px;">'
-            + '<span class="badge b-green">Staff</span>'
+            + '<div class="set-acts">'
+            + '<span class="badge b-green set-staff-badge">Staff</span>'
             + permsBtn
             + promoteBtn
             + deleteBtn
@@ -3814,6 +3841,29 @@ html, body {
         }).join('');
       }
     }
+    settingsFilter(); // keep any search typed before a re-render
+  }
+
+  // Search box above Current Admins / All Staff: hides rows whose name or
+  // email doesn't contain what's typed (any case), on both lists.
+  function settingsFilter() {
+    var box = document.getElementById('settings-search');
+    var q = box ? box.value.trim().toLowerCase() : '';
+    [['admins-list', 'admins-nomatch', null], ['all-staff-list', 'all-staff-nomatch', 'all-staff-count']].forEach(function (cfg) {
+      var listEl = document.getElementById(cfg[0]);
+      if (!listEl) return;
+      var rows = listEl.querySelectorAll('.set-row');
+      var shown = 0;
+      rows.forEach(function (row) {
+        var hit = !q || (row.getAttribute('data-q') || '').indexOf(q) !== -1;
+        row.style.display = hit ? '' : 'none';
+        if (hit) shown++;
+      });
+      var none = document.getElementById(cfg[1]);
+      if (none) none.style.display = q && rows.length && !shown ? 'block' : 'none';
+      var cnt = cfg[2] && document.getElementById(cfg[2]);
+      if (cnt) cnt.textContent = q ? '(' + shown + ' of ' + rows.length + ')' : '(' + rows.length + ')';
+    });
   }
 
   // ── MANAGE PERMISSIONS ──
@@ -8362,7 +8412,7 @@ html, body {
   // ── LOAD STAFF PROFILES FROM SUPABASE ──
   async function loadDbProfiles() {
     try {
-      var data = await sbFetch('GET', '/rest/v1/profiles?order=created_at.asc&limit=100');
+      var data = await sbFetch('GET', '/rest/v1/profiles?order=created_at.asc&limit=2000');
       if (!data || data.length === 0) return;
       localStorage.setItem('mjm_staff', JSON.stringify(data.map(function(p) {
         return { id: p.id, name: p.full_name, email: p.email, role: p.role || 'staff', permissions: p.permissions || null };
