@@ -11,8 +11,8 @@
 // Relies on the page's SURL / SKEY / escHtml globals.
 
 // Lunch is flexible (any time 11am-2pm) but at most 1h 30m, so a remark
-// like "Going straight to lunch" stays on Home for 1h 30m after Time In --
-// by then they're due back in the office.
+// stays on Home for 1h 30m after Time In; one about lunch only until
+// they're due back (see tiLunchBackBy).
 var TI_NOTE_SHOW_MIN = 90;    // how long a remark shows on Home after Time In
 var TI_REMARK_MAX = 100;
 
@@ -29,6 +29,7 @@ var TI_REMARK_MAX = 100;
     + '#ti-remark{width:100%;box-sizing:border-box;border:1.5px solid #D5DEDA;border-radius:12px;padding:10px 12px;font-size:14px;font-family:inherit;color:#111C18;resize:none;height:64px;outline:none}'
     + '#ti-remark:focus{border-color:#0F6E5C}'
     + '#ti-count{font-size:10.5px;color:#9AABA3;text-align:right;margin:3px 0 12px}'
+    + '#ti-hint{font-size:12px;color:#854F0B;background:#FAEEDA;border-radius:9px;padding:7px 10px;margin-top:6px}'
     + '.ti-row{display:flex;gap:8px}'
     + '.ti-btn{flex:1;border-radius:12px;padding:12px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer}'
     + '.ti-go{background:#0F6E5C;color:#fff;border:none}'
@@ -45,12 +46,33 @@ var TI_REMARK_MAX = 100;
 
 function tiClock(d) { return d.toLocaleTimeString('en-MY', { hour: 'numeric', minute: '2-digit' }); }
 
-// The grey example in the box. Lunch can start any time from 11am to 2pm,
-// so inside that window it also says when they'd be due back (1h 30m on).
-function tiExample() {
-  var now = new Date(), h = now.getHours();
-  if (h >= 11 && h < 14) return 'e.g. Going straight to lunch, back ' + tiClock(new Date(now.getTime() + TI_NOTE_SHOW_MIN * 60000));
-  return 'e.g. Going straight to lunch';
+// Lunch is flexible from 11am to 2pm and at most 1h 30m. When a remark
+// mentions lunch, the app works out "be back before": 1h 30m after Time
+// In, but never later than 2pm. Null if it isn't about lunch, or if Time
+// In is already 2pm or later (lunch time is over).
+var TI_LUNCH_END_HOUR = 14;
+function tiLunchBackBy(remark, timeIn) {
+  if (!remark || !/\b(lunch|makan)\b/i.test(remark)) return null;
+  var t = new Date(timeIn);
+  var end = new Date(t); end.setHours(TI_LUNCH_END_HOUR, 0, 0, 0);
+  if (t >= end) return null;
+  var back = new Date(t.getTime() + TI_NOTE_SHOW_MIN * 60000);
+  return back > end ? end : back;
+}
+
+// The remark as shown to others, e.g. "Going straight to lunch · be back
+// before 1:00 pm".
+function tiNoteHtml(r) {
+  var back = tiLunchBackBy(r.time_in_remark, r.time_in);
+  return escHtml(r.time_in_remark) + (back ? ' · <b>be back before ' + escHtml(tiClock(back)) + '</b>' : '');
+}
+
+function tiUpdateHint() {
+  var box = document.getElementById('ti-remark'), hint = document.getElementById('ti-hint');
+  if (!box || !hint) return;
+  var back = tiLunchBackBy(box.value, new Date());
+  hint.innerHTML = back ? '🍽 Others will see: <b>be back before ' + escHtml(tiClock(back)) + '</b>' : '';
+  hint.style.display = back ? 'block' : 'none';
 }
 
 // Opens the "Time In at 11:30 AM" box. Resolves with the remark ('' when
@@ -65,7 +87,8 @@ function tiAskRemark() {
       + '<h4 id="ti-title">Time In at ' + escHtml(tiClock(new Date())) + '</h4>'
       + '<p>Anything people should know? <b>Optional</b> — leave it empty if you\'re back in the office.</p>'
       + '<label for="ti-remark">Remark (optional)</label>'
-      + '<textarea id="ti-remark" maxlength="' + TI_REMARK_MAX + '" placeholder="' + escHtml(tiExample()) + '"></textarea>'
+      + '<textarea id="ti-remark" maxlength="' + TI_REMARK_MAX + '" placeholder="e.g. Going straight to lunch"></textarea>'
+      + '<div id="ti-hint" style="display:none;"></div>'
       + '<div id="ti-count">0 / ' + TI_REMARK_MAX + '</div>'
       + '<div class="ti-row"><button class="ti-btn ti-no" id="ti-no">Cancel</button><button class="ti-btn ti-go" id="ti-go">Time In</button></div>'
       + '</div>';
@@ -74,7 +97,7 @@ function tiAskRemark() {
     var done = function (val) { ov.remove(); document.removeEventListener('keydown', onKey); resolve(val); };
     var onKey = function (e) { if (e.key === 'Escape') done(null); };
     document.addEventListener('keydown', onKey);
-    box.addEventListener('input', function () { document.getElementById('ti-count').textContent = box.value.length + ' / ' + TI_REMARK_MAX; });
+    box.addEventListener('input', function () { document.getElementById('ti-count').textContent = box.value.length + ' / ' + TI_REMARK_MAX; tiUpdateHint(); });
     document.getElementById('ti-go').onclick = function () { done(box.value.replace(/\s+/g, ' ').trim().slice(0, TI_REMARK_MAX)); };
     document.getElementById('ti-no').onclick = function () { done(null); };
     ov.addEventListener('click', function (e) { if (e.target === ov) done(null); });
@@ -106,7 +129,7 @@ async function tiPatchWithRemark(patchFn, patch, remark) {
 // The amber "📝 remark" line under a record.
 function tiRemarkLineHtml(r) {
   if (!r || !r.time_in_remark) return '';
-  return '<div class="ti-remark-line">📝 ' + escHtml(r.time_in_remark) + '</div>';
+  return '<div class="ti-remark-line">📝 ' + tiNoteHtml(r) + '</div>';
 }
 
 // Remarks from the last TI_NOTE_SHOW_MIN minutes, newest per person,
@@ -129,6 +152,9 @@ async function tiFetchRecentNotes(outRows) {
     .forEach(function (r) {
       var key = (r.staff_email || r.staff_name || '').toLowerCase();
       if (seen[key] || outNow[key]) return;
+      // A lunch note goes once they're due back (2pm at the latest).
+      var back = tiLunchBackBy(r.time_in_remark, r.time_in);
+      if (back && Date.now() > back.getTime()) return;
       seen[key] = true;
       notes.push(r);
     });
@@ -140,6 +166,6 @@ function tiHomeNotesHtml(notes, nameOf) {
   if (!notes || !notes.length) return '';
   return '<span class="ti-home">' + notes.map(function (r) {
     var name = nameOf ? nameOf(r) : (r.staff_name || '');
-    return '<span class="ti-home-line">📝 <b>' + escHtml(name) + '</b> · in ' + escHtml(tiClock(new Date(r.time_in))) + ' · ' + escHtml(r.time_in_remark) + '</span>';
+    return '<span class="ti-home-line">📝 <b>' + escHtml(name) + '</b> · in ' + escHtml(tiClock(new Date(r.time_in))) + ' · ' + tiNoteHtml(r) + '</span>';
   }).join('') + '</span>';
 }
