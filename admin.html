@@ -7759,7 +7759,9 @@ html, body {
       + '<div class="to-meter-top"><span class="to-meter-label">This Month</span>'
       + '<span class="to-meter-value ' + mCls + '">' + fmtTimeOffChargedHours(monthlyMinutes) + ' <span style="color:var(--text3);font-weight:500;">/ 4h</span></span></div>'
       + '<div class="to-meter-track"><div class="to-meter-fill ' + mCls + '" style="width:' + pct + '%;"></div></div>'
-      + '</div>';
+      + '</div>'
+      // Right under This Month, so it's easy to find (before the Reason box).
+      + '<button class="btn-ghost" style="border-color:var(--red-text);color:var(--red-text);margin:0 0 10px;" onclick="adminShowBackfillForm()">Log a Missed Time Off</button>';
 
     if (openRecord) {
       var out = new Date(openRecord.time_out);
@@ -7831,7 +7833,6 @@ html, body {
         + '</div>';
     });
 
-    html += '<button class="btn-ghost" style="border-color:var(--red-text);color:var(--red-text);margin-top:2px;" onclick="adminShowBackfillForm()">Log a Missed Time Off</button>';
     return html;
   }
 

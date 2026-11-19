@@ -412,7 +412,9 @@ function renderTimeOffStatus(openRecord, monthlyMinutes, dueReminders) {
     + '<div class="to-meter-track"><div class="to-meter-fill ' + mCls + '" style="width:' + pct + '%;"></div></div>'
     + '</div>';
 
-  var html = meter;
+  // Log a Missed Time Off sits right under This Month, so it's easy to find.
+  var html = meter
+    + '<button class="book-btn-ghost" style="border-color:var(--red-text);color:var(--red-text);margin:0 0 10px;" onclick="showBackfillForm()">📝 Log a Missed Time Off</button>';
 
   if (openRecord) {
     var out = new Date(openRecord.time_out);
@@ -485,8 +487,6 @@ function renderTimeOffStatus(openRecord, monthlyMinutes, dueReminders) {
       + '<button class="book-btn-ghost" style="border-color:var(--red-text);color:var(--red-text);margin-top:2px;" onclick="cancelReminder(' + r.id + ')">✕ Cancel — not taking this Time Off</button>'
       + '</div>';
   });
-
-  html += '<button class="book-btn-ghost" style="border-color:var(--red-text);color:var(--red-text);margin-top:2px;" onclick="showBackfillForm()">📝 Log a Missed Time Off</button>';
 
   return html;
 }
