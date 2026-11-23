@@ -12,10 +12,10 @@ who is signed in to the MJM Intranet **and** has been given access to the
 MJMConnect icon there (the module with code `MJMCONNECT`). Everyone else
 gets an error and just sees a plain calendar.
 
-How it checks: the Intranet sends the user's Intranet login token. The
-function asks the Intranet's own database "which module is `MJMCONNECT`?"
-using that token. The Intranet's permission rules only show a module to
-people who have access to it, so:
+How it checks: the Intranet sends the user's Intranet login token. Using
+that token, the function asks the Intranet's own database for the
+`MJMCONNECT` module and for the list of modules this person may use
+(`gw_my_module_ids`), so:
 
 - not signed in or token expired → refused (401)
 - signed in but no MJMConnect access → refused (403)
@@ -44,8 +44,9 @@ the code below; they are public values.
    **"Verify JWT with legacy secret"** → **Save changes**. The token it
    receives is an *Intranet* token, which this project can't verify itself;
    the function checks it with the Intranet instead.
-5. In the MJM Intranet, the MJMConnect icon must use code **`MJMCONNECT`**
-   (Settings → Master Manage → Module → Add module).
+5. In the MJM Intranet, the MJMConnect icon must use code **`MJMCONNECT`**.
+   It is added by running `supabase/migrations/20261202100000_system_mjmconnect.sql`
+   (MJM-Intranet repo) in the Intranet's SQL Editor.
 
 ## Test it
 
@@ -107,17 +108,23 @@ function addDays(date: string, n: number) {
   return d.toISOString().slice(0, 10);
 }
 
-// Signed in to the Intranet and allowed to use MJMConnect there?
-// The Intranet only returns the module row to people who have access.
+// Signed in to the Intranet and given Access to MJMConnect there?
+// Compares the MJMCONNECT module id with the person's own usable modules
+// (gw_my_module_ids: Access ticked + module in one of their Businesses;
+// super admins have every module). Being an admin alone is not enough.
 async function intranetAccess(token: string): Promise<number> {
-  const res = await fetch(
-    INTRANET_URL + '/rest/v1/gw_modules?code=eq.' + MODULE_CODE + '&is_active=is.true&select=id',
-    { headers: { apikey: INTRANET_ANON_KEY, Authorization: 'Bearer ' + token } }
-  );
-  if (res.status === 401 || res.status === 403) return 401;
-  if (!res.ok) return 502;
-  const rows = await res.json();
-  return Array.isArray(rows) && rows.length ? 200 : 403;
+  const headers = { apikey: INTRANET_ANON_KEY, Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' };
+  const [modRes, mineRes] = await Promise.all([
+    fetch(INTRANET_URL + '/rest/v1/gw_modules?code=eq.' + MODULE_CODE + '&is_active=is.true&select=id', { headers }),
+    fetch(INTRANET_URL + '/rest/v1/rpc/gw_my_module_ids', { method: 'POST', headers, body: '{}' })
+  ]);
+  if ([modRes.status, mineRes.status].some((s) => s === 401 || s === 403)) return 401;
+  if (!modRes.ok || !mineRes.ok) return 502;
+  const mod = await modRes.json();
+  const mine = await mineRes.json();
+  const id = Array.isArray(mod) && mod[0] && mod[0].id;
+  const ids = (Array.isArray(mine) ? mine : []).map((x) => (typeof x === 'string' ? x : x && x.gw_my_module_ids));
+  return id && ids.includes(id) ? 200 : 403;
 }
 
 async function db(path: string) {
