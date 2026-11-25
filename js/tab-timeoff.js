@@ -24,6 +24,13 @@ var TIMEOFF_PER_TRIP_CAP_MIN = 120; // 2h -- hard block once a trip runs longer 
 var TIMEOFF_MONTHLY_CAP_MIN  = 240; // 4h
 var TIMEOFF_NEAR_LIMIT_MIN   = 180; // 75% of the monthly cap, used for the amber "near limit" state
 
+// Personal Time Off goes live on 1 Dec 2026. Until then the old system is
+// still in use, so the Personal side is greyed out (Out for Work stays open)
+// and no personal trip can be started or logged for a date before this.
+var TIMEOFF_GO_LIVE = '2026-12-01';
+var TIMEOFF_NOT_LIVE_MSG = 'Personal Time Off starts on 1 Dec 2026. Until 30 Nov, please keep using the old system.';
+function timeoffNotLiveYet() { return localDateStr() < TIMEOFF_GO_LIVE; }
+
 function formatClock(d) {
   var h = d.getHours(), m = d.getMinutes();
   var ap = h >= 12 ? 'PM' : 'AM';
@@ -413,8 +420,12 @@ function renderTimeOffStatus(openRecord, monthlyMinutes, dueReminders) {
     + '</div>';
 
   // Log a Missed Time Off sits right under This Month, so it's easy to find.
+  var notLive = timeoffNotLiveYet();
   var html = meter
-    + '<button class="book-btn-ghost" style="border-color:var(--red-text);color:var(--red-text);margin:0 0 10px;" onclick="showBackfillForm()">📝 Log a Missed Time Off</button>';
+    + (notLive
+      ? '<div class="to-warn amber" style="margin-top:0;"><b>🗓 Starts on 1 Dec 2026</b>Until 30 Nov, please keep using the old system for personal Time Off. 💼 Work outings can be logged here already.</div>'
+        + '<button class="book-btn-ghost" style="margin:0 0 10px;opacity:0.5;cursor:not-allowed;" disabled>📝 Log a Missed Time Off</button>'
+      : '<button class="book-btn-ghost" style="border-color:var(--red-text);color:var(--red-text);margin:0 0 10px;" onclick="showBackfillForm()">📝 Log a Missed Time Off</button>');
 
   if (openRecord) {
     var out = new Date(openRecord.time_out);
@@ -458,6 +469,12 @@ function renderTimeOffStatus(openRecord, monthlyMinutes, dueReminders) {
         + '<button class="book-btn-primary" style="background:var(--green-dark);margin-bottom:0;" onclick="timeInNow(' + openRecord.id + ')">✓ I\'m Back — Time In</button>'
         + '</div>';
     }
+  } else if (notLive) {
+    html += '<div class="card" style="opacity:0.55;">'
+      + '<div class="book-form-group"><label class="book-form-label">Reason</label>'
+      + '<input class="book-form-input" id="timeoff-reason" placeholder="Available from 1 Dec 2026" disabled></div>'
+      + '<button class="book-btn-primary" style="margin-bottom:0;" disabled>🚶 Time Out Now</button>'
+      + '</div>';
   } else {
     html += '<div class="card">'
       + '<div class="book-form-group"><label class="book-form-label">Reason</label>'
@@ -829,6 +846,7 @@ async function timeOutAtCustomTime() {
 }
 
 async function startTimeOff(timeOutDate) {
+  if (timeoffNotLiveYet()) { alert(TIMEOFF_NOT_LIVE_MSG); return; }
   var me = timeOffMe();
   var reasonEl = document.getElementById('timeoff-reason');
   var reason = reasonEl ? reasonEl.value.trim() : '';
@@ -988,6 +1006,7 @@ async function approveCancelTimeOff(id) {
 // file from before still has a way to be acted on.
 
 async function convertReminder(id) {
+  if (timeoffNotLiveYet()) { alert(TIMEOFF_NOT_LIVE_MSG); return; }
   var me = timeOffMe();
   try {
     var existing = await fetch(SURL + '/rest/v1/time_off_records?staff_email=eq.' + encodeURIComponent(me.email) + '&time_in=is.null&entry_type=neq.cancel_pending&limit=1',
@@ -1032,6 +1051,7 @@ async function cancelReminder(id) {
 // ── LOG A MISSED TIME OFF (backfill) ──
 
 function showBackfillForm() {
+  if (timeoffNotLiveYet()) { alert(TIMEOFF_NOT_LIVE_MSG); return; }
   document.getElementById('timeoff-bf-reason').value = '';
   document.getElementById('timeoff-bf-date').value = localDateStr();
   document.getElementById('timeoff-bf-out').value = '';
@@ -1049,6 +1069,7 @@ async function saveBackfillEntry() {
   var outT   = document.getElementById('timeoff-bf-out').value;
   var inT    = document.getElementById('timeoff-bf-in').value;
   if (!reason || !date || !outT || !inT) { alert('Please fill in the reason, date, and both times.'); return; }
+  if (date < TIMEOFF_GO_LIVE) { alert('Personal Time Off before 1 Dec 2026 goes in the old system, not here.'); return; }
   var outParts = outT.split(':'), inParts = inT.split(':');
   var timeOut = new Date(date + 'T00:00:00'); timeOut.setHours(parseInt(outParts[0], 10), parseInt(outParts[1], 10));
   var timeIn  = new Date(date + 'T00:00:00'); timeIn.setHours(parseInt(inParts[0], 10), parseInt(inParts[1], 10));
