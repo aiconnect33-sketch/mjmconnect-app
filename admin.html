@@ -2572,6 +2572,7 @@ html, body {
         <span class="tor-trip-only" style="display:contents;">
         <button class="fr-pill active" id="tor-wo-filter-all" onclick="setWorkReportFilter('all')">All</button>
         <button class="fr-pill" id="tor-wo-filter-out" onclick="setWorkReportFilter('out')">Currently Out</button>
+        <button class="fr-pill" id="tor-wo-filter-upcoming" onclick="setWorkReportFilter('upcoming')">Planned</button>
         <button class="fr-pill" id="tor-wo-filter-completed" onclick="setWorkReportFilter('completed')">Completed</button>
         <button class="fr-pill" id="tor-wo-filter-voided" onclick="setWorkReportFilter('voided')">Cancelled</button>
         </span>
@@ -6437,7 +6438,7 @@ html, body {
 
   function setWorkReportFilter(f) {
     torWoFilter = f;
-    ['all', 'out', 'completed', 'voided'].forEach(function (k) {
+    ['all', 'out', 'upcoming', 'completed', 'voided'].forEach(function (k) {
       var el = document.getElementById('tor-wo-filter-' + k);
       if (el) el.classList.toggle('active', k === f);
     });
@@ -6445,21 +6446,24 @@ html, body {
   }
   function setWorkReportStaff(k) { torWoStaff = k; renderWorkReport(); }
 
+  // 'upcoming' = planned ahead, not started yet (js/work-outings.js). A
+  // "not coming back today" outing past closing time counts as completed.
   function torWoStatus(r) {
     if (r.entry_type === 'voided') return 'voided';
-    if (!r.time_in) return 'out';
+    if (woIsUpcoming(r)) return 'upcoming';
+    if (!woEndedAt(r)) return 'out';
     return 'completed';
   }
-  function torWoMinutes(r) {
-    if (r.time_in) return r.duration_minutes != null ? r.duration_minutes : (new Date(r.time_in) - new Date(r.time_out)) / 60000;
-    return (Date.now() - new Date(r.time_out).getTime()) / 60000;
-  }
+  function torWoMinutes(r) { return woMinutes(r); }
   function torWoBadge(r) {
     var st = torWoStatus(r);
     var b = st === 'voided' ? '<span class="badge b-red">Cancelled</span>'
+      : st === 'upcoming' ? '<span class="badge b-amber">📅 Planned</span>'
       : st === 'out' ? '<span class="badge b-work">● Out now</span>'
       : '<span class="badge b-green">Completed</span>';
     if (r.entry_type === 'edited') b += ' <span style="color:var(--amber-text);font-weight:700;font-size:10px;">(edited)</span>';
+    var plan = woPlanTagText(r);
+    if (plan && st !== 'upcoming') b += '<div style="font-size:10px;font-weight:700;margin-top:3px;color:' + (plan.indexOf('changed') !== -1 ? 'var(--amber-text)' : '#534AB7') + ';">📅 ' + escHtml(plan) + '</div>';
     return b;
   }
 
@@ -6477,12 +6481,13 @@ html, body {
   function torWoStaffGroups(rows) {
     var map = {}, list = [];
     rows.forEach(function (r) {
-      if (r.entry_type === 'voided') return;
+      var st = torWoStatus(r);
+      if (st === 'voided' || st === 'upcoming') return;
       var key = torStaffKey(r);
       if (!map[key]) { map[key] = { key: key, name: timeoffDisplayName(r), outings: 0, total: 0, longest: 0, out: false, rows: [] }; list.push(map[key]); }
       var g = map[key], m = torWoMinutes(r);
       g.outings++; g.total += m; g.longest = Math.max(g.longest, m); g.rows.push(r);
-      if (!r.time_in) g.out = true;
+      if (st === 'out') g.out = true;
     });
     return list.sort(function (a, b) { return b.total - a.total || a.name.localeCompare(b.name); });
   }
@@ -6508,7 +6513,7 @@ html, body {
         if (open) {
           g.rows.slice().sort(function (a, b) { return new Date(a.time_out) - new Date(b.time_out); }).forEach(function (r) {
             var when = new Date(r.time_out).toLocaleDateString('en-MY', { day: 'numeric', month: 'short' }) + ' · ' + fcDateTime(r.time_out).split(', ')[1]
-              + ' → ' + (r.time_in ? fcDateTime(r.time_in).split(', ')[1] : 'still out');
+              + ' → ' + (woEndedAt(r) ? fcDateTime(woEndedAt(r).toISOString()).split(', ')[1] : 'still out');
             h += '<tr class="tor-staff-trips"><td colspan="6">' + when + ' · ' + escHtml(r.purpose || '') + ' · <b>' + fmtTimeOffDuration(torWoMinutes(r)) + '</b> ' + torWoBadge(r)
               + (r.time_in_remark ? ' <span style="color:#854F0B;font-weight:600;">· 📝 ' + escHtml(r.time_in_remark) + '</span>' : '') + '</td></tr>';
           });
@@ -6522,13 +6527,15 @@ html, body {
     if (!rows.length) html += '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px;">No work outings match.</td></tr>';
     rows.forEach(function (r) {
       var outParts = fcDateTime(r.time_out).split(', ');
-      var inParts = r.time_in ? fcDateTime(r.time_in).split(', ') : null;
+      var endAt = woEndedAt(r);
+      var inParts = endAt ? fcDateTime(endAt.toISOString()).split(', ') : null;
+      var upc = torWoStatus(r) === 'upcoming';
       html += '<tr' + (r.entry_type === 'voided' ? ' style="opacity:.6;"' : '') + '>'
         + '<td style="white-space:nowrap;">' + outParts[0] + '</td>'
         + '<td>' + escHtml(timeoffDisplayName(r)) + '</td>'
         + '<td style="white-space:nowrap;">' + outParts[1] + '</td>'
-        + '<td style="white-space:nowrap;">' + (inParts ? inParts[1] : '<span style="color:var(--text3);">—</span>') + '</td>'
-        + '<td style="white-space:nowrap;font-weight:700;">' + fmtTimeOffDuration(torWoMinutes(r)) + (r.time_in ? '' : ' <span style="font-weight:400;color:var(--text3);">so far</span>') + '</td>'
+        + '<td style="white-space:nowrap;">' + (inParts ? inParts[1] : '<span style="color:var(--text3);">' + (upc && r.back_by ? 'back by ' + fcDateTime(r.back_by).split(', ')[1] : '—') + '</span>') + '</td>'
+        + '<td style="white-space:nowrap;font-weight:700;">' + (upc ? '<span style="font-weight:400;color:var(--text3);">—</span>' : fmtTimeOffDuration(torWoMinutes(r)) + (endAt ? '' : ' <span style="font-weight:400;color:var(--text3);">so far</span>')) + '</td>'
         + '<td>' + escHtml(r.purpose || '') + (typeof tiRemarkLineHtml === 'function' ? tiRemarkLineHtml(r) : '') + '</td>'
         + '<td style="white-space:nowrap;">' + torWoBadge(r) + '</td></tr>';
     });
@@ -6552,13 +6559,15 @@ html, body {
       return;
     }
     var rows = torWoVisibleRows(false).slice().sort(function (a, b) { return new Date(a.time_out) - new Date(b.time_out); });
-    var lines = [['Date', 'Staff Name', 'Time Out', 'Time In', 'Duration (min)', 'Where To & What For', 'Status', 'Remark at Time In'].join(',')];
+    var lines = [['Date', 'Staff Name', 'Time Out', 'Time In', 'Duration (min)', 'Where To & What For', 'Status', 'Remark at Time In', 'Planned Time Out', 'Back By'].join(',')];
     rows.forEach(function (r) {
       var st = torWoStatus(r);
+      var endAt = woEndedAt(r);
       lines.push([
         fcDateTime(r.time_out).split(',')[0], timeoffDisplayName(r), fcDateTime(r.time_out),
-        r.time_in ? fcDateTime(r.time_in) : '', Math.round(torWoMinutes(r)),
-        r.purpose, (st === 'voided' ? 'cancelled' : st) + (r.entry_type === 'edited' ? ' (edited)' : ''), r.time_in_remark || ''
+        endAt ? fcDateTime(endAt.toISOString()) : '', st === 'upcoming' ? '' : Math.round(torWoMinutes(r)),
+        r.purpose, (st === 'voided' ? 'cancelled' : st === 'upcoming' ? 'planned' : st) + (r.entry_type === 'edited' ? ' (edited)' : ''), r.time_in_remark || '',
+        r.planned_time_out ? fcDateTime(r.planned_time_out) : '', r.rest_of_day ? 'rest of the day' : (r.back_by ? fcDateTime(r.back_by) : '')
       ].map(torCsvEscape).join(','));
     });
     torSaveCsv(lines, 'Work-Outings-' + torPeriodFileTag() + '.csv');
@@ -8890,18 +8899,20 @@ html, body {
         var out = (await sbFetch('GET', '/rest/v1/time_off_records?time_in=is.null&entry_type=neq.voided&entry_type=neq.cancel_pending&order=time_out.asc&limit=20')) || [];
         // Out for Work (js/work-outings.js) shares this card, tagged purple.
         var woOut = typeof woFetchOpen === 'function' ? await woFetchOpen() : [];
+        var woLater = typeof woFetchUpcomingToday === 'function' ? await woFetchUpcomingToday() : [];
         if (out.length || woOut.length) {
           var onames = out.concat(woOut).map(function(r){ return timeoffDisplayName(r); }).join(', ');
           toEl.innerHTML = '<div class="home-summary-card" onclick="switchTabByName(\'timeoff\')">'
             + '<div class="home-summary-ic" style="background:var(--blue-bg);color:var(--blue-text);"><i class="ti ti-clock"></i></div>'
             + '<div style="flex:1;min-width:0;"><div class="home-summary-title">Currently Out</div>'
             + '<div class="home-summary-sub">' + escHtml(onames) + '</div>'
-            + (typeof woHomeLineHtml === 'function' ? woHomeLineHtml(woOut) : '') + '</div>'
+            + (typeof woHomeLineHtml === 'function' ? woHomeLineHtml(woOut, woLater) : '') + '</div>'
             + '<div class="home-summary-count">' + (out.length + woOut.length) + '</div>'
             + '<i class="ti ti-chevron-right home-summary-chev"></i>'
             + '</div>';
         } else {
-          toEl.innerHTML = '<div class="card" style="cursor:pointer;" onclick="switchTabByName(\'timeoff\')"><div style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0;">No one out right now.</div></div>';
+          toEl.innerHTML = '<div class="card" style="cursor:pointer;" onclick="switchTabByName(\'timeoff\')"><div style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0;">No one out right now.'
+            + (woLater.length && typeof woHomeLineHtml === 'function' ? '<div style="margin-top:4px;">' + woHomeLineHtml([], woLater) + '</div>' : '') + '</div></div>';
         }
       }
     } catch(e) {}

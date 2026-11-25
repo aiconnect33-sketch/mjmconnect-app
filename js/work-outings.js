@@ -17,13 +17,25 @@
 //   #to-personal-panel / #to-work-panel -- what each pill shows
 // A person can't be out on Personal and Work at the same time; the personal
 // Time Out functions call woMyOpenOuting() before starting.
+//
+// Planned ahead (docs/work-outings-plan-ahead.sql): an outing can be keyed
+// in for a later time or day. It's simply a row whose time_out is still in
+// the future -- "Upcoming" until then, and out for work from that moment on,
+// with nobody needing to tap anything (planned_time_out keeps what was
+// planned, so the record can show "planned 2:30 PM · changed to 2:45").
+// Any outing can also have an optional back_by time, or rest_of_day = true
+// ("not coming back to the office today"), which ends it by itself at
+// closing time. The work-outing-reminders Edge Function
+// (docs/work-outing-reminders-setup.md) sends the "you're now out for work"
+// and "still out?" notifications and closes rest-of-day outings server-side.
 
 var WO_PURPLE = '#534AB7';
 var WO_PURPLE_BG = '#EEEDFE';
 
 var woState = {
   rows: [], today: '', myEmailLow: '', kind: 'personal', list: 'mine',
-  cancelledOpen: false, autoSwitched: {}, missingTable: false, loaded: false
+  cancelledOpen: false, autoSwitched: {}, missingTable: false, loaded: false,
+  editing: {}, deepLink: ''
 };
 
 function woInjectStyles() {
@@ -69,6 +81,25 @@ function woInjectStyles() {
     + '.wo-fix button{border:none;border-radius:8px;padding:7px 12px;font-size:11.5px;font-weight:700;font-family:inherit;background:#0F6E5C;color:#fff;cursor:pointer}'
     + '.wo-edited{color:#854F0B;font-weight:700}'
     + '.wo-note{font-size:11.5px;color:#70827D;text-align:center;padding:14px 0}'
+    + '.wo-up{background:#FFF6E5;border:1.5px dashed #D9A441;border-radius:16px;padding:13px;margin-bottom:10px}'
+    + '.wo-up-st{font-size:10.5px;font-weight:800;letter-spacing:.05em;color:#854F0B;margin-bottom:4px}'
+    + '.wo-up-tm{font-size:11px;color:#70827D;margin:3px 0 10px}'
+    + '.wo-up-acts{display:flex;gap:8px}'
+    + '.wo-up-acts button{flex:1;border-radius:10px;padding:8px;font-size:11.5px;font-weight:700;font-family:inherit;background:#fff;cursor:pointer}'
+    + '.wo-up-ed{border:1.5px solid #854F0B;color:#854F0B}.wo-up-x{border:1.5px solid #E7B4B4;color:#A32D2D}'
+    + '.wo-banner.late{background:#FFF6E5;border-color:#D9A441}.wo-banner.late .wo-status{color:#854F0B}.wo-banner.late .wo-dot{background:#854F0B}'
+    + '.wo-chg{display:inline-block;font-size:11.5px;font-weight:700;color:' + WO_PURPLE + ';margin-top:10px;cursor:pointer}'
+    + '.wo-two{display:flex;gap:8px}.wo-two>div{flex:1;min-width:0}'
+    + '.wo-check{display:flex;align-items:center;gap:8px;font-size:12px;color:#111C18;margin:0 0 10px;cursor:pointer}'
+    + '.wo-check input{width:16px;height:16px;margin:0;accent-color:' + WO_PURPLE + '}'
+    + '.wo-dur{font-size:11px;font-weight:700;color:' + WO_PURPLE + ';background:' + WO_PURPLE_BG + ';border-radius:9px;padding:7px 10px;margin:-4px 0 10px}'
+    + '.wo-edit{text-align:left;background:#fff;border:1px solid #E2ECE8;border-radius:12px;padding:12px;margin-top:10px}'
+    + '.wo-edit .wo-btn{margin-top:2px}'
+    + '.wo-ext{display:flex;gap:8px;align-items:stretch;margin-top:4px}'
+    + '.wo-ext input{flex:1;margin:0}'
+    + '.wo-ext button{flex:0 0 90px;border:none;border-radius:10px;font-size:12.5px;font-weight:700;font-family:inherit;background:#854F0B;color:#fff;cursor:pointer}'
+    + '.wo-plan{display:inline-block;max-width:100%;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-top:5px;background:' + WO_PURPLE_BG + ';color:' + WO_PURPLE + '}'
+    + '.wo-plan.chg{background:#FFF6E5;color:#854F0B}'
     + '.wo-mini{display:inline-block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:' + WO_PURPLE_BG + ';color:' + WO_PURPLE + ';margin-top:5px;vertical-align:top}';
   var el = document.createElement('style');
   el.id = 'wo-styles';
@@ -97,7 +128,9 @@ function woDur(mins) {
 }
 function woMinutes(r) {
   if (r.time_in) return r.duration_minutes != null ? r.duration_minutes : (new Date(r.time_in) - new Date(r.time_out)) / 60000;
-  return (Date.now() - new Date(r.time_out).getTime()) / 60000;
+  if (woIsUpcoming(r)) return 0;
+  var end = woEndedAt(r);
+  return ((end ? end.getTime() : Date.now()) - new Date(r.time_out).getTime()) / 60000;
 }
 // Two letters: first letters of the first two words, or for a one-word
 // name like "ShirleyT" its capitals ("ST"), else its first two letters.
@@ -107,7 +140,63 @@ function woInitials(name) {
   var w = words[0] || '?', caps = w.replace(/[^A-Z]/g, '');
   return (caps.length >= 2 ? caps.slice(0, 2) : w.slice(0, 2)).toUpperCase();
 }
-function woIsOpen(r) { return !r.time_in && r.entry_type !== 'voided'; }
+// Closing time on the day of d: 12:00 PM on Saturday, 4:30 PM otherwise.
+function woClosingFor(d) {
+  var c = new Date(d);
+  if (c.getDay() === 6) c.setHours(12, 0, 0, 0); else c.setHours(16, 30, 0, 0);
+  return c;
+}
+// When a "not coming back today" outing ends by itself: closing time.
+function woRestEnd(r) {
+  if (!r.rest_of_day) return null;
+  var out = new Date(r.time_out), c = woClosingFor(out);
+  return c < out ? out : c;
+}
+// The real end: Time In, or closing time once a rest-of-day outing passes it.
+function woEndedAt(r) {
+  if (r.time_in) return new Date(r.time_in);
+  var e = woRestEnd(r);
+  return e && Date.now() >= e.getTime() ? e : null;
+}
+// Planned ahead and not started yet (time_out still in the future).
+function woIsUpcoming(r) { return !r.time_in && r.entry_type !== 'voided' && new Date(r.time_out).getTime() > Date.now(); }
+function woIsOpen(r) { return !r.time_in && r.entry_type !== 'voided' && !woIsUpcoming(r) && !woEndedAt(r); }
+function woPastBackBy(r) { return woIsOpen(r) && !r.rest_of_day && r.back_by && Date.now() > new Date(r.back_by).getTime(); }
+// Build a Date from 'YYYY-MM-DD' + 'HH:MM' (device local time).
+function woAt(dateStr, timeStr) {
+  var p = String(timeStr || '').split(':');
+  var d = new Date(dateStr + 'T00:00:00');
+  d.setHours(parseInt(p[0], 10), parseInt(p[1], 10), 0, 0);
+  return d;
+}
+function woHHMM(d) { return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
+function woDayName(d) {
+  var key = localDateStr(d), today = localDateStr();
+  var tm = new Date(); tm.setDate(tm.getDate() + 1);
+  if (key === today) return 'Today';
+  if (key === localDateStr(tm)) return 'Tomorrow';
+  return d.toLocaleDateString('en-MY', { weekday: 'short', day: 'numeric', month: 'short' });
+}
+// "back by 4:00 PM" / "rest of the day" / '' -- for banners and lists.
+function woBackText(r) {
+  if (r.rest_of_day) return 'rest of the day';
+  if (r.back_by) return 'back by ' + woClock(new Date(r.back_by));
+  return '';
+}
+// Plain text for planned outings: "planned · on time" or
+// "planned 2:30 PM · changed to 2:45 PM". '' for outings started on the spot.
+function woPlanTagText(r) {
+  if (!r.planned_time_out) return '';
+  var p = new Date(r.planned_time_out), o = new Date(r.time_out);
+  if (Math.abs(p - o) < 60000) return 'planned · on time';
+  var sameDay = localDateStr(p) === localDateStr(o);
+  return 'planned ' + (sameDay ? '' : woDayName(p) + ' ') + woClock(p) + ' · changed to ' + (sameDay ? '' : woDayName(o) + ' ') + woClock(o);
+}
+function woPlanTagHtml(r) {
+  var t = woPlanTagText(r);
+  if (!t) return '';
+  return '<div><span class="wo-plan' + (t.indexOf('changed') !== -1 ? ' chg' : '') + '">📅 ' + escHtml(t) + '</span></div>';
+}
 
 async function woReq(method, path, body) {
   var headers = { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY };
@@ -130,7 +219,18 @@ function woIsMissingTable(e) { return e && (e.status === 404 || e.code === '42P0
 // on both pages. Never throws: no table yet simply means nobody is out.
 async function woFetchOpen() {
   try {
-    return (await woReq('GET', 'work_outings?time_in=is.null&entry_type=neq.voided&order=time_out.asc&limit=50')) || [];
+    // time_out <= now: planned-ahead outings that haven't started yet aren't out.
+    var rows = (await woReq('GET', 'work_outings?time_in=is.null&entry_type=neq.voided&time_out=lte.' + encodeURIComponent(new Date().toISOString()) + '&order=time_out.asc&limit=50')) || [];
+    return rows.filter(woIsOpen);
+  } catch (e) { return []; }
+}
+
+// Planned outings starting later today -- the Home "later today" line.
+async function woFetchUpcomingToday() {
+  try {
+    var end = new Date(); end.setHours(23, 59, 59, 999);
+    return (await woReq('GET', 'work_outings?time_in=is.null&entry_type=neq.voided&time_out=gt.' + encodeURIComponent(new Date().toISOString())
+      + '&time_out=lte.' + encodeURIComponent(end.toISOString()) + '&order=time_out.asc&limit=50')) || [];
   } catch (e) { return []; }
 }
 
@@ -139,17 +239,29 @@ async function woFetchOpen() {
 async function woMyOpenOuting(email) {
   if (!email) return null;
   try {
-    var rows = await woReq('GET', 'work_outings?staff_email=eq.' + encodeURIComponent(email) + '&time_in=is.null&entry_type=neq.voided&limit=1');
-    return rows && rows.length ? rows[0] : null;
+    var rows = await woReq('GET', 'work_outings?staff_email=eq.' + encodeURIComponent(email) + '&time_in=is.null&entry_type=neq.voided&time_out=lte.' + encodeURIComponent(new Date().toISOString()) + '&limit=5');
+    rows = (rows || []).filter(woIsOpen);
+    return rows.length ? rows[0] : null;
   } catch (e) { return null; }
 }
 
-// The purple line under the Home "Currently Out" names.
-function woHomeLineHtml(workRows) {
-  if (!workRows || !workRows.length) return '';
+// The purple line under the Home "Currently Out" names, plus an amber one
+// for outings planned for later today.
+function woHomeLineHtml(workRows, upcomingRows) {
+  var html = '';
   woInjectStyles(); // Home can render before the Time Off screen ever loads
-  var names = workRows.map(function (r) { return woName(r); }).join(', ');
-  return '<span class="wo-mini">💼 Out for work · ' + escHtml(names) + '</span>';
+  if (workRows && workRows.length) {
+    var names = workRows.map(function (r) {
+      var back = r.rest_of_day ? ' (away rest of day)' : (r.back_by ? ' (back ~' + woClock(new Date(r.back_by)) + ')' : '');
+      return woName(r) + back;
+    }).join(', ');
+    html += '<span class="wo-mini">💼 Out for work · ' + escHtml(names) + '</span>';
+  }
+  if (upcomingRows && upcomingRows.length) {
+    var later = upcomingRows.map(function (r) { return woName(r) + ' ' + woClock(new Date(r.time_out)); }).join(', ');
+    html += (html ? '<br>' : '') + '<span class="wo-mini" style="background:#FFF6E5;color:#854F0B;">📅 Out for work later today · ' + escHtml(later) + '</span>';
+  }
+  return html;
 }
 
 // ── Personal | Work switch ──
@@ -199,6 +311,7 @@ async function woLoad() {
     return;
   }
   woState.loaded = true;
+  await woTidyMine();
   var mine = woMyOpen();
   woSetWorkPillLabel(!!mine);
   // Opening Time Off while out for work lands on the Work side -- once per
@@ -207,45 +320,146 @@ async function woLoad() {
     woState.autoSwitched[mine.id] = true;
     woSwitchKind('work');
   }
+  // Opened from a reminder notification (?open=work / ?open=work-change).
+  var deep = woState.deepLink;
+  if (deep) { woState.deepLink = ''; woSwitchKind('work'); }
+  if (deep === 'work-change' && mine) woState.editing[mine.id] = true;
   woRender();
+}
+
+// Housekeeping on the signed-in person's own rows, so the record is right
+// even before the server-side reminder job catches up:
+//  - a "not coming back today" outing past closing time gets its Time In
+//  - a planned outing that started while an earlier one was still open ends
+//    the earlier one at that moment (they went straight from one to the next)
+async function woTidyMine() {
+  var mineRows = woState.rows.filter(function (r) {
+    return (r.staff_email || '').toLowerCase() === woState.myEmailLow && !r.time_in && r.entry_type !== 'voided' && !woIsUpcoming(r);
+  }).sort(function (a, b) { return new Date(a.time_out) - new Date(b.time_out); });
+  var patches = [];
+  mineRows.forEach(function (r, i) {
+    var end = woEndedAt(r);
+    var next = mineRows[i + 1];
+    if (next && (!end || new Date(next.time_out) < end)) end = new Date(next.time_out);
+    if (!end) return;
+    var mins = Math.max(0, Math.round((end - new Date(r.time_out)) / 60000));
+    r.time_in = end.toISOString(); r.duration_minutes = mins;
+    patches.push(woReq('PATCH', 'work_outings?id=eq.' + r.id + '&time_in=is.null', { time_in: r.time_in, duration_minutes: mins }).catch(function () {}));
+  });
+  if (patches.length) await Promise.all(patches);
 }
 
 function woMyOpen() {
   return woState.rows.find(function (r) { return woIsOpen(r) && (r.staff_email || '').toLowerCase() === woState.myEmailLow; }) || null;
 }
+function woMyUpcoming() {
+  return woState.rows.filter(function (r) { return woIsUpcoming(r) && (r.staff_email || '').toLowerCase() === woState.myEmailLow; })
+    .sort(function (a, b) { return new Date(a.time_out) - new Date(b.time_out); });
+}
+
+// Re-render by itself when the next thing changes on screen: a planned
+// outing starting, a back-by time passing, or closing time for rest-of-day.
+var woTick = null;
+function woScheduleTick() {
+  if (woTick) { clearTimeout(woTick); woTick = null; }
+  var now = Date.now(), next = Infinity;
+  woState.rows.forEach(function (r) {
+    if (r.time_in || r.entry_type === 'voided') return;
+    [new Date(r.time_out).getTime(), r.back_by ? new Date(r.back_by).getTime() : 0, r.rest_of_day ? woRestEnd(r).getTime() : 0].forEach(function (t) {
+      if (t > now && t < next) next = t;
+    });
+  });
+  if (next === Infinity || next - now > 12 * 3600e3) return;
+  woTick = setTimeout(function () {
+    if (document.getElementById('to-work-panel')) woLoad();
+  }, next - now + 1500);
+}
+
+// The Back by / "not coming back today" fields, shared by the new-outing
+// form and the Change panels. prefix: 'wo' or 'wo-ed-<id>'.
+function woBackFieldsHtml(prefix, r) {
+  var back = r && r.back_by ? woHHMM(new Date(r.back_by)) : '';
+  var rest = !!(r && r.rest_of_day);
+  return '<div class="wo-lbl">Back by <span style="text-transform:none;font-weight:500;">(optional)</span></div>'
+    + '<input class="wo-input" type="time" id="' + prefix + '-backby" value="' + back + '"' + (rest ? ' disabled' : '') + ' oninput="woUpdateDurHint(\'' + prefix + '\')">'
+    + '<div class="wo-dur" id="' + prefix + '-dur" style="display:none;"></div>'
+    + '<label class="wo-check"><input type="checkbox" id="' + prefix + '-rest"' + (rest ? ' checked' : '') + ' onchange="woToggleRest(\'' + prefix + '\')">Not coming back to the office today</label>';
+}
 
 function woRender() {
   var panel = document.getElementById('to-work-panel');
   if (!panel) return;
+  // A refresh (pull-to-refresh, or the timer when an outing starts) must
+  // not wipe what someone is in the middle of typing.
+  // (After a save, woAfterChange() asks for a clean form instead.)
+  var kept = {}, customOpen = false;
+  if (!woState.resetForm) {
+    panel.querySelectorAll('input[id]').forEach(function (el) { kept[el.id] = el.type === 'checkbox' ? el.checked : el.value; });
+    customOpen = !!(document.getElementById('wo-custom-row') && document.getElementById('wo-custom-row').style.display !== 'none');
+  }
+  woState.resetForm = false;
   var mine = woMyOpen();
+  var upcoming = woMyUpcoming();
   var html = '';
 
   if (mine) {
     var out = new Date(mine.time_out);
-    html += '<div class="wo-banner">'
-      + '<div class="wo-status"><span class="wo-dot"></span>YOU\'RE OUT FOR WORK</div>'
+    var late = woPastBackBy(mine);
+    var timeLine = 'Out since ' + woClock(out) + (mine.planned_time_out && Math.abs(new Date(mine.planned_time_out) - out) < 60000 ? ' (as planned)' : '');
+    if (mine.rest_of_day) timeLine += ' · rest of the day';
+    else if (mine.back_by) {
+      var left = (new Date(mine.back_by) - Date.now()) / 60000;
+      timeLine += ' · back by ' + woClock(new Date(mine.back_by)) + (left > 0 ? ' · ' + woDur(left) + ' left' : '');
+    } else timeLine += ' · ' + woDur(woMinutes(mine)) + ' so far';
+    html += '<div class="wo-banner' + (late ? ' late' : '') + '">'
+      + '<div class="wo-status"><span class="wo-dot"></span>' + (late ? 'PAST YOUR BACK-BY TIME' : 'YOU\'RE OUT FOR WORK') + '</div>'
       + '<div class="wo-purpose">' + escHtml(mine.purpose) + '</div>'
-      + '<div class="wo-time">Out since ' + woClock(out) + ' · ' + woDur(woMinutes(mine)) + ' so far</div>'
-      + '<div class="wo-free">💼 Not charged to your Time Off</div>'
+      + '<div class="wo-time">' + escHtml(timeLine) + '</div>'
+      + (late ? '' : '<div class="wo-free">💼 Not charged to your Time Off</div>')
       + '<button class="wo-btn green" onclick="woTimeIn(' + mine.id + ')">✓ I\'m Back — Time In</button>'
-      // Only admins / Time Off editors can cancel an outing -- staff just
-      // tap I'm Back (an accidental tap is a few minutes, never charged).
+      + (late
+        ? '<div class="wo-lbl" style="text-align:left;margin-top:12px;">Need more time? New back-by time</div>'
+          + '<div class="wo-ext"><input class="wo-input" type="time" id="wo-extend-' + mine.id + '"><button onclick="woExtend(' + mine.id + ')">Update</button></div>'
+        : '')
+      + '<div><span class="wo-chg" onclick="woShowEdit(' + mine.id + ')">✎ ' + (mine.planned_time_out ? 'Left at a different time? Change it' : 'Change back-by time') + '</span></div>'
+      + '<div id="wo-edit-' + mine.id + '"></div>'
+      // Only admins / Time Off editors can cancel an outing that wasn't
+      // planned -- staff just tap I'm Back (an accidental tap is a few
+      // minutes, never charged). A planned one can be cancelled in Change.
       + (woCanManage() ? '<div><span class="wo-mistake" onclick="woCancel(' + mine.id + ')">✕ Started this by mistake? Cancel it</span></div>' : '')
       + '</div>';
-  } else {
+  }
+
+  upcoming.forEach(function (r) {
+    var o = new Date(r.time_out);
+    var when = woDayName(o).toUpperCase() + ' ' + woClock(o) + (r.back_by && !r.rest_of_day ? ' – ' + woClock(new Date(r.back_by)) : '');
+    html += '<div class="wo-up">'
+      + '<div class="wo-up-st">📅 UPCOMING · ' + escHtml(when) + '</div>'
+      + '<div class="wo-purpose">' + escHtml(r.purpose) + '</div>'
+      + '<div class="wo-up-tm">Starts by itself ' + (woDayName(o) === 'Today' ? '' : woDayName(o) === 'Tomorrow' ? 'tomorrow ' : 'on ' + woDayName(o) + ' ') + 'at ' + woClock(o) + (r.rest_of_day ? ' · rest of the day' : '') + '</div>'
+      + '<div class="wo-up-acts"><button class="wo-up-ed" onclick="woShowEdit(' + r.id + ')">✎ Change</button><button class="wo-up-x" onclick="woCancelPlanned(' + r.id + ')">✕ Cancel</button></div>'
+      + '<div id="wo-edit-' + r.id + '"></div>'
+      + '</div>';
+  });
+
+  if (!mine) {
+    var today = localDateStr();
     html += '<div class="wo-card">'
       + '<div class="wo-lbl">Where to &amp; what for</div>'
       + '<input class="wo-input" id="wo-purpose" maxlength="200" placeholder="e.g. Public Bank — company deposit">'
       + '<div class="wo-hint">💼 For Company errands only. Doesn\'t use your 4h Time Off.</div>'
+      + '<div id="wo-custom-fields" style="display:none;">'
+      + '<div class="wo-two"><div><div class="wo-lbl">Date</div><input class="wo-input" type="date" id="wo-custom-date" min="' + today + '" value="' + today + '" oninput="woUpdateCustomLabel()"></div>'
+      + '<div><div class="wo-lbl">Time Out At</div><input class="wo-input" type="time" id="wo-custom-time" oninput="woUpdateCustomLabel()"></div></div>'
+      + '</div>'
+      + woBackFieldsHtml('wo', null)
       + '<div id="wo-now-row">'
       + '<button class="wo-btn" onclick="woTimeOutNow()">💼 Time Out for Work</button>'
-      + '<div class="wo-toggle" onclick="woShowCustomTime()">⏱ Or key in a time instead</div>'
+      + '<div class="wo-toggle" onclick="woShowCustomTime()">⏱ Or key in a time — or plan ahead</div>'
       + '</div>'
       + '<div id="wo-custom-row" style="display:none;">'
-      + '<div class="wo-lbl">Time Out At</div>'
-      + '<input class="wo-input" type="time" id="wo-custom-time">'
-      + '<button class="wo-btn" onclick="woTimeOutAtCustomTime()">💼 Confirm Time Out for Work</button>'
-      + '<div class="wo-toggle" onclick="woHideCustomTime()">↺ Use current time instead</div>'
+      + '<button class="wo-btn" id="wo-custom-btn" onclick="woTimeOutAtCustomTime()">💼 Confirm Time Out for Work</button>'
+      + '<div class="wo-toggle" onclick="woHideCustomTime()">↺ Going now instead</div>'
       + '</div>'
       + '</div>';
   }
@@ -256,14 +470,33 @@ function woRender() {
   if (openRows.length) {
     html += '<div class="wo-now">' + openRows.map(function (r) {
       var isMe = (r.staff_email || '').toLowerCase() === woState.myEmailLow;
+      var back = woBackText(r);
       return '<div class="wo-pr"><div class="wo-av">' + escHtml(woInitials(woName(r))) + '</div>'
         + '<div style="min-width:0;flex:1;"><div class="wo-nm">' + escHtml(woName(r)) + (isMe ? ' <span style="color:#70827D;font-weight:500;">(you)</span>' : '') + '</div>'
         + '<div class="wo-sub">' + escHtml(r.purpose) + '</div>'
-        + '<div class="wo-sub">Since ' + woClock(new Date(r.time_out)) + ' · ' + woDur(woMinutes(r)) + ' so far</div></div>'
+        + '<div class="wo-sub">Since ' + woClock(new Date(r.time_out)) + ' · ' + (back ? escHtml(back) : woDur(woMinutes(r)) + ' so far') + '</div></div>'
         + '<span class="wo-tag out">Out</span></div>';
     }).join('') + '</div>';
   } else {
     html += '<div class="wo-now-empty">No one is out for work right now.</div>';
+  }
+
+  // Planned for later today -- everyone's, so colleagues know in advance.
+  var endOfDay = new Date(); endOfDay.setHours(23, 59, 59, 999);
+  var laterRows = woState.rows.filter(function (r) { return woIsUpcoming(r) && new Date(r.time_out) <= endOfDay; })
+    .sort(function (a, b) { return new Date(a.time_out) - new Date(b.time_out); });
+  if (laterRows.length) {
+    html += '<div class="wo-sec" style="color:#854F0B;"><span class="wo-dot" style="background:#854F0B;"></span>Out for work later today · ' + laterRows.length + '</div>'
+      + '<div class="wo-now" style="border-color:#D9A441;">' + laterRows.map(function (r) {
+        var isMe = (r.staff_email || '').toLowerCase() === woState.myEmailLow;
+        var o = new Date(r.time_out);
+        var span = woClock(o) + (r.rest_of_day ? ' · rest of the day' : (r.back_by ? ' – ' + woClock(new Date(r.back_by)) : ''));
+        return '<div class="wo-pr"><div class="wo-av" style="background:#FFF6E5;color:#854F0B;">' + escHtml(woInitials(woName(r))) + '</div>'
+          + '<div style="min-width:0;flex:1;"><div class="wo-nm">' + escHtml(woName(r)) + (isMe ? ' <span style="color:#70827D;font-weight:500;">(you)</span>' : '') + '</div>'
+          + '<div class="wo-sub">' + escHtml(r.purpose) + '</div>'
+          + '<div class="wo-sub">' + escHtml(span) + '</div></div>'
+          + '<span class="wo-tag" style="background:#FFF6E5;color:#854F0B;">Later</span></div>';
+      }).join('') + '</div>';
   }
 
   // My Work Outings | All Work Outings -- same pattern as My/All Records.
@@ -278,6 +511,22 @@ function woRender() {
   html += '<div id="wo-list">' + woListHtml() + '</div>';
 
   panel.innerHTML = html;
+  Object.keys(woState.editing).forEach(function (id) {
+    if (document.getElementById('wo-edit-' + id)) woShowEdit(parseInt(id, 10)); else delete woState.editing[id];
+  });
+  if (customOpen && document.getElementById('wo-custom-row')) {
+    document.getElementById('wo-now-row').style.display = 'none';
+    document.getElementById('wo-custom-row').style.display = 'block';
+    document.getElementById('wo-custom-fields').style.display = 'block';
+  }
+  Object.keys(kept).forEach(function (id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    if (el.type === 'checkbox') { el.checked = kept[id]; if (id.slice(-5) === '-rest') woToggleRest(id.slice(0, -5)); }
+    else if (!el.disabled) el.value = kept[id];
+  });
+  if (customOpen) woUpdateCustomLabel(); else woUpdateDurHint('wo');
+  woScheduleTick();
 }
 
 function woSwitchList(which) {
@@ -302,6 +551,7 @@ function woDayLabel(dayKey) {
 function woListHtml() {
   var isMineList = woState.list === 'mine';
   var rows = woState.rows.filter(function (r) {
+    if (woIsUpcoming(r)) return false; // shown as Upcoming / later today instead
     return !isMineList || (r.staff_email || '').toLowerCase() === woState.myEmailLow;
   });
   var live = rows.filter(function (r) { return r.entry_type !== 'voided'; });
@@ -342,7 +592,9 @@ function woRowHtml(r, isMineList) {
   var voided = r.entry_type === 'voided';
   var open = woIsOpen(r);
   var title = (isMineList ? '' : escHtml(woName(r)) + ' — ') + escHtml(r.purpose);
-  var sub = woClock(out) + ' → ' + (r.time_in ? woClock(new Date(r.time_in)) : 'still out')
+  var ended = woEndedAt(r);
+  var sub = woClock(out) + ' → ' + (ended ? woClock(ended) : 'still out')
+    + (r.rest_of_day ? ' · rest of the day' : (open && r.back_by ? ' · back by ' + woClock(new Date(r.back_by)) : ''))
     + (r.entry_type === 'edited' ? ' · <span class="wo-edited">edited</span>' : '');
   var tag = voided ? '<span class="wo-tag done">Cancelled</span>'
     : open ? '<span class="wo-tag out">Out · ' + woDur(woMinutes(r)) + '</span>'
@@ -355,6 +607,7 @@ function woRowHtml(r, isMineList) {
   return '<div class="wo-row' + (voided ? ' voided' : '') + '" data-wo-id="' + r.id + '">'
     + '<div class="wo-row-top"><div class="wo-row-t">' + title + '</div>' + tag + '</div>'
     + '<div class="wo-row-s">' + sub + '</div>'
+    + woPlanTagHtml(r)
     + (typeof tiRemarkLineHtml === 'function' ? tiRemarkLineHtml(r) : '')
     + (acts ? '<div class="wo-acts">' + acts + '</div>' : '')
     + '<div id="wo-fix-' + r.id + '"></div>'
@@ -365,24 +618,189 @@ function woRowHtml(r, isMineList) {
 function woShowCustomTime() {
   var now = new Date();
   var t = document.getElementById('wo-custom-time');
-  if (t) t.value = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+  if (t) t.value = woHHMM(now);
   document.getElementById('wo-now-row').style.display = 'none';
   document.getElementById('wo-custom-row').style.display = 'block';
+  document.getElementById('wo-custom-fields').style.display = 'block';
+  woUpdateCustomLabel();
 }
 function woHideCustomTime() {
   document.getElementById('wo-now-row').style.display = 'block';
   document.getElementById('wo-custom-row').style.display = 'none';
+  document.getElementById('wo-custom-fields').style.display = 'none';
+  woUpdateDurHint('wo');
 }
+// The keyed-in date + time, or null if incomplete.
+function woCustomDate() {
+  var d = document.getElementById('wo-custom-date'), t = document.getElementById('wo-custom-time');
+  if (!d || !t || !d.value || !t.value) return null;
+  return woAt(d.value, t.value);
+}
+// "Confirm Time Out for Work" for a time already past, "Plan Work Outing"
+// for a later time or day.
+function woUpdateCustomLabel() {
+  var btn = document.getElementById('wo-custom-btn');
+  var d = woCustomDate();
+  if (btn) btn.innerHTML = d && d.getTime() > Date.now() + 60000 ? '📅 Plan Work Outing' : '💼 Confirm Time Out for Work';
+  woUpdateDurHint('wo');
+}
+function woToggleRest(prefix) {
+  var rest = document.getElementById(prefix + '-rest'), back = document.getElementById(prefix + '-backby');
+  if (back) { back.disabled = !!(rest && rest.checked); if (back.disabled) back.value = ''; }
+  woUpdateDurHint(prefix);
+}
+// The time out the Back by hint measures from, for a form prefix.
+function woFormTimeOut(prefix) {
+  if (prefix === 'wo') {
+    var custom = document.getElementById('wo-custom-row');
+    return custom && custom.style.display !== 'none' ? woCustomDate() : new Date();
+  }
+  var id = parseInt(prefix.replace('wo-ed-', ''), 10);
+  var r = woState.rows.find(function (x) { return x.id === id; });
+  var dEl = document.getElementById(prefix + '-date'), tEl = document.getElementById(prefix + '-time');
+  if (!r) return null;
+  if (tEl && tEl.value) return woAt(dEl && dEl.value ? dEl.value : localDateStr(new Date(r.time_out)), tEl.value);
+  return new Date(r.time_out);
+}
+// "⏱ That's 1h 30m out" under Back by.
+function woUpdateDurHint(prefix) {
+  var box = document.getElementById(prefix + '-dur');
+  var back = document.getElementById(prefix + '-backby');
+  if (!box) return;
+  var out = woFormTimeOut(prefix);
+  if (!back || !back.value || !out) { box.style.display = 'none'; return; }
+  var b = woAt(localDateStr(out), back.value);
+  box.style.display = 'block';
+  box.textContent = b > out ? '⏱ That\'s ' + woDur((b - out) / 60000) + ' out' : '⚠ Back by has to be after the time out (' + woClock(out) + ').';
+}
+// Reads Back by / "not coming back today" for an outing starting at
+// timeOut. Returns {} (nothing set), the fields to save, or null after an alert.
+function woReadBackFields(prefix, timeOut) {
+  var back = document.getElementById(prefix + '-backby'), rest = document.getElementById(prefix + '-rest');
+  if (rest && rest.checked) {
+    if (woClosingFor(timeOut) <= timeOut) { alert('That\'s already after closing time (' + woClock(woClosingFor(timeOut)) + '), so "Not coming back to the office today" doesn\'t apply.'); return null; }
+    return { rest_of_day: true, back_by: null };
+  }
+  if (back && back.value) {
+    var b = woAt(localDateStr(timeOut), back.value);
+    if (b <= timeOut) { alert('Back by has to be after the time out (' + woClock(timeOut) + ').'); return null; }
+    return { back_by: b.toISOString(), rest_of_day: false };
+  }
+  return { back_by: null, rest_of_day: false };
+}
+// New columns only go in when used, so outings keep working the old way
+// until docs/work-outings-plan-ahead.sql has been run.
+function woNewColsMissing(e) { return e && (e.code === 'PGRST204' || e.code === '42703'); }
+var WO_NOT_SET_UP = 'Planning ahead and Back by aren\'t switched on yet.' + '\n\nPlease ask an admin to run docs/work-outings-plan-ahead.sql in Supabase.';
+
 async function woTimeOutNow() { await woStart(new Date()); }
 async function woTimeOutAtCustomTime() {
-  var t = document.getElementById('wo-custom-time');
-  var val = t ? t.value : '';
-  if (!val) { alert('Please choose a time.'); return; }
-  var parts = val.split(':');
-  var d = new Date();
-  d.setHours(parseInt(parts[0], 10), parseInt(parts[1], 10), 0, 0);
-  if (d.getTime() > Date.now() + 60000) { alert('Time Out can\'t be in the future.'); return; }
+  var d = woCustomDate();
+  if (!d) { alert('Please choose a date and time.'); return; }
+  if (localDateStr(d) < localDateStr()) { alert('Please pick today or a later day.'); return; }
+  if (d.getTime() > Date.now() + 60000) { await woPlan(d); return; }
   await woStart(d);
+}
+
+async function woPlan(timeOutDate) {
+  var me = woMe();
+  if (!me.email) return;
+  var el = document.getElementById('wo-purpose');
+  var purpose = el ? el.value.trim() : '';
+  if (!purpose) { alert('Please say where you\'re going and what for.'); return; }
+  if (timeOutDate.getTime() - Date.now() > 120 * 24 * 3600e3) { alert('You can plan up to 4 months ahead.'); return; }
+  var extra = woReadBackFields('wo', timeOutDate);
+  if (!extra) return;
+  var body = { staff_name: me.name || me.email, staff_email: me.email, purpose: purpose, time_out: timeOutDate.toISOString(), planned_time_out: timeOutDate.toISOString() };
+  if (extra.back_by) body.back_by = extra.back_by;
+  if (extra.rest_of_day) body.rest_of_day = true;
+  try {
+    await woReq('POST', 'work_outings', body);
+    woAfterChange();
+  } catch (e) {
+    alert(woNewColsMissing(e) ? WO_NOT_SET_UP : woIsMissingTable(e) ? 'Out for Work isn\'t switched on yet. Please ask an admin.' : 'Could not plan your work outing. Please try again.');
+  }
+}
+
+// ✎ Change: an upcoming outing (date, time out, back by) or the one you're
+// out on now (time out if it was planned, back by).
+function woShowEdit(id) {
+  var r = woState.rows.find(function (x) { return x.id === id; });
+  var box = document.getElementById('wo-edit-' + id);
+  if (!r || !box) return;
+  if (box.innerHTML) { box.innerHTML = ''; delete woState.editing[id]; return; }
+  woState.editing[id] = true;
+  var pre = 'wo-ed-' + id, o = new Date(r.time_out), up = woIsUpcoming(r);
+  var html = '<div class="wo-edit">';
+  if (up) {
+    html += '<div class="wo-two"><div><div class="wo-lbl">Date</div><input class="wo-input" type="date" id="' + pre + '-date" min="' + localDateStr() + '" value="' + localDateStr(o) + '" oninput="woUpdateDurHint(\'' + pre + '\')"></div>'
+      + '<div><div class="wo-lbl">Time out</div><input class="wo-input" type="time" id="' + pre + '-time" value="' + woHHMM(o) + '" oninput="woUpdateDurHint(\'' + pre + '\')"></div></div>';
+  } else if (r.planned_time_out) {
+    html += '<div class="wo-lbl">When did you actually leave?</div>'
+      + '<input class="wo-input" type="time" id="' + pre + '-time" value="' + woHHMM(o) + '" oninput="woUpdateDurHint(\'' + pre + '\')">'
+      + '<div style="font-size:10.5px;color:#70827D;margin:-4px 0 10px;line-height:1.45;">Planned for ' + woClock(new Date(r.planned_time_out)) + '. Not left yet? Put a later time and it goes back to Upcoming.</div>';
+  }
+  html += woBackFieldsHtml(pre, r)
+    + '<button class="wo-btn" onclick="woSaveEdit(' + id + ')">Save</button>'
+    + (!up && r.planned_time_out ? '<div style="text-align:center;"><span class="wo-mistake" onclick="woCancelPlanned(' + id + ')">✕ Didn\'t go? Cancel this outing</span></div>' : '')
+    + '</div>';
+  box.innerHTML = html;
+  woUpdateDurHint(pre);
+}
+
+async function woSaveEdit(id) {
+  var r = woState.rows.find(function (x) { return x.id === id; });
+  if (!r) return;
+  var pre = 'wo-ed-' + id, up = woIsUpcoming(r);
+  var tEl = document.getElementById(pre + '-time'), dEl = document.getElementById(pre + '-date');
+  var out = new Date(r.time_out);
+  if (tEl) {
+    if (!tEl.value || (dEl && !dEl.value)) { alert('Please choose a date and time.'); return; }
+    out = woAt(dEl ? dEl.value : localDateStr(out), tEl.value);
+    if (localDateStr(out) < localDateStr()) { alert('Please pick today or a later day.'); return; }
+  }
+  var extra = woReadBackFields(pre, out);
+  if (!extra) return;
+  var patch = { back_by: extra.back_by, rest_of_day: extra.rest_of_day };
+  var oldBack = r.back_by ? new Date(r.back_by).getTime() : null, newBack = extra.back_by ? new Date(extra.back_by).getTime() : null;
+  if (oldBack !== newBack) patch.back_by_notified_at = null; // remind again at the new time
+  if (tEl && Math.abs(out - new Date(r.time_out)) >= 60000) {
+    patch.time_out = out.toISOString();
+    if (out.getTime() > Date.now()) patch.start_notified_at = null; // moved later: remind when it starts
+    else if (!r.start_notified_at) patch.start_notified_at = new Date().toISOString(); // already fixed by hand
+  }
+  try {
+    await woReq('PATCH', 'work_outings?id=eq.' + id + '&time_in=is.null', patch);
+    delete woState.editing[id];
+    woAfterChange();
+  } catch (e) { alert(woNewColsMissing(e) ? WO_NOT_SET_UP : 'Could not save the change. Please try again.'); }
+}
+
+// Past the back-by time: set a new one in one step.
+async function woExtend(id) {
+  var r = woState.rows.find(function (x) { return x.id === id; });
+  var input = document.getElementById('wo-extend-' + id);
+  if (!r || !input) return;
+  if (!input.value) { alert('Please choose the new back-by time.'); return; }
+  var b = woAt(localDateStr(), input.value);
+  if (b.getTime() <= Date.now()) { alert('The new back-by time has to be later than now.'); return; }
+  try {
+    await woReq('PATCH', 'work_outings?id=eq.' + id + '&time_in=is.null', { back_by: b.toISOString(), back_by_notified_at: null });
+    woAfterChange();
+  } catch (e) { alert(woNewColsMissing(e) ? WO_NOT_SET_UP : 'Could not update the back-by time. Please try again.'); }
+}
+
+// A planned outing that's cancelled (or didn't happen) leaves no record.
+async function woCancelPlanned(id) {
+  var r = woState.rows.find(function (x) { return x.id === id; });
+  if (!r || r.time_in || !r.planned_time_out) return;
+  if ((r.staff_email || '').toLowerCase() !== woState.myEmailLow && !woCanManage()) return;
+  if (!confirm('Cancel this planned work outing?\n\n' + r.purpose + '\n\nNothing will be recorded.')) return;
+  try {
+    await woReq('DELETE', 'work_outings?id=eq.' + id + '&time_in=is.null');
+    delete woState.editing[id];
+    woAfterChange();
+  } catch (e) { alert('Could not cancel this work outing. Please try again.'); }
 }
 
 // Is the signed-in person on personal Time Off right now?
@@ -405,13 +823,15 @@ async function woStart(timeOutDate) {
       return;
     }
     if (await woMyOpenOuting(me.email)) { alert('You\'re already out for work. Tap I\'m Back on that one first.'); return; }
-    await woReq('POST', 'work_outings', {
-      staff_name: me.name || me.email, staff_email: me.email,
-      purpose: purpose, time_out: timeOutDate.toISOString()
-    });
+    var extra = woReadBackFields('wo', timeOutDate);
+    if (!extra) return;
+    var body = { staff_name: me.name || me.email, staff_email: me.email, purpose: purpose, time_out: timeOutDate.toISOString() };
+    if (extra.back_by) body.back_by = extra.back_by;
+    if (extra.rest_of_day) body.rest_of_day = true;
+    await woReq('POST', 'work_outings', body);
     woAfterChange();
   } catch (e) {
-    alert(woIsMissingTable(e) ? 'Out for Work isn\'t switched on yet. Please ask an admin.' : 'Could not start your work outing. Please try again.');
+    alert(woNewColsMissing(e) ? WO_NOT_SET_UP : woIsMissingTable(e) ? 'Out for Work isn\'t switched on yet. Please ask an admin.' : 'Could not start your work outing. Please try again.');
   }
 }
 
@@ -488,6 +908,7 @@ async function woSaveFix(id) {
 // Refresh this panel plus the Home "Currently Out" card on whichever page
 // we're on.
 function woAfterChange() {
+  woState.resetForm = true;
   if (woIsAdminPage()) {
     woLoad();
     if (typeof loadAdminLeaveDuty === 'function') loadAdminLeaveDuty();
@@ -497,3 +918,21 @@ function woAfterChange() {
     woLoad();
   }
 }
+
+// ── opened from a reminder notification ──
+// The work-outing-reminders Edge Function's notifications open
+// ?open=work (back-by reminder) or ?open=work-change (planned start: "left at
+// a different time?"). Runs after each page's own start-up (which restores
+// the last tab), then goes to Time Off → 💼 Work.
+(function () {
+  var m = /[?&]open=(work-change|work)\b/.exec(window.location.search);
+  if (!m) return;
+  woState.deepLink = m[1];
+  try { history.replaceState(history.state, '', window.location.pathname + window.location.hash); } catch (e) {}
+  window.addEventListener('DOMContentLoaded', function () {
+    setTimeout(function () {
+      if (woIsAdminPage()) { if (typeof switchTabByName === 'function') switchTabByName('timeoff'); }
+      else if (typeof switchNav === 'function') { switchNav('timeoff'); if (typeof loadTimeOff === 'function') loadTimeOff(); }
+    }, 0);
+  });
+})();

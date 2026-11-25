@@ -186,18 +186,21 @@ async function loadTimeOff() {
       // Out for Work (js/work-outings.js) -- listed on the same card, with
       // its own purple line so colleagues can tell who's on company business.
       var work = typeof woFetchOpen === 'function' ? await woFetchOpen() : [];
+      // ...and outings planned for later today (amber line).
+      var workLater = typeof woFetchUpcomingToday === 'function' ? await woFetchUpcomingToday() : [];
       if (data.length || work.length) {
         var names = data.concat(work).map(function (r) { return timeoffDisplayName(r); }).join(', ');
         homeEl.innerHTML = '<div class="home-summary-card" onclick="switchNav(\'timeoff\');loadTimeOff()">'
           + '<div class="home-summary-ic" style="background:var(--blue-bg);color:var(--blue-text);"><i class="ti ti-clock"></i></div>'
           + '<div style="flex:1;min-width:0;"><div class="home-summary-title">Currently Out</div>'
           + '<div class="home-summary-sub" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escHtml(names) + '</div>'
-          + (typeof woHomeLineHtml === 'function' ? woHomeLineHtml(work) : '') + '</div>'
+          + (typeof woHomeLineHtml === 'function' ? woHomeLineHtml(work, workLater) : '') + '</div>'
           + '<div class="home-summary-count">' + (data.length + work.length) + '</div>'
           + '<i class="ti ti-chevron-right home-summary-chev"></i>'
           + '</div>';
       } else {
-        homeEl.innerHTML = '<div class="card" style="cursor:pointer;" onclick="switchNav(\'timeoff\');loadTimeOff()"><div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:8px 0;">No one out right now.</div></div>';
+        homeEl.innerHTML = '<div class="card" style="cursor:pointer;" onclick="switchNav(\'timeoff\');loadTimeOff()"><div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:8px 0;">No one out right now.'
+          + (workLater.length && typeof woHomeLineHtml === 'function' ? '<div style="margin-top:4px;">' + woHomeLineHtml([], workLater) + '</div>' : '') + '</div></div>';
       }
     } catch (e) {
       homeEl.innerHTML = '<div class="card"><div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:8px 0;">Could not load Time Off.</div></div>';
