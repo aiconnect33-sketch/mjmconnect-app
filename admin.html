@@ -1864,7 +1864,7 @@ html, body {
         </div>
         <div class="form-group">
           <label class="form-label">Date</label>
-          <input class="form-input no-icon" type="date" id="admin-timeoff-bf-date">
+          <input class="form-input no-icon" type="date" id="admin-timeoff-bf-date" min="2026-12-01">
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
           <div class="form-group">
@@ -7752,7 +7752,15 @@ html, body {
     if (el) el.remove();
   }
 
+  // Personal Time Off goes live on 1 Dec 2026 (same as js/tab-timeoff.js).
+  // Until then the old system is still in use, so the Personal side is greyed
+  // out (Out for Work stays open) and nothing before that date can be logged.
+  var ADMIN_TIMEOFF_GO_LIVE = '2026-12-01';
+  var ADMIN_TIMEOFF_NOT_LIVE_MSG = 'Personal Time Off starts on 1 Dec 2026. Until 30 Nov, please keep using the old system.';
+  function adminTimeoffNotLiveYet() { return localDateStr() < ADMIN_TIMEOFF_GO_LIVE; }
+
   function renderAdminTimeOffStatus(openRecord, monthlyMinutes, dueReminders) {
+    var notLive = adminTimeoffNotLiveYet();
     var pct = Math.min(100, Math.round((monthlyMinutes / 240) * 100));
     var mCls = monthlyMinutes > 240 ? 'over' : (monthlyMinutes >= 180 ? 'warn' : '');
     var html = '<div class="to-meter-card">'
@@ -7761,7 +7769,10 @@ html, body {
       + '<div class="to-meter-track"><div class="to-meter-fill ' + mCls + '" style="width:' + pct + '%;"></div></div>'
       + '</div>'
       // Right under This Month, so it's easy to find (before the Reason box).
-      + '<button class="btn-ghost" style="border-color:var(--red-text);color:var(--red-text);margin:0 0 10px;" onclick="adminShowBackfillForm()">Log a Missed Time Off</button>';
+      + (notLive
+        ? '<div class="to-warn amber" style="margin-top:0;"><b>🗓 Starts on 1 Dec 2026</b>Until 30 Nov, please keep using the old system for personal Time Off. 💼 Work outings can be logged here already.</div>'
+          + '<button class="btn-ghost" style="margin:0 0 10px;opacity:0.5;cursor:not-allowed;" disabled>Log a Missed Time Off</button>'
+        : '<button class="btn-ghost" style="border-color:var(--red-text);color:var(--red-text);margin:0 0 10px;" onclick="adminShowBackfillForm()">Log a Missed Time Off</button>');
 
     if (openRecord) {
       var out = new Date(openRecord.time_out);
@@ -7803,6 +7814,12 @@ html, body {
           + '<button class="btn-primary" style="margin-bottom:0;" onclick="adminTimeInNow(' + openRecord.id + ')">I\'m Back — Time In</button>'
           + '</div>';
       }
+    } else if (notLive) {
+      html += '<div class="card" style="opacity:0.55;">'
+        + '<div class="form-group"><label class="form-label">Reason</label>'
+        + '<input class="form-input no-icon" id="admin-timeoff-reason" placeholder="Available from 1 Dec 2026" disabled></div>'
+        + '<button class="btn-primary" style="margin-bottom:0;" disabled>Time Out Now</button>'
+        + '</div>';
     } else {
       html += '<div class="card">'
         + '<div class="form-group"><label class="form-label">Reason</label>'
@@ -7965,6 +7982,7 @@ html, body {
   }
 
   async function adminStartTimeOff(timeOutDate) {
+    if (adminTimeoffNotLiveYet()) { alert(ADMIN_TIMEOFF_NOT_LIVE_MSG); return; }
     var me = JSON.parse(localStorage.getItem('mjm_user') || '{}');
     var reasonEl = document.getElementById('admin-timeoff-reason');
     var reason = reasonEl ? reasonEl.value.trim() : '';
@@ -8145,6 +8163,7 @@ html, body {
   // on file from before still has a way to be acted on.
 
   async function adminConvertReminder(id) {
+    if (adminTimeoffNotLiveYet()) { alert(ADMIN_TIMEOFF_NOT_LIVE_MSG); return; }
     var me = JSON.parse(localStorage.getItem('mjm_user') || '{}');
     try {
       var existing = await sbFetch('GET', '/rest/v1/time_off_records?staff_email=eq.' + encodeURIComponent(me.email) + '&time_in=is.null&entry_type=neq.cancel_pending&limit=1');
@@ -8184,6 +8203,7 @@ html, body {
   }
 
   function adminShowBackfillForm() {
+    if (adminTimeoffNotLiveYet()) { alert(ADMIN_TIMEOFF_NOT_LIVE_MSG); return; }
     document.getElementById('admin-timeoff-bf-reason').value = '';
     document.getElementById('admin-timeoff-bf-date').value = localDateStr();
     document.getElementById('admin-timeoff-bf-out').value = '';
@@ -8201,6 +8221,7 @@ html, body {
     var outT = document.getElementById('admin-timeoff-bf-out').value;
     var inT = document.getElementById('admin-timeoff-bf-in').value;
     if (!reason || !date || !outT || !inT) { alert('Please fill in the reason, date, and both times.'); return; }
+    if (date < ADMIN_TIMEOFF_GO_LIVE) { alert('Personal Time Off before 1 Dec 2026 goes in the old system, not here.'); return; }
     var outParts = outT.split(':'), inParts = inT.split(':');
     var timeOut = new Date(date + 'T00:00:00'); timeOut.setHours(parseInt(outParts[0], 10), parseInt(outParts[1], 10));
     var timeIn = new Date(date + 'T00:00:00'); timeIn.setHours(parseInt(inParts[0], 10), parseInt(inParts[1], 10));
