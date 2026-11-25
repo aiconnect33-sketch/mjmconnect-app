@@ -26,7 +26,7 @@
 // Any outing can also have an optional back_by time, or rest_of_day = true
 // ("not coming back to the office today"), which ends it by itself at
 // closing time. The work-outing-reminders Edge Function
-// (docs/work-outing-reminders-setup.md) sends the "you're now out for work"
+// (docs/work-outing-reminders-setup.md) sends the "starts in 10 minutes"
 // and "still out?" notifications and closes rest-of-day outings server-side.
 
 var WO_PURPLE = '#534AB7';
@@ -323,7 +323,9 @@ async function woLoad() {
   // Opened from a reminder notification (?open=work / ?open=work-change).
   var deep = woState.deepLink;
   if (deep) { woState.deepLink = ''; woSwitchKind('work'); }
-  if (deep === 'work-change' && mine) woState.editing[mine.id] = true;
+  // "Starts in 10 minutes" opens the Change panel of the next planned one.
+  var target = mine || woMyUpcoming()[0];
+  if (deep === 'work-change' && target) woState.editing[target.id] = true;
   woRender();
 }
 
@@ -921,8 +923,8 @@ function woAfterChange() {
 
 // ── opened from a reminder notification ──
 // The work-outing-reminders Edge Function's notifications open
-// ?open=work (back-by reminder) or ?open=work-change (planned start: "left at
-// a different time?"). Runs after each page's own start-up (which restores
+// ?open=work (back-by reminder) or ?open=work-change ("starts in 10 minutes:
+// running late or not going?"). Runs after each page's own start-up (which restores
 // the last tab), then goes to Time Off → 💼 Work.
 (function () {
   var m = /[?&]open=(work-change|work)\b/.exec(window.location.search);

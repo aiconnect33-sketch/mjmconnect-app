@@ -15,7 +15,7 @@
 alter table work_outings add column if not exists planned_time_out timestamptz;  -- set only when planned ahead
 alter table work_outings add column if not exists back_by timestamptz;           -- optional "Back by" time
 alter table work_outings add column if not exists rest_of_day boolean not null default false; -- not coming back today: ends at closing time
-alter table work_outings add column if not exists start_notified_at timestamptz;   -- "you're now out for work" reminder sent
+alter table work_outings add column if not exists start_notified_at timestamptz;   -- "starts in 10 minutes" reminder sent (cleared when moved later)
 alter table work_outings add column if not exists back_by_notified_at timestamptz; -- "still out?" reminder sent (cleared when Back by changes)
 
 -- The reminder job looks these up every minute.

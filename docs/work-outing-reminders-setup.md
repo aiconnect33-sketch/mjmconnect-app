@@ -3,10 +3,14 @@
 Sends two phone notifications for Out for Work, and ends "Not coming back to
 the office today" outings at closing time:
 
-1. **At a planned outing's start time:** *"💼 You're now out for work.
-   Public Bank, from 2:30 PM as planned. Back by 4:00 PM. Left at a different
-   time? Tap to change."* Tapping it opens Time Off → 💼 Work with the Change
-   panel open.
+1. **10 minutes before a planned outing starts:** *"📅 Your work outing
+   starts at 2:00 PM. Public Bank — bank-in cheques. Running late or not
+   going? Tap to change."* Tapping it opens Time Off → 💼 Work with the
+   Change panel open, so the time can be moved later or the outing
+   cancelled before it starts. (Only for outings planned at least 10 minutes
+   ahead. If the time is moved later, the reminder comes again 10 minutes
+   before the new time.) At the start time itself nothing is sent; the
+   outing simply begins.
 2. **At the Back by time, only if they haven't tapped I'm Back:** *"⏰ Still
    out for work? Public Bank: you planned to be back by 4:00 PM. Back
    already? Tap I'm Back. Need more time? Set a new back-by time."* Sent once
@@ -76,12 +80,12 @@ To switch it off later: `select cron.unschedule('work-outing-reminders');`
 
 1. On a phone with MJMConnect notifications enabled, go to Time Off →
    💼 Work, type a purpose, tap **⏱ Or key in a time — or plan ahead**, set
-   the time 2 minutes from now and a **Back by** 2 minutes after that, then
+   the time 12 minutes from now and a **Back by** 2 minutes after that, then
    tap **📅 Plan Work Outing**.
-2. Within a minute of the start time you get *"You're now out for work"*.
-   Tapping it opens the Change panel.
-3. Don't tap I'm Back: within a minute of the Back by time you get *"Still
-   out for work?"*.
+2. About 2 minutes later (10 minutes before the start) you get *"Your work
+   outing starts at …"*. Tapping it opens the Change panel.
+3. Leave it: it starts by itself at the planned time. Don't tap I'm Back:
+   within a minute of the Back by time you get *"Still out for work?"*.
 
 ## Edge Function code
 
@@ -90,8 +94,11 @@ To switch it off later: `select cron.unschedule('work-outing-reminders');`
 //
 // Called every minute by pg_cron (see docs/work-outing-reminders-setup.md).
 // Each run:
-//   1. "You're now out for work" -- planned outings (planned_time_out set)
-//      whose time_out has just arrived. Sent once (start_notified_at).
+//   1. "Your work outing starts at 2:00 PM" -- 10 minutes before a planned
+//      outing (planned_time_out set) starts, so a delay can be fixed in
+//      time. Sent once (start_notified_at; the app clears it when the time
+//      out is moved later). Nothing is sent at the start itself -- the
+//      outing just begins by itself.
 //   2. "Still out for work?" -- outings past their back_by time that nobody
 //      has tapped I'm Back on yet. Sent once per back_by (back_by_notified_at
 //      is cleared by the app whenever Back by changes).
@@ -115,7 +122,8 @@ const VAPID_PUBLIC_KEY = Deno.env.get('VAPID_PUBLIC_KEY') || '';
 const VAPID_PRIVATE_KEY = Deno.env.get('VAPID_PRIVATE_KEY') || '';
 
 const MY_OFFSET_MS = 8 * 60 * 60 * 1000; // Malaysia is UTC+8 all year
-const LATE_LIMIT_MS = 60 * 60 * 1000;    // don't send a reminder more than 1h late
+const LATE_LIMIT_MS = 60 * 60 * 1000;    // don't send a "still out" reminder more than 1h late
+const HEADS_UP_MS = 10 * 60 * 1000;      // planned outing reminder: 10 minutes before it starts
 
 function corsHeaders() {
   return { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'content-type' };
@@ -281,7 +289,7 @@ async function pushTo(email: string, payload: { title: string; body: string; url
   return sent;
 }
 
-type Outing = { id: number; staff_email: string; purpose: string; time_out: string; back_by: string | null; rest_of_day: boolean };
+type Outing = { id: number; staff_email: string; purpose: string; time_out: string; back_by: string | null; rest_of_day: boolean; created_at?: string };
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders() });
@@ -289,20 +297,23 @@ Deno.serve(async (req) => {
   const nowIso = encodeURIComponent(now.toISOString());
   const lateIso = encodeURIComponent(new Date(now.getTime() - LATE_LIMIT_MS).toISOString());
   const open = 'time_in=is.null&entry_type=neq.voided';
-  const result = { started: 0, stillOut: 0, closed: 0, sent: 0 };
+  const result = { startingSoon: 0, stillOut: 0, closed: 0, sent: 0 };
 
   try {
-    // 1. Planned outings that have just started.
+    // 1. Planned outings starting in the next 10 minutes. Only ones planned
+    //    at least 10 minutes ahead (no reminder for something just keyed in),
+    //    and never once the start time has passed.
+    const soonIso = encodeURIComponent(new Date(now.getTime() + HEADS_UP_MS).toISOString());
     const starting: Outing[] = await rest('GET', 'work_outings?' + open + '&planned_time_out=not.is.null&start_notified_at=is.null'
-      + '&time_out=lte.' + nowIso + '&time_out=gte.' + lateIso + '&select=id,staff_email,purpose,time_out,back_by,rest_of_day') || [];
+      + '&time_out=gt.' + nowIso + '&time_out=lte.' + soonIso + '&select=id,staff_email,purpose,time_out,back_by,rest_of_day,created_at') || [];
     for (const r of starting) {
+      if (r.created_at && new Date(r.created_at).getTime() > new Date(r.time_out).getTime() - HEADS_UP_MS) continue;
       const claimed = await rest('PATCH', 'work_outings?id=eq.' + r.id + '&start_notified_at=is.null', { start_notified_at: now.toISOString() });
       if (!claimed || !claimed.length) continue;
-      result.started++;
-      const then = r.rest_of_day ? ' Rest of the day.' : (r.back_by ? ' Back by ' + myClock(r.back_by) + '.' : '');
+      result.startingSoon++;
       result.sent += await pushTo(r.staff_email, {
-        title: "💼 You're now out for work",
-        body: short(r.purpose, 80) + ', from ' + myClock(r.time_out) + ' as planned.' + then + ' Left at a different time? Tap to change.',
+        title: '📅 Your work outing starts at ' + myClock(r.time_out),
+        body: short(r.purpose, 80) + '. Running late or not going? Tap to change.',
         url: './?open=work-change', tag: 'wo-start-' + r.id,
       });
     }
