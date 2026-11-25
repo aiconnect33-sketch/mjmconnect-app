@@ -38,12 +38,18 @@ self.addEventListener('push', function(e) {
   var data = {};
   try { data = e.data ? e.data.json() : {}; } catch (err) {}
   var title = data.title || 'MJMConnect';
+  // data.url (optional, relative to the app) opens a specific screen, e.g.
+  // the Out for Work reminders' './?open=work'. data.tag replaces an older
+  // notification with the same tag instead of stacking.
+  var url = self.registration.scope;
+  if (data.url) { try { url = new URL(data.url, self.registration.scope).href; } catch (err) {} }
   var options = {
     body: data.body || '',
     icon: 'icons/icon-192.png',
     badge: 'icons/icon-192.png',
-    data: { url: self.registration.scope }
+    data: { url: url }
   };
+  if (data.tag) options.tag = data.tag;
   e.waitUntil(self.registration.showNotification(title, options));
 });
 
@@ -51,10 +57,17 @@ self.addEventListener('push', function(e) {
 self.addEventListener('notificationclick', function(e) {
   e.notification.close();
   var url = (e.notification.data && e.notification.data.url) || self.registration.scope;
+  var deepLink = url !== self.registration.scope;
   e.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(list) {
       for (var i = 0; i < list.length; i++) {
-        if ('focus' in list[i]) return list[i].focus();
+        if (!('focus' in list[i])) continue;
+        // A notification for a specific screen reloads the open app there.
+        if (deepLink && 'navigate' in list[i]) {
+          var c = list[i];
+          return c.focus().then(function() { return c.navigate(url); }).catch(function() { return c.focus(); });
+        }
+        return list[i].focus();
       }
       if (self.clients.openWindow) return self.clients.openWindow(url);
     })
