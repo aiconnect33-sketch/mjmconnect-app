@@ -231,7 +231,7 @@ async function woFetchOpen() {
   } catch (e) { return []; }
 }
 
-// Planned outings starting later today -- the Home "later today" line.
+// Planned outings starting later today -- Home refreshes when each starts.
 async function woFetchUpcomingToday() {
   try {
     var end = new Date(); end.setHours(23, 59, 59, 999);
@@ -251,9 +251,9 @@ async function woMyOpenOuting(email) {
   } catch (e) { return null; }
 }
 
-// The purple line under the Home "Currently Out" names, plus an amber one
-// for outings planned for later today.
-function woHomeLineHtml(workRows, upcomingRows) {
+// The purple line under the Home "Currently Out" names. Planned outings
+// aren't shown on Home until they start (see woHomeRefreshAt).
+function woHomeLineHtml(workRows) {
   var html = '';
   woInjectStyles(); // Home can render before the Time Off screen ever loads
   if (workRows && workRows.length) {
@@ -263,11 +263,19 @@ function woHomeLineHtml(workRows, upcomingRows) {
     }).join(', ');
     html += '<span class="wo-mini">💼 Out for work · ' + escHtml(names) + '</span>';
   }
-  if (upcomingRows && upcomingRows.length) {
-    var later = upcomingRows.map(function (r) { return woName(r) + ' ' + woClock(new Date(r.time_out)); }).join(', ');
-    html += (html ? '<br>' : '') + '<span class="wo-mini" style="background:#FFF6E5;color:#854F0B;">📅 Out for work later today · ' + escHtml(later) + '</span>';
-  }
   return html;
+}
+
+// Home only lists who is out now, so when a planned outing is due to start
+// later today, refresh the Home card at that moment (reload: the page's
+// own Home loader).
+var woHomeTimer = null;
+function woHomeRefreshAt(upcomingRows, reload) {
+  if (woHomeTimer) { clearTimeout(woHomeTimer); woHomeTimer = null; }
+  var now = Date.now(), next = Infinity;
+  (upcomingRows || []).forEach(function (r) { var t = new Date(r.time_out).getTime(); if (t > now && t < next) next = t; });
+  if (next === Infinity || next - now > 12 * 3600e3) return;
+  woHomeTimer = setTimeout(function () { woHomeTimer = null; reload(); }, next - now + 2000);
 }
 
 // ── Personal | Work switch ──
