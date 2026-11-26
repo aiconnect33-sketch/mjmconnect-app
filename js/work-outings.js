@@ -89,7 +89,11 @@ function woInjectStyles() {
     + '.wo-up-ed{border:1.5px solid #854F0B;color:#854F0B}.wo-up-x{border:1.5px solid #E7B4B4;color:#A32D2D}'
     + '.wo-banner.late{background:#FFF6E5;border-color:#D9A441}.wo-banner.late .wo-status{color:#854F0B}.wo-banner.late .wo-dot{background:#854F0B}'
     + '.wo-chg{display:inline-block;font-size:11.5px;font-weight:700;color:' + WO_PURPLE + ';margin-top:10px;cursor:pointer}'
-    + '.wo-two{display:flex;gap:8px}.wo-two>div{flex:1;min-width:0}'
+    + '.wo-two{display:flex;gap:14px}.wo-two>div{flex:1;min-width:0}'
+    // iPhone Safari gives date/time boxes their own minimum width, so they
+    // ran past the card edge; this keeps them inside their column.
+    + '.wo-input[type=date],.wo-input[type=time]{-webkit-appearance:none;appearance:none;display:block;min-width:0;max-width:100%;min-height:40px}'
+    + '.wo-input::-webkit-date-and-time-value{text-align:left;margin:0}'
     + '.wo-when{font-size:11px;font-weight:600;color:#70827D;margin:-4px 0 12px;line-height:1.45}.wo-when:empty{display:none}'
     + '.wo-when.later{color:#854F0B;background:#FFF6E5;border-radius:9px;padding:7px 10px}'
     + '.wo-check{display:flex;align-items:center;gap:8px;font-size:12px;color:#111C18;margin:0 0 10px;cursor:pointer}'
