@@ -90,6 +90,8 @@ function woInjectStyles() {
     + '.wo-banner.late{background:#FFF6E5;border-color:#D9A441}.wo-banner.late .wo-status{color:#854F0B}.wo-banner.late .wo-dot{background:#854F0B}'
     + '.wo-chg{display:inline-block;font-size:11.5px;font-weight:700;color:' + WO_PURPLE + ';margin-top:10px;cursor:pointer}'
     + '.wo-two{display:flex;gap:8px}.wo-two>div{flex:1;min-width:0}'
+    + '.wo-when{font-size:11px;font-weight:600;color:#70827D;margin:-4px 0 12px;line-height:1.45}.wo-when:empty{display:none}'
+    + '.wo-when.later{color:#854F0B;background:#FFF6E5;border-radius:9px;padding:7px 10px}'
     + '.wo-check{display:flex;align-items:center;gap:8px;font-size:12px;color:#111C18;margin:0 0 10px;cursor:pointer}'
     + '.wo-check input{width:16px;height:16px;margin:0;accent-color:' + WO_PURPLE + '}'
     + '.wo-dur{font-size:11px;font-weight:700;color:' + WO_PURPLE + ';background:' + WO_PURPLE_BG + ';border-radius:9px;padding:7px 10px;margin:-4px 0 10px}'
@@ -394,10 +396,12 @@ function woRender() {
   // A refresh (pull-to-refresh, or the timer when an outing starts) must
   // not wipe what someone is in the middle of typing.
   // (After a save, woAfterChange() asks for a clean form instead.)
-  var kept = {}, customOpen = false;
+  var kept = {};
   if (!woState.resetForm) {
-    panel.querySelectorAll('input[id]').forEach(function (el) { kept[el.id] = el.type === 'checkbox' ? el.checked : el.value; });
-    customOpen = !!(document.getElementById('wo-custom-row') && document.getElementById('wo-custom-row').style.display !== 'none');
+    panel.querySelectorAll('input[id]').forEach(function (el) {
+      if (el.dataset && el.dataset.auto === '1') return; // still "now": show the new now
+      kept[el.id] = el.type === 'checkbox' ? el.checked : el.value;
+    });
   }
   woState.resetForm = false;
   var mine = woMyOpen();
@@ -450,19 +454,14 @@ function woRender() {
       + '<div class="wo-lbl">Where to &amp; what for</div>'
       + '<input class="wo-input" id="wo-purpose" maxlength="200" placeholder="e.g. Public Bank — company deposit">'
       + '<div class="wo-hint">💼 For Company errands only. Doesn\'t use your 4h Time Off.</div>'
-      + '<div id="wo-custom-fields" style="display:none;">'
-      + '<div class="wo-two"><div><div class="wo-lbl">Date</div><input class="wo-input" type="date" id="wo-custom-date" min="' + today + '" value="' + today + '" oninput="woUpdateCustomLabel()"></div>'
-      + '<div><div class="wo-lbl">Time Out At</div><input class="wo-input" type="time" id="wo-custom-time" oninput="woUpdateCustomLabel()"></div></div>'
-      + '</div>'
+      // One form for now, earlier today or later: Date starts at today and
+      // Time Out at the current time (kept ticking until the staff member
+      // changes it). A later date/time is simply saved as planned.
+      + '<div class="wo-two"><div><div class="wo-lbl">Date</div><input class="wo-input" type="date" id="wo-new-date" min="' + today + '" value="' + today + '" oninput="woFormChanged(\'date\')"></div>'
+      + '<div><div class="wo-lbl">Time Out</div><input class="wo-input" type="time" id="wo-new-time" data-auto="1" value="' + woHHMM(new Date()) + '" oninput="woFormChanged(\'time\')"></div></div>'
+      + '<div class="wo-when" id="wo-when"></div>'
       + woBackFieldsHtml('wo', null)
-      + '<div id="wo-now-row">'
-      + '<button class="wo-btn" onclick="woTimeOutNow()">💼 Time Out for Work</button>'
-      + '<div class="wo-toggle" onclick="woShowCustomTime()">⏱ Or key in a time — or plan ahead</div>'
-      + '</div>'
-      + '<div id="wo-custom-row" style="display:none;">'
-      + '<button class="wo-btn" id="wo-custom-btn" onclick="woTimeOutAtCustomTime()">💼 Confirm Time Out for Work</button>'
-      + '<div class="wo-toggle" onclick="woHideCustomTime()">↺ Going now instead</div>'
-      + '</div>'
+      + '<button class="wo-btn" id="wo-go-btn" onclick="woSubmitNew()">💼 Time Out for Work</button>'
       + '</div>';
   }
 
@@ -516,19 +515,15 @@ function woRender() {
   Object.keys(woState.editing).forEach(function (id) {
     if (document.getElementById('wo-edit-' + id)) woShowEdit(parseInt(id, 10)); else delete woState.editing[id];
   });
-  if (customOpen && document.getElementById('wo-custom-row')) {
-    document.getElementById('wo-now-row').style.display = 'none';
-    document.getElementById('wo-custom-row').style.display = 'block';
-    document.getElementById('wo-custom-fields').style.display = 'block';
-  }
   Object.keys(kept).forEach(function (id) {
     var el = document.getElementById(id);
     if (!el) return;
     if (el.type === 'checkbox') { el.checked = kept[id]; if (id.slice(-5) === '-rest') woToggleRest(id.slice(0, -5)); }
-    else if (!el.disabled) el.value = kept[id];
+    else if (!el.disabled) { el.value = kept[id]; if (id === 'wo-new-time') delete el.dataset.auto; }
   });
-  if (customOpen) woUpdateCustomLabel(); else woUpdateDurHint('wo');
+  woFormChanged();
   woScheduleTick();
+  woStartClock();
 }
 
 function woSwitchList(which) {
@@ -617,34 +612,57 @@ function woRowHtml(r, isMineList) {
 }
 
 // ── actions ──
-function woShowCustomTime() {
-  var now = new Date();
-  var t = document.getElementById('wo-custom-time');
-  if (t) t.value = woHHMM(now);
-  document.getElementById('wo-now-row').style.display = 'none';
-  document.getElementById('wo-custom-row').style.display = 'block';
-  document.getElementById('wo-custom-fields').style.display = 'block';
-  woUpdateCustomLabel();
-}
-function woHideCustomTime() {
-  document.getElementById('wo-now-row').style.display = 'block';
-  document.getElementById('wo-custom-row').style.display = 'none';
-  document.getElementById('wo-custom-fields').style.display = 'none';
-  woUpdateDurHint('wo');
-}
-// The keyed-in date + time, or null if incomplete.
-function woCustomDate() {
-  var d = document.getElementById('wo-custom-date'), t = document.getElementById('wo-custom-time');
+// The new-outing form's Date + Time Out, or null if incomplete. While the
+// time hasn't been touched (data-auto) and the date is today, that's "now"
+// to the second.
+function woNewTimeOut() {
+  var d = document.getElementById('wo-new-date'), t = document.getElementById('wo-new-time');
   if (!d || !t || !d.value || !t.value) return null;
+  if (t.dataset.auto === '1' && d.value === localDateStr()) return new Date();
   return woAt(d.value, t.value);
 }
-// "Confirm Time Out for Work" for a time already past, "Plan Work Outing"
-// for a later time or day.
-function woUpdateCustomLabel() {
-  var btn = document.getElementById('wo-custom-btn');
-  var d = woCustomDate();
-  if (btn) btn.innerHTML = d && d.getTime() > Date.now() + 60000 ? '📅 Plan Work Outing' : '💼 Confirm Time Out for Work';
+function woIsLater(d) { return !!d && d.getTime() > Date.now() + 60000; }
+// Called whenever Date or Time Out changes (what: 'date' | 'time'), and
+// after each render / clock tick: updates the button and the line under
+// the fields.
+function woFormChanged(what) {
+  var dEl = document.getElementById('wo-new-date'), tEl = document.getElementById('wo-new-time');
+  if (!dEl || !tEl) return;
+  // Once they pick the time themselves -- or another day -- it stops
+  // following the clock.
+  if (what === 'time' || (what === 'date' && dEl.value !== localDateStr())) delete tEl.dataset.auto;
+  var d = woNewTimeOut(), later = woIsLater(d);
+  var btn = document.getElementById('wo-go-btn');
+  if (btn) btn.innerHTML = later ? '📅 Plan Work Outing' : '💼 Time Out for Work';
+  var when = document.getElementById('wo-when');
+  if (when) {
+    var txt = '';
+    if (!d) txt = '';
+    else if (later) {
+      var day = woDayName(d);
+      txt = '📅 Starts by itself ' + (day === 'Today' ? 'today' : day === 'Tomorrow' ? 'tomorrow' : 'on ' + day) + ' at ' + woClock(d) + '.'
+        + (d.getTime() - Date.now() >= 10 * 60000 ? ' You\'ll get a reminder 10 minutes before.' : '');
+    } else if (tEl.dataset.auto === '1' || Date.now() - d.getTime() < 60000) txt = '🕑 Leaving now';
+    else txt = '🕑 Left earlier, at ' + woClock(d);
+    when.textContent = txt;
+    when.className = 'wo-when' + (later ? ' later' : '');
+  }
   woUpdateDurHint('wo');
+}
+// Keeps an untouched Time Out showing the current time.
+var woClockTimer = null;
+function woStartClock() {
+  if (woClockTimer) return;
+  woClockTimer = setInterval(function () {
+    var t = document.getElementById('wo-new-time');
+    if (!document.getElementById('to-work-panel')) { clearInterval(woClockTimer); woClockTimer = null; return; }
+    if (!t) return;
+    if (t.dataset.auto === '1') {
+      var now = woHHMM(new Date());
+      if (t.value !== now) t.value = now;
+    }
+    woFormChanged();
+  }, 15000);
 }
 function woToggleRest(prefix) {
   var rest = document.getElementById(prefix + '-rest'), back = document.getElementById(prefix + '-backby');
@@ -653,10 +671,7 @@ function woToggleRest(prefix) {
 }
 // The time out the Back by hint measures from, for a form prefix.
 function woFormTimeOut(prefix) {
-  if (prefix === 'wo') {
-    var custom = document.getElementById('wo-custom-row');
-    return custom && custom.style.display !== 'none' ? woCustomDate() : new Date();
-  }
+  if (prefix === 'wo') return woNewTimeOut();
   var id = parseInt(prefix.replace('wo-ed-', ''), 10);
   var r = woState.rows.find(function (x) { return x.id === id; });
   var dEl = document.getElementById(prefix + '-date'), tEl = document.getElementById(prefix + '-time');
@@ -695,13 +710,14 @@ function woReadBackFields(prefix, timeOut) {
 function woNewColsMissing(e) { return e && (e.code === 'PGRST204' || e.code === '42703'); }
 var WO_NOT_SET_UP = 'Planning ahead and Back by aren\'t switched on yet.' + '\n\nPlease ask an admin to run docs/work-outings-plan-ahead.sql in Supabase.';
 
-async function woTimeOutNow() { await woStart(new Date()); }
-async function woTimeOutAtCustomTime() {
-  var d = woCustomDate();
+// The one button: a later date/time is planned (starts by itself), now or
+// earlier today starts the outing straight away.
+async function woSubmitNew() {
+  var d = woNewTimeOut();
   if (!d) { alert('Please choose a date and time.'); return; }
   if (localDateStr(d) < localDateStr()) { alert('Please pick today or a later day.'); return; }
-  if (d.getTime() > Date.now() + 60000) { await woPlan(d); return; }
-  await woStart(d);
+  if (woIsLater(d)) { await woPlan(d); return; }
+  await woStart(d.getTime() > Date.now() ? new Date() : d);
 }
 
 async function woPlan(timeOutDate) {

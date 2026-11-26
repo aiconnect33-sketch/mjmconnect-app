@@ -79,9 +79,9 @@ To switch it off later: `select cron.unschedule('work-outing-reminders');`
 ### Test it
 
 1. On a phone with MJMConnect notifications enabled, go to Time Off →
-   💼 Work, type a purpose, tap **⏱ Or key in a time — or plan ahead**, set
-   the time 12 minutes from now and a **Back by** 2 minutes after that, then
-   tap **📅 Plan Work Outing**.
+   💼 Work, type a purpose, change **Time Out** to 12 minutes from now and
+   set a **Back by** 2 minutes after that, then tap **📅 Plan Work
+   Outing**.
 2. About 2 minutes later (10 minutes before the start) you get *"Your work
    outing starts at …"*. Tapping it opens the Change panel.
 3. Leave it: it starts by itself at the planned time. Don't tap I'm Back:
