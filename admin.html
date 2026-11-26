@@ -1792,8 +1792,10 @@ html, body {
           <label class="form-label">Staff Name</label>
           <div class="input-wrap">
             <i class="ti ti-user input-icon"></i>
-            <input class="form-input" type="text" id="estatetrip-name" placeholder="Full name">
+            <input class="form-input" type="text" id="estatetrip-name" placeholder="Full name" list="estatetrip-staff-list" autocomplete="off">
+            <datalist id="estatetrip-staff-list"></datalist>
           </div>
+          <div style="font-size:11px;color:var(--text3);margin-top:5px;">Your name is filled in. Adding it for someone else? Change it to their name.</div>
           <div class="field-error" id="estatetrip-name-error">
             <i class="ti ti-alert-circle"></i> Name is required.
           </div>
@@ -3124,8 +3126,28 @@ html, body {
 
   // ── ESTATE TRIP FORM ──
   var editingEstateTripId = null;
+  var editingEstateTrip = null;
+  function estMe() {
+    var u = {};
+    try { u = JSON.parse(localStorage.getItem('mjm_user') || '{}') || {}; } catch (e) {}
+    var email = (u.email || '').toLowerCase();
+    return { email: email, name: (email && estNameMap[email]) || u.name || u.email || '' };
+  }
+  // The email that goes with the name typed in: your own, the trip's own
+  // (name unchanged while editing), or the staff member with that exact
+  // name. Keeping the email means the trip follows that person's profile
+  // name and they can edit it themselves in the staff app.
+  function estEmailForName(name) {
+    var low = name.trim().toLowerCase(), me = estMe();
+    if (me.email && low === me.name.toLowerCase()) return me.email;
+    if (editingEstateTrip && editingEstateTrip.staff_email && low === (estDisplayName(editingEstateTrip) || '').toLowerCase()) return editingEstateTrip.staff_email;
+    var hit = Object.keys(estNameMap).find(function (em) { return estNameMap[em].toLowerCase() === low; });
+    return hit || '';
+  }
   function showEstateTripForm() {
     editingEstateTripId = null;
+    editingEstateTrip = null;
+    document.getElementById('estatetrip-name').value = estMe().name;
     document.getElementById('estatetrip-form-title').textContent = 'New Estate Trip';
     document.getElementById('estatetrip-form').classList.add('visible');
     document.getElementById('estatetrip-form').scrollIntoView({ behavior:'smooth', block:'start' });
@@ -3136,6 +3158,7 @@ html, body {
     document.getElementById('estatetrip-going-to').value = '';
     document.getElementById('estatetrip-date').value = '';
     editingEstateTripId = null;
+    editingEstateTrip = null;
     clearFormErrors();
   }
   async function saveEstateTripDb() {
@@ -3161,13 +3184,14 @@ html, body {
     }
     if (!valid) return;
 
+    var staffEmail = estEmailForName(name);
     setLoading('estatetrip-save', true);
     try {
       if (editingEstateTripId) {
-        await sbFetch('PATCH', '/rest/v1/estate_trips?id=eq.' + editingEstateTripId, { staff_name: name, estate_name: goingTo, trip_date: date }, { 'Prefer': '' });
+        await sbFetch('PATCH', '/rest/v1/estate_trips?id=eq.' + editingEstateTripId, { staff_name: name, staff_email: staffEmail, estate_name: goingTo, trip_date: date }, { 'Prefer': '' });
         editingEstateTripId = null;
       } else {
-        await sbFetch('POST', '/rest/v1/estate_trips', { staff_name: name, estate_name: goingTo, trip_date: date });
+        await sbFetch('POST', '/rest/v1/estate_trips', { staff_name: name, staff_email: staffEmail, estate_name: goingTo, trip_date: date });
       }
       setLoading('estatetrip-save', false);
       hideEstateTripForm();
@@ -7105,6 +7129,15 @@ html, body {
       var estNameMapRows = await sbFetch('GET', '/rest/v1/profiles?select=email,full_name&limit=500').catch(function () { return []; });
       estNameMap = {};
       (estNameMapRows || []).forEach(function (p) { if (p.email && p.full_name) estNameMap[p.email.toLowerCase()] = p.full_name; });
+      var staffList = document.getElementById('estatetrip-staff-list');
+      if (staffList) staffList.innerHTML = Object.keys(estNameMap).map(function (em) { return estNameMap[em]; })
+        .sort().map(function (n) { return '<option value="' + escHtml(n) + '"></option>'; }).join('');
+      // Form opened before the names loaded: show the profile name.
+      var nameEl = document.getElementById('estatetrip-name'), formEl = document.getElementById('estatetrip-form');
+      if (nameEl && formEl && formEl.classList.contains('visible') && !editingEstateTripId) {
+        var u = {}; try { u = JSON.parse(localStorage.getItem('mjm_user') || '{}') || {}; } catch (e) {}
+        if (nameEl.value === (u.name || u.email || '')) nameEl.value = estMe().name;
+      }
 
       var data = await sbFetch('GET', '/rest/v1/estate_trips?trip_date=gte.' + today + '&order=trip_date.asc&limit=200');
       if (!data) return;
@@ -7156,6 +7189,7 @@ html, body {
     sbFetch('GET', '/rest/v1/estate_trips?id=eq.' + id + '&select=*').then(function(data) {
       if (!data || !data.length) return;
       var trip = data[0];
+      editingEstateTrip = trip;
       document.getElementById('estatetrip-form-title').textContent = 'Edit Estate Trip';
       // Resolved to their CURRENT name so re-saving doesn't re-persist a stale one.
       document.getElementById('estatetrip-name').value = estDisplayName(trip) || '';
